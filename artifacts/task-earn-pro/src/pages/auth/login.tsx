@@ -41,9 +41,7 @@ export default function Login() {
             description: "Successfully logged in.",
           });
           
-          if (!data.user.isEmailVerified) {
-            setLocation("/auth/verify-email");
-          } else if (!data.user.quizCompleted) {
+          if (!data.user.quizCompleted) {
             setLocation("/quiz");
           } else {
             setLocation("/dashboard");
