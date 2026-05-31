@@ -778,13 +778,15 @@ components:
     # ── Auth ──────────────────────────────────────────────────────────────────
     RegisterInput:
       type: object
-      required: [email, password, name]
+      required: [email, password, name, phone]
       properties:
         email:
           type: string
         password:
           type: string
         name:
+          type: string
+        phone:
           type: string
         referralCode:
           type: ["string", "null"]
@@ -840,6 +842,8 @@ components:
           type: string
         name:
           type: string
+        phone:
+          type: ["string", "null"]
         avatar:
           type: ["string", "null"]
         level:

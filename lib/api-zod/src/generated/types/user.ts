@@ -11,6 +11,8 @@ export interface User {
   email: string;
   name: string;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   avatar?: string | null;
   level: number;
   levelName?: string;

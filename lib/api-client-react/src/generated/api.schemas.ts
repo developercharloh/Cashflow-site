@@ -17,6 +17,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   name: string;
+  phone: string;
   /** @nullable */
   referralCode?: string | null;
 }
@@ -43,6 +44,8 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  /** @nullable */
+  phone?: string | null;
   /** @nullable */
   avatar?: string | null;
   level: number;

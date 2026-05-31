@@ -8,9 +8,9 @@ const router = Router();
 
 router.post("/auth/register", async (req, res) => {
   try {
-    const { email, password, name, referralCode } = req.body;
+    const { email, password, name, phone, referralCode } = req.body;
     if (!email || !password || !name) {
-      res.status(400).json({ error: "Email, password, and name are required" });
+      res.status(400).json({ error: "Name, email, and password are required" });
       return;
     }
     const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
@@ -40,9 +40,10 @@ router.post("/auth/register", async (req, res) => {
       email: email.toLowerCase(),
       password: hashed,
       name,
+      phone: phone ?? null,
       referralCode: code,
       referredBy: referredById ?? null,
-      emailVerifyCode: otp,
+      isEmailVerified: true,
     }).returning();
 
     const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
@@ -165,6 +166,7 @@ function sanitizeUser(user: typeof usersTable.$inferSelect) {
     id: user.id,
     email: user.email,
     name: user.name,
+    phone: user.phone,
     avatar: user.avatar,
     level: user.level,
     levelName: getLevelName(user.level),

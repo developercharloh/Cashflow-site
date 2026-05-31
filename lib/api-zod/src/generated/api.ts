@@ -23,6 +23,7 @@ export const RegisterBody = zod.object({
   "email": zod.string(),
   "password": zod.string(),
   "name": zod.string(),
+  "phone": zod.string(),
   "referralCode": zod.string().nullish()
 })
 
@@ -40,6 +41,7 @@ export const LoginResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "phone": zod.string().nullish(),
   "avatar": zod.string().nullish(),
   "level": zod.number(),
   "levelName": zod.string().optional(),
@@ -74,6 +76,7 @@ export const GetMeResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "phone": zod.string().nullish(),
   "avatar": zod.string().nullish(),
   "level": zod.number(),
   "levelName": zod.string().optional(),
