@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TaskEarn Pro API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: users
+  - name: tasks
+  - name: wallet
+  - name: referrals
+  - name: quiz
+  - name: dashboard
+  - name: notifications
+  - name: leaderboard
+  - name: admin
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,733 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── AUTH ────────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthenticated
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Reset link sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify email OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailInput"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ─── QUIZ ────────────────────────────────────────────────────────────────────
+  /quiz/questions:
+    get:
+      operationId: getQuizQuestions
+      tags: [quiz]
+      summary: Get welcome quiz questions (10 random)
+      responses:
+        "200":
+          description: Quiz questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizQuestion"
+
+  /quiz/submit:
+    post:
+      operationId: submitQuiz
+      tags: [quiz]
+      summary: Submit welcome quiz answers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizSubmission"
+      responses:
+        "200":
+          description: Quiz result with bonus credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  # ─── DASHBOARD ───────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get user dashboard stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/earnings-chart:
+    get:
+      operationId: getEarningsChart
+      tags: [dashboard]
+      summary: Get earnings chart data (last 30 days)
+      responses:
+        "200":
+          description: Earnings chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChartDataPoint"
+
+  # ─── TASKS ───────────────────────────────────────────────────────────────────
+  /tasks:
+    get:
+      operationId: getTasks
+      tags: [tasks]
+      summary: Get available tasks
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get task by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}/start:
+    post:
+      operationId: startTask
+      tags: [tasks]
+      summary: Start a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserTask"
+
+  /tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Complete a task and earn reward
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCompletionInput"
+      responses:
+        "200":
+          description: Task completed, reward credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCompletionResult"
+
+  /tasks/categories:
+    get:
+      operationId: getTaskCategories
+      tags: [tasks]
+      summary: Get all task categories with counts
+      responses:
+        "200":
+          description: Task categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskCategory"
+
+  /tasks/daily-checkin:
+    post:
+      operationId: dailyCheckIn
+      tags: [tasks]
+      summary: Perform daily check-in
+      responses:
+        "200":
+          description: Check-in result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInResult"
+
+  # ─── WALLET ──────────────────────────────────────────────────────────────────
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet balance summary
+      responses:
+        "200":
+          description: Wallet summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/transactions:
+    get:
+      operationId: getTransactions
+      tags: [wallet]
+      summary: Get transaction history
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
+  /wallet/withdraw:
+    post:
+      operationId: requestWithdrawal
+      tags: [wallet]
+      summary: Request a withdrawal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "200":
+          description: Withdrawal requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Insufficient balance
+
+  # ─── REFERRALS ───────────────────────────────────────────────────────────────
+  /referrals:
+    get:
+      operationId: getReferralInfo
+      tags: [referrals]
+      summary: Get user's referral info and stats
+      responses:
+        "200":
+          description: Referral info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralInfo"
+
+  /referrals/list:
+    get:
+      operationId: getReferralList
+      tags: [referrals]
+      summary: Get list of referred users
+      responses:
+        "200":
+          description: Referred users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferredUser"
+
+  # ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get user notifications
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ─── LEADERBOARD ─────────────────────────────────────────────────────────────
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get leaderboard
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [earners, referrers, completers]
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [weekly, monthly, alltime]
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  # ─── MEMBERSHIP ──────────────────────────────────────────────────────────────
+  /membership/levels:
+    get:
+      operationId: getMembershipLevels
+      tags: [users]
+      summary: Get all membership levels
+      responses:
+        "200":
+          description: Membership levels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipLevel"
+
+  # ─── ADMIN ───────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      operationId: adminGetUsers
+      tags: [admin]
+      summary: Admin — list all users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{id}/ban:
+    patch:
+      operationId: adminBanUser
+      tags: [admin]
+      summary: Admin — ban/unban a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BanUserInput"
+      responses:
+        "200":
+          description: User ban status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/tasks:
+    get:
+      operationId: adminGetTasks
+      tags: [admin]
+      summary: Admin — list all tasks
+      responses:
+        "200":
+          description: Tasks list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: adminCreateTask
+      tags: [admin]
+      summary: Admin — create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /admin/tasks/{id}:
+    patch:
+      operationId: adminUpdateTask
+      tags: [admin]
+      summary: Admin — update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: adminDeleteTask
+      tags: [admin]
+      summary: Admin — delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/withdrawals:
+    get:
+      operationId: adminGetWithdrawals
+      tags: [admin]
+      summary: Admin — list withdrawal requests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Withdrawal list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/withdrawals/{id}/approve:
+    patch:
+      operationId: adminApproveWithdrawal
+      tags: [admin]
+      summary: Admin — approve withdrawal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Withdrawal approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/withdrawals/{id}/reject:
+    patch:
+      operationId: adminRejectWithdrawal
+      tags: [admin]
+      summary: Admin — reject withdrawal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectInput"
+      responses:
+        "200":
+          description: Withdrawal rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/analytics:
+    get:
+      operationId: adminGetAnalytics
+      tags: [admin]
+      summary: Admin — platform analytics
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalytics"
+
+  /admin/announcements:
+    post:
+      operationId: adminCreateAnnouncement
+      tags: [admin]
+      summary: Admin — create announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnouncementInput"
+      responses:
+        "201":
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +766,564 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+        referralCode:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    ForgotPasswordInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    ResetPasswordInput:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+
+    VerifyEmailInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, name, level, balance, pendingEarnings, totalWithdrawn, referralCode, referralCount, tasksCompleted, isEmailVerified, isAdmin, quizCompleted, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        level:
+          type: integer
+        levelName:
+          type: string
+        balance:
+          type: number
+        pendingEarnings:
+          type: number
+        totalWithdrawn:
+          type: number
+        referralCode:
+          type: string
+        referralCount:
+          type: integer
+        tasksCompleted:
+          type: integer
+        isEmailVerified:
+          type: boolean
+        isAdmin:
+          type: boolean
+        quizCompleted:
+          type: boolean
+        isBanned:
+          type: boolean
+        createdAt:
+          type: string
+
+    # ── Quiz ──────────────────────────────────────────────────────────────────
+    QuizQuestion:
+      type: object
+      required: [id, question, options]
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+
+    QuizSubmission:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required: [questionId, answer]
+            properties:
+              questionId:
+                type: integer
+              answer:
+                type: string
+
+    QuizResult:
+      type: object
+      required: [score, totalQuestions, bonusEarned, message]
+      properties:
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        bonusEarned:
+          type: number
+        message:
+          type: string
+
+    # ── Dashboard ─────────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [balance, pendingEarnings, totalWithdrawn, level, levelName, levelProgress, referralCount, tasksCompleted, tasksAvailable, streakDays]
+      properties:
+        balance:
+          type: number
+        pendingEarnings:
+          type: number
+        totalWithdrawn:
+          type: number
+        level:
+          type: integer
+        levelName:
+          type: string
+        levelProgress:
+          type: number
+        referralCount:
+          type: integer
+        tasksCompleted:
+          type: integer
+        tasksAvailable:
+          type: integer
+        streakDays:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, description, amount, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        amount:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    ChartDataPoint:
+      type: object
+      required: [date, amount]
+      properties:
+        date:
+          type: string
+        amount:
+          type: number
+
+    # ── Tasks ─────────────────────────────────────────────────────────────────
+    Task:
+      type: object
+      required: [id, title, description, category, reward, estimatedMinutes, difficulty, minLevel, isActive]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        reward:
+          type: number
+        estimatedMinutes:
+          type: integer
+        difficulty:
+          type: string
+        minLevel:
+          type: integer
+        isActive:
+          type: boolean
+        completedByUser:
+          type: boolean
+        instructions:
+          type: ["string", "null"]
+
+    TaskCategory:
+      type: object
+      required: [name, count, totalReward]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+        totalReward:
+          type: number
+        icon:
+          type: ["string", "null"]
+
+    UserTask:
+      type: object
+      required: [id, taskId, userId, status, startedAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+        startedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+
+    TaskCompletionInput:
+      type: object
+      properties:
+        proof:
+          type: ["string", "null"]
+
+    TaskCompletionResult:
+      type: object
+      required: [success, rewardEarned, message]
+      properties:
+        success:
+          type: boolean
+        rewardEarned:
+          type: number
+        message:
+          type: string
+        newBalance:
+          type: number
+
+    CheckInResult:
+      type: object
+      required: [success, rewardEarned, streakDays, message]
+      properties:
+        success:
+          type: boolean
+        rewardEarned:
+          type: number
+        streakDays:
+          type: integer
+        message:
+          type: string
+
+    TaskInput:
+      type: object
+      required: [title, description, category, reward, estimatedMinutes, difficulty, minLevel]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        reward:
+          type: number
+        estimatedMinutes:
+          type: integer
+        difficulty:
+          type: string
+        minLevel:
+          type: integer
+        instructions:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        reward:
+          type: number
+        isActive:
+          type: boolean
+        minLevel:
+          type: integer
+        difficulty:
+          type: string
+        estimatedMinutes:
+          type: integer
+
+    # ── Wallet ────────────────────────────────────────────────────────────────
+    Wallet:
+      type: object
+      required: [balance, pendingEarnings, totalEarned, totalWithdrawn, totalReferralEarnings, totalTaskEarnings, totalBonusEarnings]
+      properties:
+        balance:
+          type: number
+        pendingEarnings:
+          type: number
+        totalEarned:
+          type: number
+        totalWithdrawn:
+          type: number
+        totalReferralEarnings:
+          type: number
+        totalTaskEarnings:
+          type: number
+        totalBonusEarnings:
+          type: number
+
+    Transaction:
+      type: object
+      required: [id, type, amount, status, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        description:
+          type: string
+        method:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    WithdrawalInput:
+      type: object
+      required: [amount, method, accountDetails]
+      properties:
+        amount:
+          type: number
+        method:
+          type: string
+        accountDetails:
+          type: string
+
+    # ── Referrals ─────────────────────────────────────────────────────────────
+    ReferralInfo:
+      type: object
+      required: [referralCode, referralLink, totalReferrals, activeReferrals, totalEarned, pendingEarnings]
+      properties:
+        referralCode:
+          type: string
+        referralLink:
+          type: string
+        totalReferrals:
+          type: integer
+        activeReferrals:
+          type: integer
+        totalEarned:
+          type: number
+        pendingEarnings:
+          type: number
+
+    ReferredUser:
+      type: object
+      required: [id, name, joinedAt, tasksCompleted, status, earningsGenerated]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        joinedAt:
+          type: string
+        tasksCompleted:
+          type: integer
+        status:
+          type: string
+        earningsGenerated:
+          type: number
+
+    # ── Notifications ─────────────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, type, title, message, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+
+    # ── Leaderboard ───────────────────────────────────────────────────────────
+    LeaderboardEntry:
+      type: object
+      required: [rank, userId, name, avatar, value, badge]
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        value:
+          type: number
+        badge:
+          type: ["string", "null"]
+
+    # ── Membership ────────────────────────────────────────────────────────────
+    MembershipLevel:
+      type: object
+      required: [level, name, description, minEarnings, maxEarnings, taskMultiplier, perks]
+      properties:
+        level:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        minEarnings:
+          type: number
+        maxEarnings:
+          type: ["number", "null"]
+        taskMultiplier:
+          type: number
+        perks:
+          type: array
+          items:
+            type: string
+
+    # ── Admin ─────────────────────────────────────────────────────────────────
+    AdminUser:
+      type: object
+      required: [id, email, name, level, balance, tasksCompleted, referralCount, isBanned, isAdmin, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        level:
+          type: integer
+        balance:
+          type: number
+        tasksCompleted:
+          type: integer
+        referralCount:
+          type: integer
+        isBanned:
+          type: boolean
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+
+    BanUserInput:
+      type: object
+      required: [banned]
+      properties:
+        banned:
+          type: boolean
+
+    AdminWithdrawal:
+      type: object
+      required: [id, userId, userName, amount, method, accountDetails, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        amount:
+          type: number
+        method:
+          type: string
+        accountDetails:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    RejectInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    AdminAnalytics:
+      type: object
+      required: [totalUsers, activeUsers, totalTasksCompleted, totalEarningsPaid, totalWithdrawals, pendingWithdrawals, revenueThisMonth, newUsersThisMonth]
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        totalTasksCompleted:
+          type: integer
+        totalEarningsPaid:
+          type: number
+        totalWithdrawals:
+          type: integer
+        pendingWithdrawals:
+          type: integer
+        revenueThisMonth:
+          type: number
+        newUsersThisMonth:
+          type: integer
+
+    AnnouncementInput:
+      type: object
+      required: [title, message, type]
+      properties:
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string

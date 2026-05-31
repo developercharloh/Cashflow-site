@@ -1,0 +1,82 @@
+import { Switch, Route, Router as WouterRouter } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AppLayout } from "@/components/layout";
+import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
+import Login from "@/pages/auth/login";
+import Register from "@/pages/auth/register";
+import ForgotPassword from "@/pages/auth/forgot-password";
+import VerifyEmail from "@/pages/auth/verify-email";
+import Quiz from "@/pages/quiz";
+import Dashboard from "@/pages/dashboard";
+import Tasks from "@/pages/tasks";
+import WalletPage from "@/pages/wallet";
+import Referrals from "@/pages/referrals";
+import Leaderboard from "@/pages/leaderboard";
+import Membership from "@/pages/membership";
+import Notifications from "@/pages/notifications";
+import AdminDashboard from "@/pages/admin/index";
+import AdminUsers from "@/pages/admin/users";
+import AdminTasks from "@/pages/admin/tasks";
+import AdminWithdrawals from "@/pages/admin/withdrawals";
+import AdminAnalytics from "@/pages/admin/analytics";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
+
+function Router() {
+  return (
+    <AppLayout>
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/auth/login" component={Login} />
+        <Route path="/auth/register" component={Register} />
+        <Route path="/auth/forgot-password" component={ForgotPassword} />
+        <Route path="/auth/verify-email" component={VerifyEmail} />
+        <Route path="/quiz" component={Quiz} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/tasks" component={Tasks} />
+        <Route path="/wallet" component={WalletPage} />
+        <Route path="/referrals" component={Referrals} />
+        <Route path="/leaderboard" component={Leaderboard} />
+        <Route path="/membership" component={Membership} />
+        <Route path="/notifications" component={Notifications} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/tasks" component={AdminTasks} />
+        <Route path="/admin/withdrawals" component={AdminWithdrawals} />
+        <Route path="/admin/analytics" component={AdminAnalytics} />
+        <Route component={NotFound} />
+      </Switch>
+    </AppLayout>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="dark" storageKey="taskearn-theme">
+        <TooltipProvider>
+          <AuthProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

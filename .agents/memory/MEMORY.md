@@ -1,0 +1,1 @@
+- [TaskEarn Pro stack](taskearnpro-stack.md) — full-stack earning platform; key auth, routing, and level-up rules
