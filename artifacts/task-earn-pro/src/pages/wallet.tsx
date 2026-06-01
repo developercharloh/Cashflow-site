@@ -16,7 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Wallet2, TrendingUp, ArrowUpRight, Loader2,
   DollarSign, Users, Star, CheckCircle, Clock, XCircle,
-  Plus, CreditCard, Landmark, RefreshCw, AlertCircle,
+  Plus, CreditCard, Landmark, RefreshCw,
   ChevronRight, Smartphone, Building2, Banknote,
 } from "lucide-react";
 
@@ -241,8 +241,7 @@ export default function WalletPage() {
   };
 
   const hasPendingDeposit = transactions?.some(t => t.type === "deposit" && t.status === "pending");
-
-  const isOpen = stage.view !== "none";
+  void hasPendingDeposit;
 
   if (isLoading || !wallet) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -255,25 +254,6 @@ export default function WalletPage() {
         <h1 className="text-2xl font-bold">Wallet</h1>
         <p className="text-sm text-muted-foreground">Manage your earnings and payments</p>
       </div>
-
-      {/* Pending deposit alert */}
-      {hasPendingDeposit && (
-        <div className="flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3">
-          <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-yellow-800">Payment pending</p>
-            <p className="text-xs text-yellow-700">Already paid? Check your deposit status.</p>
-          </div>
-          <button
-            onClick={handleCheckPending}
-            disabled={verifyPendingMutation.isPending}
-            className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-yellow-800 border border-yellow-300 rounded-lg px-3 py-1.5 hover:bg-yellow-100 transition-colors"
-          >
-            {verifyPendingMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            Check
-          </button>
-        </div>
-      )}
 
       {/* Balance card with Deposit + Withdraw */}
       <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%)" }}>
@@ -407,6 +387,15 @@ export default function WalletPage() {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
             ))}
+            <button
+              onClick={handleCheckPending}
+              disabled={verifyPendingMutation.isPending}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-border rounded-xl"
+            >
+              {verifyPendingMutation.isPending
+                ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking…</>
+                : <><RefreshCw className="w-3.5 h-3.5" /> Already paid? Check deposit status</>}
+            </button>
           </div>
         </DialogContent>
       </Dialog>
