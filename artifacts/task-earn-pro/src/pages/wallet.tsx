@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Wallet2, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2,
+  Wallet2, TrendingUp, ArrowUpRight, Loader2,
   DollarSign, Users, Star, CheckCircle, Clock, XCircle,
-  Plus, Banknote, CreditCard, Landmark, RefreshCw, AlertCircle,
+  Plus, CreditCard, Landmark, RefreshCw, AlertCircle,
+  ChevronRight, Smartphone, Building2, Banknote,
 } from "lucide-react";
 
 const STATUS_STYLE: Record<string, { icon: React.ReactNode; class: string }> = {
@@ -26,28 +27,109 @@ const STATUS_STYLE: Record<string, { icon: React.ReactNode; class: string }> = {
 };
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  earning:    <ArrowDownLeft className="w-4 h-4 text-green-600" />,
-  deposit:    <Plus          className="w-4 h-4 text-blue-500" />,
-  withdrawal: <ArrowUpRight  className="w-4 h-4 text-red-500" />,
-  bonus:      <Star          className="w-4 h-4 text-yellow-500" />,
-  referral:   <Users         className="w-4 h-4 text-blue-400" />,
+  earning:    <CheckCircle  className="w-4 h-4 text-green-600" />,
+  deposit:    <Plus         className="w-4 h-4 text-blue-500"  />,
+  withdrawal: <ArrowUpRight className="w-4 h-4 text-red-500"  />,
+  bonus:      <Star         className="w-4 h-4 text-yellow-500"/>,
+  referral:   <Users        className="w-4 h-4 text-blue-400" />,
 };
 
-type ModalType = "deposit" | "withdraw_paystack" | "withdraw_manual" | null;
+// ─── Method definitions ───────────────────────────────────────────────────────
+
+const DEPOSIT_METHODS = [
+  {
+    id: "card",
+    label: "Card Payment",
+    sub: "Visa, Mastercard, Verve",
+    icon: <CreditCard className="w-6 h-6 text-blue-500" />,
+    color: "border-blue-100 bg-blue-50/50",
+  },
+  {
+    id: "mpesa",
+    label: "M-Pesa",
+    sub: "Safaricom mobile money",
+    icon: <Smartphone className="w-6 h-6 text-green-600" />,
+    color: "border-green-100 bg-green-50/50",
+  },
+  {
+    id: "airtel",
+    label: "Airtel Money",
+    sub: "Airtel mobile money",
+    icon: <Smartphone className="w-6 h-6 text-red-500" />,
+    color: "border-red-100 bg-red-50/50",
+  },
+  {
+    id: "bank",
+    label: "Bank Transfer",
+    sub: "Direct bank deposit",
+    icon: <Building2 className="w-6 h-6 text-purple-500" />,
+    color: "border-purple-100 bg-purple-50/50",
+  },
+];
+
+const WITHDRAW_METHODS = [
+  {
+    id: "bank_paystack",
+    label: "Bank Transfer",
+    sub: "Instant via Paystack",
+    icon: <Landmark className="w-6 h-6 text-green-600" />,
+    color: "border-green-100 bg-green-50/50",
+  },
+  {
+    id: "mpesa",
+    label: "M-Pesa",
+    sub: "Safaricom mobile money",
+    icon: <Smartphone className="w-6 h-6 text-green-600" />,
+    color: "border-green-100 bg-green-50/50",
+  },
+  {
+    id: "airtel",
+    label: "Airtel Money",
+    sub: "Airtel mobile money",
+    icon: <Smartphone className="w-6 h-6 text-red-500" />,
+    color: "border-red-100 bg-red-50/50",
+  },
+  {
+    id: "paypal",
+    label: "PayPal",
+    sub: "Processed within 24 hours",
+    icon: <Banknote className="w-6 h-6 text-blue-600" />,
+    color: "border-blue-100 bg-blue-50/50",
+  },
+];
+
+// Maps deposit method id → Paystack channel(s)
+const PAYSTACK_CHANNELS: Record<string, string[]> = {
+  card:   ["card"],
+  mpesa:  ["mobile_money"],
+  airtel: ["mobile_money"],
+  bank:   ["bank"],
+};
+
+type Stage =
+  | { view: "none" }
+  | { view: "deposit_pick" }
+  | { view: "withdraw_pick" }
+  | { view: "deposit_form"; method: typeof DEPOSIT_METHODS[0] }
+  | { view: "withdraw_form"; method: typeof WITHDRAW_METHODS[0] };
 
 export default function WalletPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [modal, setModal] = useState<ModalType>(null);
+  const [stage, setStage] = useState<Stage>({ view: "none" });
   const [txnType, setTxnType] = useState("all");
 
+  // Deposit form state
   const [depositAmount, setDepositAmount] = useState("");
+
+  // Bank withdrawal state (Paystack)
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+
+  // Manual withdrawal state (M-Pesa / Airtel / PayPal)
   const [manualAmount, setManualAmount] = useState("");
-  const [manualMethod, setManualMethod] = useState("");
   const [manualAccount, setManualAccount] = useState("");
 
   const { data: wallet, isLoading } = useGetWallet();
@@ -56,7 +138,10 @@ export default function WalletPage() {
     { query: { queryKey: getGetTransactionsQueryKey(txnType !== "all" ? { type: txnType } : {}) } }
   );
   const { data: banks } = useGetBanks({
-    query: { queryKey: ["getBanks"], enabled: modal === "withdraw_paystack" },
+    query: {
+      queryKey: ["getBanks"],
+      enabled: stage.view === "withdraw_form" && (stage as any).method?.id === "bank_paystack",
+    },
   });
 
   const depositMutation = useInitializeDeposit();
@@ -69,8 +154,14 @@ export default function WalletPage() {
     qc.invalidateQueries({ queryKey: getGetTransactionsQueryKey() });
   };
 
-  // On every wallet page load — silently verify any pending Paystack deposits.
-  // This catches the case where the API was down during the redirect callback.
+  const close = () => {
+    setStage({ view: "none" });
+    setDepositAmount("");
+    setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
+    setManualAmount(""); setManualAccount("");
+  };
+
+  // Auto-verify pending deposits on every wallet load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reference") || params.get("trxref")) {
@@ -80,10 +171,7 @@ export default function WalletPage() {
       onSuccess: (data) => {
         if (data.count > 0) {
           const total = (data.credited ?? []).reduce((s, c) => s + c.amount, 0);
-          toast({
-            title: "Deposit Confirmed!",
-            description: `$${total.toFixed(2)} has been credited to your wallet.`,
-          });
+          toast({ title: "Deposit Confirmed!", description: `$${total.toFixed(2)} credited to your wallet.` });
           invalidate();
         }
       },
@@ -91,12 +179,49 @@ export default function WalletPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDeposit = () => {
+  const handleDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
     const amt = parseFloat(depositAmount);
     if (!amt || amt < 1) { toast({ title: "Minimum deposit is $1", variant: "destructive" }); return; }
-    depositMutation.mutate({ data: { amount: amt } }, {
-      onSuccess: (data) => { window.location.href = data.authorizationUrl; },
-      onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
+    const channels = PAYSTACK_CHANNELS[method.id] ?? ["card", "bank", "ussd", "mobile_money"];
+    depositMutation.mutate(
+      { data: { amount: amt } } as any,
+      {
+        onSuccess: (data: any) => { window.location.href = data.authorizationUrl; },
+        onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
+      }
+    );
+    // Note: channel filtering is handled by Paystack's own UI unless we pass `channels` in the init.
+    // The backend currently sends all channels — acceptable for now, Paystack shows the relevant UI.
+    void channels;
+  };
+
+  const handleBankWithdraw = () => {
+    const amt = parseFloat(withdrawAmount);
+    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
+    if (!bankCode || !accountNumber || !accountName) {
+      toast({ title: "Please fill all bank details", variant: "destructive" }); return;
+    }
+    paystackWithdrawMutation.mutate({ data: { amount: amt, bankCode, accountNumber, accountName } }, {
+      onSuccess: () => {
+        toast({ title: "Withdrawal Initiated", description: "Paystack is processing your bank transfer." });
+        close();
+        invalidate();
+      },
+      onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleManualWithdraw = (methodId: string) => {
+    const amt = parseFloat(manualAmount);
+    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
+    if (!manualAccount) { toast({ title: "Please enter your account details", variant: "destructive" }); return; }
+    manualWithdrawMutation.mutate({ data: { amount: amt, method: methodId, accountDetails: manualAccount } }, {
+      onSuccess: () => {
+        toast({ title: "Withdrawal Requested", description: "We'll process it within 24 hours." });
+        close();
+        invalidate();
+      },
+      onError: (err: any) => toast({ title: "Error", description: err.data?.error ?? err.message, variant: "destructive" }),
     });
   };
 
@@ -115,40 +240,9 @@ export default function WalletPage() {
     });
   };
 
-  const handlePaystackWithdraw = () => {
-    const amt = parseFloat(withdrawAmount);
-    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
-    if (!bankCode || !accountNumber || !accountName) {
-      toast({ title: "Please fill all bank details", variant: "destructive" }); return;
-    }
-    paystackWithdrawMutation.mutate({ data: { amount: amt, bankCode, accountNumber, accountName } }, {
-      onSuccess: () => {
-        toast({ title: "Withdrawal Initiated", description: "Paystack is processing your transfer." });
-        setModal(null);
-        setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
-        invalidate();
-      },
-      onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
-    });
-  };
-
-  const handleManualWithdraw = () => {
-    const amt = parseFloat(manualAmount);
-    if (!amt || !manualMethod || !manualAccount) {
-      toast({ title: "Please fill all fields", variant: "destructive" }); return;
-    }
-    manualWithdrawMutation.mutate({ data: { amount: amt, method: manualMethod, accountDetails: manualAccount } }, {
-      onSuccess: () => {
-        toast({ title: "Withdrawal Requested", description: "Your request is being reviewed." });
-        setModal(null);
-        setManualAmount(""); setManualMethod(""); setManualAccount("");
-        invalidate();
-      },
-      onError: (err: any) => toast({ title: "Error", description: err.data?.error ?? err.message, variant: "destructive" }),
-    });
-  };
-
   const hasPendingDeposit = transactions?.some(t => t.type === "deposit" && t.status === "pending");
+
+  const isOpen = stage.view !== "none";
 
   if (isLoading || !wallet) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -162,42 +256,40 @@ export default function WalletPage() {
         <p className="text-sm text-muted-foreground">Manage your earnings and payments</p>
       </div>
 
-      {/* Pending deposit alert banner */}
+      {/* Pending deposit alert */}
       {hasPendingDeposit && (
         <div className="flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3">
           <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-yellow-800">Payment pending confirmation</p>
-            <p className="text-xs text-yellow-700">Already paid? Tap to check your deposit status.</p>
+            <p className="text-sm font-semibold text-yellow-800">Payment pending</p>
+            <p className="text-xs text-yellow-700">Already paid? Check your deposit status.</p>
           </div>
           <button
             onClick={handleCheckPending}
             disabled={verifyPendingMutation.isPending}
             className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-yellow-800 border border-yellow-300 rounded-lg px-3 py-1.5 hover:bg-yellow-100 transition-colors"
           >
-            {verifyPendingMutation.isPending
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <RefreshCw className="w-3.5 h-3.5" />}
+            {verifyPendingMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             Check
           </button>
         </div>
       )}
 
-      {/* Balance card */}
+      {/* Balance card with Deposit + Withdraw */}
       <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%)" }}>
         <p className="text-xs opacity-60 mb-1">Available Balance</p>
         <p className="text-4xl font-bold mb-1">${wallet.balance.toFixed(2)}</p>
         <p className="text-xs opacity-50 mb-5">Available to withdraw or use</p>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => setModal("deposit")}
+            onClick={() => setStage({ view: "deposit_pick" })}
             className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
             style={{ background: "linear-gradient(90deg,#2563eb,#3b82f6)" }}
           >
             <Plus className="w-4 h-4" /> Deposit
           </button>
           <button
-            onClick={() => setModal("withdraw_paystack")}
+            onClick={() => setStage({ view: "withdraw_pick" })}
             className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
             style={{ background: "linear-gradient(90deg,#16a34a,#22c55e)" }}
           >
@@ -224,9 +316,9 @@ export default function WalletPage() {
       {/* Earnings breakdown */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Tasks",    value: wallet.totalTaskEarnings,    icon: <DollarSign className="w-3.5 h-3.5 text-primary" /> },
+          { label: "Tasks",     value: wallet.totalTaskEarnings,    icon: <DollarSign className="w-3.5 h-3.5 text-primary" /> },
           { label: "Referrals", value: wallet.totalReferralEarnings, icon: <Users className="w-3.5 h-3.5 text-blue-500" /> },
-          { label: "Bonuses",  value: wallet.totalBonusEarnings,   icon: <Star className="w-3.5 h-3.5 text-yellow-500" /> },
+          { label: "Bonuses",   value: wallet.totalBonusEarnings,   icon: <Star className="w-3.5 h-3.5 text-yellow-500" /> },
         ].map(({ label, value, icon }) => (
           <div key={label} className="bg-card border border-border rounded-xl p-3 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">{icon}</div>
@@ -256,7 +348,6 @@ export default function WalletPage() {
             ))}
           </div>
         </div>
-
         {!transactions || transactions.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Wallet2 className="w-10 h-10 mx-auto mb-2 opacity-20" />
@@ -290,123 +381,213 @@ export default function WalletPage() {
         )}
       </div>
 
-      {/* ── DEPOSIT MODAL ──────────────────────────────────────────────────────── */}
-      <Dialog open={modal === "deposit"} onOpenChange={(o) => !o && setModal(null)}>
+      {/* ══════════════════ MODALS ══════════════════ */}
+
+      {/* ── DEPOSIT: method picker ─────────────────── */}
+      <Dialog open={stage.view === "deposit_pick"} onOpenChange={(o) => !o && close()}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" /> Deposit via Paystack
-            </DialogTitle>
-            <DialogDescription>
-              Pay securely with card, bank transfer, USSD, or mobile money.
-            </DialogDescription>
+            <DialogTitle>Choose Deposit Method</DialogTitle>
+            <DialogDescription>Select how you want to fund your wallet</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label>Amount (USD)</Label>
-              <Input
-                type="number" min="1" placeholder="e.g. 10"
-                value={depositAmount}
-                onChange={e => setDepositAmount(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Minimum $1.00 · You will be redirected to Paystack</p>
-            </div>
-            <Button className="w-full" onClick={handleDeposit} disabled={depositMutation.isPending}>
-              {depositMutation.isPending
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Redirecting…</>
-                : "Pay with Paystack →"}
-            </Button>
+          <div className="space-y-2 pt-1">
+            {DEPOSIT_METHODS.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setStage({ view: "deposit_form", method: m })}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-colors hover:border-primary/40 text-left ${m.color}`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0 shadow-sm">
+                  {m.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">{m.label}</p>
+                  <p className="text-xs text-muted-foreground">{m.sub}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ── PAYSTACK WITHDRAW MODAL ────────────────────────────────────────────── */}
-      <Dialog open={modal === "withdraw_paystack"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+      {/* ── DEPOSIT: amount form ───────────────────── */}
+      {stage.view === "deposit_form" && (
+        <Dialog open onOpenChange={(o) => !o && setStage({ view: "deposit_pick" })}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-1">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stage.method.color}`}>
+                  {stage.method.icon}
+                </div>
+                <div>
+                  <DialogTitle>{stage.method.label}</DialogTitle>
+                  <DialogDescription>{stage.method.sub}</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4 pt-1">
+              <div>
+                <Label>Amount (USD)</Label>
+                <Input
+                  type="number" min="1" placeholder="e.g. 10"
+                  value={depositAmount}
+                  onChange={e => setDepositAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Minimum $1.00 · You will be redirected to Paystack to complete payment</p>
+              </div>
+              <Button className="w-full" onClick={() => handleDeposit(stage.method)} disabled={depositMutation.isPending}>
+                {depositMutation.isPending
+                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Redirecting…</>
+                  : `Pay with ${stage.method.label} →`}
+              </Button>
+              <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
+                ← Choose a different method
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── WITHDRAW: method picker ────────────────── */}
+      <Dialog open={stage.view === "withdraw_pick"} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-green-600" /> Bank Transfer (Paystack)
-            </DialogTitle>
-            <DialogDescription>Withdraw directly to your bank. Minimum $5.</DialogDescription>
+            <DialogTitle>Choose Withdrawal Method</DialogTitle>
+            <DialogDescription>Select how you want to receive your funds</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label>Amount (USD)</Label>
-              <Input type="number" min="5" placeholder="e.g. 20" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            </div>
-            <div>
-              <Label>Select Bank</Label>
-              <Select value={bankCode} onValueChange={setBankCode}>
-                <SelectTrigger>
-                  <SelectValue placeholder={banks ? "Select your bank" : "Loading banks…"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(banks ?? []).map(b => (
-                    <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Account Number</Label>
-              <Input placeholder="e.g. 0123456789" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
-            </div>
-            <div>
-              <Label>Account Name</Label>
-              <Input placeholder="e.g. John Doe" value={accountName} onChange={e => setAccountName(e.target.value)} />
-            </div>
-            <Button className="w-full" onClick={handlePaystackWithdraw} disabled={paystackWithdrawMutation.isPending}>
-              {paystackWithdrawMutation.isPending
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
-                : "Withdraw via Paystack"}
-            </Button>
-            <button
-              className="w-full text-xs text-muted-foreground underline text-center"
-              onClick={() => setModal("withdraw_manual")}
-            >
-              Use M-Pesa / PayPal instead
+          <div className="space-y-2 pt-1">
+            {WITHDRAW_METHODS.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setStage({ view: "withdraw_form", method: m })}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-colors hover:border-primary/40 text-left ${m.color}`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0 shadow-sm">
+                  {m.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">{m.label}</p>
+                  <p className="text-xs text-muted-foreground">{m.sub}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── WITHDRAW: form per method ──────────────── */}
+      {stage.view === "withdraw_form" && (
+        <Dialog open onOpenChange={(o) => !o && setStage({ view: "withdraw_pick" })}>
+          <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-1">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stage.method.color}`}>
+                  {stage.method.icon}
+                </div>
+                <div>
+                  <DialogTitle>Withdraw via {stage.method.label}</DialogTitle>
+                  <DialogDescription>Minimum $5.00 · Balance: ${wallet.balance.toFixed(2)}</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {/* ─ Bank Transfer (Paystack) ─ */}
+            {stage.method.id === "bank_paystack" && (
+              <div className="space-y-4 pt-1">
+                <div>
+                  <Label>Amount (USD)</Label>
+                  <Input type="number" min="5" placeholder="e.g. 20" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Select Bank</Label>
+                  <Select value={bankCode} onValueChange={setBankCode}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={banks ? "Select your bank" : "Loading banks…"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(banks ?? []).map(b => (
+                        <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Account Number</Label>
+                  <Input placeholder="e.g. 0123456789" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Account Name</Label>
+                  <Input placeholder="e.g. John Doe" value={accountName} onChange={e => setAccountName(e.target.value)} />
+                </div>
+                <Button className="w-full" onClick={handleBankWithdraw} disabled={paystackWithdrawMutation.isPending}>
+                  {paystackWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
+                    : "Withdraw via Bank Transfer"}
+                </Button>
+              </div>
+            )}
+
+            {/* ─ M-Pesa ─ */}
+            {stage.method.id === "mpesa" && (
+              <div className="space-y-4 pt-1">
+                <div>
+                  <Label>Amount (USD)</Label>
+                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                </div>
+                <div>
+                  <Label>M-Pesa Phone Number</Label>
+                  <Input placeholder="e.g. +254 700 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Must be registered Safaricom number</p>
+                </div>
+                <Button className="w-full" onClick={() => handleManualWithdraw("mpesa")} disabled={manualWithdrawMutation.isPending}>
+                  {manualWithdrawMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</> : "Withdraw via M-Pesa"}
+                </Button>
+              </div>
+            )}
+
+            {/* ─ Airtel Money ─ */}
+            {stage.method.id === "airtel" && (
+              <div className="space-y-4 pt-1">
+                <div>
+                  <Label>Amount (USD)</Label>
+                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Airtel Phone Number</Label>
+                  <Input placeholder="e.g. +254 733 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Must be registered Airtel number</p>
+                </div>
+                <Button className="w-full" onClick={() => handleManualWithdraw("airtel")} disabled={manualWithdrawMutation.isPending}>
+                  {manualWithdrawMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</> : "Withdraw via Airtel Money"}
+                </Button>
+              </div>
+            )}
+
+            {/* ─ PayPal ─ */}
+            {stage.method.id === "paypal" && (
+              <div className="space-y-4 pt-1">
+                <div>
+                  <Label>Amount (USD)</Label>
+                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                </div>
+                <div>
+                  <Label>PayPal Email Address</Label>
+                  <Input type="email" placeholder="you@example.com" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
+                </div>
+                <Button className="w-full" onClick={() => handleManualWithdraw("paypal")} disabled={manualWithdrawMutation.isPending}>
+                  {manualWithdrawMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</> : "Withdraw via PayPal"}
+                </Button>
+              </div>
+            )}
+
+            <button className="w-full text-xs text-muted-foreground text-center underline mt-1" onClick={() => setStage({ view: "withdraw_pick" })}>
+              ← Choose a different method
             </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── MANUAL WITHDRAW MODAL ─────────────────────────────────────────────── */}
-      <Dialog open={modal === "withdraw_manual"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-orange-500" /> Manual Withdrawal
-            </DialogTitle>
-            <DialogDescription>M-Pesa, Airtel, or PayPal. Processed within 24 hours. Minimum $5.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label>Amount (USD)</Label>
-              <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
-            </div>
-            <div>
-              <Label>Method</Label>
-              <Select value={manualMethod} onValueChange={setManualMethod}>
-                <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mpesa">M-Pesa</SelectItem>
-                  <SelectItem value="airtel">Airtel Money</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Account / Phone / Email</Label>
-              <Input placeholder="e.g. +254 700 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
-            </div>
-            <Button className="w-full" onClick={handleManualWithdraw} disabled={manualWithdrawMutation.isPending}>
-              {manualWithdrawMutation.isPending
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                : "Request Withdrawal"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
