@@ -441,6 +441,19 @@ paths:
         "400":
           description: Validation error
 
+  /paystack/deposit/verify-pending:
+    post:
+      operationId: verifyPendingDeposits
+      tags: [wallet]
+      summary: Auto-verify all pending deposits for the logged-in user
+      responses:
+        "200":
+          description: Credits applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyPendingResult"
+
   /paystack/deposit/verify/{reference}:
     get:
       operationId: verifyDeposit
@@ -1233,6 +1246,23 @@ components:
           type: string
         accountDetails:
           type: string
+
+    VerifyPendingResult:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+        credited:
+          type: array
+          items:
+            type: object
+            required: [ref, amount]
+            properties:
+              ref:
+                type: string
+              amount:
+                type: number
 
     DepositInitInput:
       type: object

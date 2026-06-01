@@ -54,5 +54,7 @@ export * from './transaction';
 export * from './user';
 export * from './userTask';
 export * from './verifyEmailInput';
+export * from './verifyPendingResult';
+export * from './verifyPendingResultCreditedItem';
 export * from './wallet';
 export * from './withdrawalInput';

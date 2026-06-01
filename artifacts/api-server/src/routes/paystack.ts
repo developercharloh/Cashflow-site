@@ -245,6 +245,57 @@ router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
+// ─── Auto-verify all pending deposits for logged-in user ─────────────────────
+router.post("/paystack/deposit/verify-pending", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const pending = await db.select().from(transactionsTable)
+      .where(eq(transactionsTable.userId, req.userId!));
+
+    const pendingDeposits = pending.filter(t => t.type === "deposit" && t.status === "pending" && t.accountDetails);
+
+    const credited: { ref: string; amount: number }[] = [];
+
+    for (const txn of pendingDeposits) {
+      const ref = txn.accountDetails!;
+      try {
+        const response = await fetch(`https://api.paystack.co/transaction/verify/${ref}`, {
+          headers: { Authorization: `Bearer ${SECRET_KEY}` },
+        });
+        const data = await response.json() as any;
+
+        if (data.status && data.data.status === "success") {
+          const amountUsd: number = Number(data.data.metadata?.amountUsd ?? data.data.amount / 100);
+          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+
+          await db.update(usersTable).set({
+            balance: user.balance + amountUsd,
+            totalEarned: user.totalEarned + amountUsd,
+          }).where(eq(usersTable.id, req.userId!));
+
+          await db.update(transactionsTable).set({ status: "completed" })
+            .where(eq(transactionsTable.id, txn.id));
+
+          await db.insert(notificationsTable).values({
+            userId: req.userId!,
+            type: "deposit",
+            title: "Deposit Confirmed",
+            message: `$${amountUsd.toFixed(2)} has been credited to your wallet.`,
+          });
+
+          credited.push({ ref, amount: amountUsd });
+        }
+      } catch {
+        // skip individual failures
+      }
+    }
+
+    res.json({ credited, count: credited.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── List supported banks ─────────────────────────────────────────────────────
 router.get("/paystack/banks", requireAuth, async (req: AuthRequest, res) => {
   try {

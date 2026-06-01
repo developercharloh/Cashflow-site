@@ -219,6 +219,16 @@ export interface WithdrawalInput {
   accountDetails: string;
 }
 
+export type VerifyPendingResultCreditedItem = {
+  ref: string;
+  amount: number;
+};
+
+export interface VerifyPendingResult {
+  count: number;
+  credited?: VerifyPendingResultCreditedItem[];
+}
+
 export interface DepositInitInput {
   amount: number;
 }

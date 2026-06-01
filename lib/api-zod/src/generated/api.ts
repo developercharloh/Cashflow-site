@@ -375,6 +375,18 @@ export const InitializeDepositResponse = zod.object({
 
 
 /**
+ * @summary Auto-verify all pending deposits for the logged-in user
+ */
+export const VerifyPendingDepositsResponse = zod.object({
+  "count": zod.number(),
+  "credited": zod.array(zod.object({
+  "ref": zod.string(),
+  "amount": zod.number()
+})).optional()
+})
+
+
+/**
  * @summary Verify a Paystack deposit by reference
  */
 export const VerifyDepositParams = zod.object({

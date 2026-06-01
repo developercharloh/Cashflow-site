@@ -65,6 +65,7 @@ import type {
   User,
   UserTask,
   VerifyEmailInput,
+  VerifyPendingResult,
   Wallet,
   WithdrawalInput
 } from './api.schemas';
@@ -1790,6 +1791,76 @@ export const useInitializeDeposit = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getInitializeDepositMutationOptions(options));
+    }
+
+export const getVerifyPendingDepositsUrl = () => {
+
+
+
+
+  return `/api/paystack/deposit/verify-pending`
+}
+
+/**
+ * @summary Auto-verify all pending deposits for the logged-in user
+ */
+export const verifyPendingDeposits = async ( options?: RequestInit): Promise<VerifyPendingResult> => {
+
+  return customFetch<VerifyPendingResult>(getVerifyPendingDepositsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerifyPendingDepositsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyPendingDeposits>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyPendingDeposits>>, TError,void, TContext> => {
+
+const mutationKey = ['verifyPendingDeposits'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyPendingDeposits>>, void> = () => {
+
+
+          return  verifyPendingDeposits(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyPendingDepositsMutationResult = NonNullable<Awaited<ReturnType<typeof verifyPendingDeposits>>>
+
+    export type VerifyPendingDepositsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Auto-verify all pending deposits for the logged-in user
+ */
+export const useVerifyPendingDeposits = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyPendingDeposits>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyPendingDeposits>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getVerifyPendingDepositsMutationOptions(options));
     }
 
 export const getVerifyDepositUrl = (reference: string,) => {
