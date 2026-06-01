@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/components/theme-provider";
 import {
   Bell, Moon, Sun, Home, CheckSquare, TrendingUp,
-  Wallet, Users, MoreHorizontal, ChevronDown, Search, Settings
+  Wallet, Users, MoreHorizontal, ChevronDown, Search, Settings, BarChart2
 } from "lucide-react";
 import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
 import { useState } from "react";
@@ -12,7 +12,7 @@ import { useState } from "react";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/leaderboard", label: "Leaderboard", icon: TrendingUp },
+  { href: "/binary", label: "Binary", icon: BarChart2 },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/referrals", label: "Referrals", icon: Users },
   { href: "/notifications", label: "More", icon: MoreHorizontal },
@@ -37,9 +37,7 @@ function TopHeader() {
 
   const effectiveTheme =
     theme === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
       : theme;
 
   return (
@@ -62,18 +60,11 @@ function TopHeader() {
         className="p-1.5 shrink-0 text-muted-foreground"
         onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
       >
-        {effectiveTheme === "dark" ? (
-          <Sun className="w-5 h-5" />
-        ) : (
-          <Moon className="w-5 h-5" />
-        )}
+        {effectiveTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
       <div className="relative shrink-0">
-        <button
-          className="flex items-center gap-1.5"
-          onClick={() => setMenuOpen((o) => !o)}
-        >
+        <button className="flex items-center gap-1.5" onClick={() => setMenuOpen((o) => !o)}>
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">
             {user?.name?.charAt(0).toUpperCase() ?? "U"}
           </div>
@@ -115,7 +106,7 @@ function BottomNav() {
   const [location] = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
       <div className="flex items-center justify-around h-16">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive =
@@ -141,13 +132,7 @@ function BottomNav() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
-  const [location, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (!isLoading && !user && !location.startsWith("/auth") && location !== "/") {
-      setLocation("/auth/login");
-    }
-  }, [user, isLoading, location, setLocation]);
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -157,10 +142,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAuthPage = location.startsWith("/auth") || location === "/" || location === "/quiz";
+  const isAuthPage = location.startsWith("/auth") || location === "/quiz";
 
-  if (!user || isAuthPage) {
+  if (isAuthPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
