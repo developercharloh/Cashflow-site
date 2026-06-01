@@ -29,9 +29,12 @@ import type {
   AnnouncementInput,
   AuthResponse,
   BanUserInput,
+  Bank,
   ChartDataPoint,
   CheckInResult,
   DashboardStats,
+  DepositInitInput,
+  DepositInitResponse,
   ForgotPasswordInput,
   GetLeaderboardParams,
   GetTasksParams,
@@ -42,6 +45,8 @@ import type {
   MembershipLevel,
   MessageResponse,
   Notification,
+  PaystackTransferResult,
+  PaystackWithdrawInput,
   QuizQuestion,
   QuizResult,
   QuizSubmission,
@@ -1714,6 +1719,372 @@ export const useRequestWithdrawal = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRequestWithdrawalMutationOptions(options));
+    }
+
+export const getInitializeDepositUrl = () => {
+
+
+
+
+  return `/api/paystack/deposit/initialize`
+}
+
+/**
+ * @summary Initialize a Paystack deposit
+ */
+export const initializeDeposit = async (depositInitInput: DepositInitInput, options?: RequestInit): Promise<DepositInitResponse> => {
+
+  return customFetch<DepositInitResponse>(getInitializeDepositUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      depositInitInput,)
+  }
+);}
+
+
+
+
+export const getInitializeDepositMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeDeposit>>, TError,{data: BodyType<DepositInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof initializeDeposit>>, TError,{data: BodyType<DepositInitInput>}, TContext> => {
+
+const mutationKey = ['initializeDeposit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof initializeDeposit>>, {data: BodyType<DepositInitInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  initializeDeposit(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InitializeDepositMutationResult = NonNullable<Awaited<ReturnType<typeof initializeDeposit>>>
+    export type InitializeDepositMutationBody = BodyType<DepositInitInput>
+    export type InitializeDepositMutationError = ErrorType<void>
+
+    /**
+ * @summary Initialize a Paystack deposit
+ */
+export const useInitializeDeposit = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeDeposit>>, TError,{data: BodyType<DepositInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof initializeDeposit>>,
+        TError,
+        {data: BodyType<DepositInitInput>},
+        TContext
+      > => {
+      return useMutation(getInitializeDepositMutationOptions(options));
+    }
+
+export const getVerifyDepositUrl = (reference: string,) => {
+
+
+
+
+  return `/api/paystack/deposit/verify/${reference}`
+}
+
+/**
+ * @summary Verify a Paystack deposit by reference
+ */
+export const verifyDeposit = async (reference: string, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getVerifyDepositUrl(reference),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getVerifyDepositQueryKey = (reference: string,) => {
+    return [
+    `/api/paystack/deposit/verify/${reference}`
+    ] as const;
+    }
+
+
+export const getVerifyDepositQueryOptions = <TData = Awaited<ReturnType<typeof verifyDeposit>>, TError = ErrorType<void>>(reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof verifyDeposit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getVerifyDepositQueryKey(reference);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof verifyDeposit>>> = ({ signal }) => verifyDeposit(reference, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(reference), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof verifyDeposit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type VerifyDepositQueryResult = NonNullable<Awaited<ReturnType<typeof verifyDeposit>>>
+export type VerifyDepositQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verify a Paystack deposit by reference
+ */
+
+export function useVerifyDeposit<TData = Awaited<ReturnType<typeof verifyDeposit>>, TError = ErrorType<void>>(
+ reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof verifyDeposit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getVerifyDepositQueryOptions(reference,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPaystackWithdrawUrl = () => {
+
+
+
+
+  return `/api/paystack/withdraw`
+}
+
+/**
+ * @summary Initiate a Paystack bank transfer withdrawal
+ */
+export const paystackWithdraw = async (paystackWithdrawInput: PaystackWithdrawInput, options?: RequestInit): Promise<PaystackTransferResult> => {
+
+  return customFetch<PaystackTransferResult>(getPaystackWithdrawUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paystackWithdrawInput,)
+  }
+);}
+
+
+
+
+export const getPaystackWithdrawMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWithdraw>>, TError,{data: BodyType<PaystackWithdrawInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paystackWithdraw>>, TError,{data: BodyType<PaystackWithdrawInput>}, TContext> => {
+
+const mutationKey = ['paystackWithdraw'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paystackWithdraw>>, {data: BodyType<PaystackWithdrawInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  paystackWithdraw(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaystackWithdrawMutationResult = NonNullable<Awaited<ReturnType<typeof paystackWithdraw>>>
+    export type PaystackWithdrawMutationBody = BodyType<PaystackWithdrawInput>
+    export type PaystackWithdrawMutationError = ErrorType<void>
+
+    /**
+ * @summary Initiate a Paystack bank transfer withdrawal
+ */
+export const usePaystackWithdraw = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWithdraw>>, TError,{data: BodyType<PaystackWithdrawInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof paystackWithdraw>>,
+        TError,
+        {data: BodyType<PaystackWithdrawInput>},
+        TContext
+      > => {
+      return useMutation(getPaystackWithdrawMutationOptions(options));
+    }
+
+export const getGetBanksUrl = () => {
+
+
+
+
+  return `/api/paystack/banks`
+}
+
+/**
+ * @summary List supported banks for withdrawal
+ */
+export const getBanks = async ( options?: RequestInit): Promise<Bank[]> => {
+
+  return customFetch<Bank[]>(getGetBanksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBanksQueryKey = () => {
+    return [
+    `/api/paystack/banks`
+    ] as const;
+    }
+
+
+export const getGetBanksQueryOptions = <TData = Awaited<ReturnType<typeof getBanks>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBanks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBanksQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBanks>>> = ({ signal }) => getBanks({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBanks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBanksQueryResult = NonNullable<Awaited<ReturnType<typeof getBanks>>>
+export type GetBanksQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List supported banks for withdrawal
+ */
+
+export function useGetBanks<TData = Awaited<ReturnType<typeof getBanks>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBanks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBanksQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPaystackWebhookUrl = () => {
+
+
+
+
+  return `/api/paystack/webhook`
+}
+
+/**
+ * @summary Paystack webhook receiver
+ */
+export const paystackWebhook = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getPaystackWebhookUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPaystackWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext> => {
+
+const mutationKey = ['paystackWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paystackWebhook>>, void> = () => {
+
+
+          return  paystackWebhook(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaystackWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof paystackWebhook>>>
+
+    export type PaystackWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Paystack webhook receiver
+ */
+export const usePaystackWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof paystackWebhook>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPaystackWebhookMutationOptions(options));
     }
 
 export const getGetReferralInfoUrl = () => {

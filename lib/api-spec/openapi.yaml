@@ -419,6 +419,94 @@ paths:
         "400":
           description: Insufficient balance
 
+  # ─── PAYSTACK ────────────────────────────────────────────────────────────────
+  /paystack/deposit/initialize:
+    post:
+      operationId: initializeDeposit
+      tags: [wallet]
+      summary: Initialize a Paystack deposit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositInitInput"
+      responses:
+        "200":
+          description: Authorization URL returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositInitResponse"
+        "400":
+          description: Validation error
+
+  /paystack/deposit/verify/{reference}:
+    get:
+      operationId: verifyDeposit
+      tags: [wallet]
+      summary: Verify a Paystack deposit by reference
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deposit verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Not successful
+
+  /paystack/withdraw:
+    post:
+      operationId: paystackWithdraw
+      tags: [wallet]
+      summary: Initiate a Paystack bank transfer withdrawal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaystackWithdrawInput"
+      responses:
+        "200":
+          description: Transfer initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaystackTransferResult"
+        "400":
+          description: Insufficient balance or bad input
+
+  /paystack/banks:
+    get:
+      operationId: getBanks
+      tags: [wallet]
+      summary: List supported banks for withdrawal
+      responses:
+        "200":
+          description: List of banks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bank"
+
+  /paystack/webhook:
+    post:
+      operationId: paystackWebhook
+      tags: [wallet]
+      summary: Paystack webhook receiver
+      responses:
+        "200":
+          description: OK
+
   # ─── REFERRALS ───────────────────────────────────────────────────────────────
   /referrals:
     get:
@@ -1144,6 +1232,61 @@ components:
         method:
           type: string
         accountDetails:
+          type: string
+
+    DepositInitInput:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+
+    DepositInitResponse:
+      type: object
+      required: [authorizationUrl, accessCode, reference]
+      properties:
+        authorizationUrl:
+          type: string
+        accessCode:
+          type: string
+        reference:
+          type: string
+
+    PaystackWithdrawInput:
+      type: object
+      required: [amount, bankCode, accountNumber, accountName]
+      properties:
+        amount:
+          type: number
+        bankCode:
+          type: string
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+
+    PaystackTransferResult:
+      type: object
+      required: [id, status, amount, description]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        transferCode:
+          type: ["string", "null"]
+
+    Bank:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+        code:
           type: string
 
     # ── Referrals ─────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import referralsRouter from "./referrals";
 import notificationsRouter from "./notifications";
 import leaderboardRouter from "./leaderboard";
 import adminRouter from "./admin";
+import paystackRouter from "./paystack";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(referralsRouter);
 router.use(notificationsRouter);
 router.use(leaderboardRouter);
 router.use(adminRouter);
+router.use(paystackRouter);
 
 export default router;

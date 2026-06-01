@@ -361,6 +361,61 @@ export const RequestWithdrawalResponse = zod.object({
 
 
 /**
+ * @summary Initialize a Paystack deposit
+ */
+export const InitializeDepositBody = zod.object({
+  "amount": zod.number()
+})
+
+export const InitializeDepositResponse = zod.object({
+  "authorizationUrl": zod.string(),
+  "accessCode": zod.string(),
+  "reference": zod.string()
+})
+
+
+/**
+ * @summary Verify a Paystack deposit by reference
+ */
+export const VerifyDepositParams = zod.object({
+  "reference": zod.coerce.string()
+})
+
+export const VerifyDepositResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Initiate a Paystack bank transfer withdrawal
+ */
+export const PaystackWithdrawBody = zod.object({
+  "amount": zod.number(),
+  "bankCode": zod.string(),
+  "accountNumber": zod.string(),
+  "accountName": zod.string()
+})
+
+export const PaystackWithdrawResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "amount": zod.number(),
+  "description": zod.string(),
+  "transferCode": zod.string().nullish()
+})
+
+
+/**
+ * @summary List supported banks for withdrawal
+ */
+export const GetBanksResponseItem = zod.object({
+  "name": zod.string(),
+  "code": zod.string()
+})
+export const GetBanksResponse = zod.array(GetBanksResponseItem)
+
+
+/**
  * @summary Get user's referral info and stats
  */
 export const GetReferralInfoResponse = zod.object({

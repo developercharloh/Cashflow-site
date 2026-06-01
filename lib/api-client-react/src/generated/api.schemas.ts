@@ -219,6 +219,37 @@ export interface WithdrawalInput {
   accountDetails: string;
 }
 
+export interface DepositInitInput {
+  amount: number;
+}
+
+export interface DepositInitResponse {
+  authorizationUrl: string;
+  accessCode: string;
+  reference: string;
+}
+
+export interface PaystackWithdrawInput {
+  amount: number;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+}
+
+export interface PaystackTransferResult {
+  id: number;
+  status: string;
+  amount: number;
+  description: string;
+  /** @nullable */
+  transferCode?: string | null;
+}
+
+export interface Bank {
+  name: string;
+  code: string;
+}
+
 export interface ReferralInfo {
   referralCode: string;
   referralLink: string;
