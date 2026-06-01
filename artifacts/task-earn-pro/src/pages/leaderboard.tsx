@@ -60,8 +60,8 @@ function LeaderboardEntry({ entry, type }: { entry: any; type: string }) {
 }
 
 export default function Leaderboard() {
-  const [type, setType] = useState("earners");
-  const [period, setPeriod] = useState("alltime");
+  const [type, setType] = useState<"earners" | "referrers" | "completers">("earners");
+  const [period, setPeriod] = useState<"weekly" | "monthly" | "alltime">("alltime");
 
   const { data: entries, isLoading } = useGetLeaderboard(
     { type, period },
@@ -76,7 +76,7 @@ export default function Leaderboard() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <Tabs value={type} onValueChange={setType} className="flex-1">
+        <Tabs value={type} onValueChange={(v) => setType(v as typeof type)} className="flex-1">
           <TabsList className="w-full">
             {TYPE_OPTIONS.map(opt => (
               <TabsTrigger key={opt.value} value={opt.value} className="flex-1 gap-2 text-xs sm:text-sm">
@@ -85,7 +85,7 @@ export default function Leaderboard() {
             ))}
           </TabsList>
         </Tabs>
-        <Tabs value={period} onValueChange={setPeriod}>
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
           <TabsList>
             {PERIOD_OPTIONS.map(opt => (
               <TabsTrigger key={opt.value} value={opt.value} className="text-xs sm:text-sm">{opt.label}</TabsTrigger>

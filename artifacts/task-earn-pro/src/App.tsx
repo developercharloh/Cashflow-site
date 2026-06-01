@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,11 +7,9 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppLayout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
-import VerifyEmail from "@/pages/auth/verify-email";
 import Quiz from "@/pages/quiz";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
@@ -34,15 +33,20 @@ const queryClient = new QueryClient({
   },
 });
 
+function RedirectToLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/auth/login"); }, [setLocation]);
+  return null;
+}
+
 function Router() {
   return (
     <AppLayout>
       <Switch>
-        <Route path="/" component={Landing} />
+        <Route path="/" component={RedirectToLogin} />
         <Route path="/auth/login" component={Login} />
         <Route path="/auth/register" component={Register} />
         <Route path="/auth/forgot-password" component={ForgotPassword} />
-        <Route path="/auth/verify-email" component={VerifyEmail} />
         <Route path="/quiz" component={Quiz} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/tasks" component={Tasks} />
@@ -65,7 +69,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="taskearn-theme">
+      <ThemeProvider defaultTheme="light" storageKey="taskearn-theme">
         <TooltipProvider>
           <AuthProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>

@@ -1,184 +1,175 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { ThemeProvider } from "@/components/theme-provider";
-import { 
-  LayoutDashboard, 
-  CheckSquare, 
-  Wallet, 
-  Users, 
-  Trophy, 
-  Star, 
-  Bell, 
-  Settings,
-  LogOut,
-  Menu,
-  X
+import { useTheme } from "@/components/theme-provider";
+import {
+  Bell, Moon, Sun, Home, CheckSquare, TrendingUp,
+  Wallet, Users, MoreHorizontal, ChevronDown, Search, Settings
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
 import { useState } from "react";
-import { useLogout } from "@workspace/api-client-react";
 
-export function Sidebar({ isMobileOpen, setIsMobileOpen }: { isMobileOpen: boolean, setIsMobileOpen: (open: boolean) => void }) {
-  const [location] = useLocation();
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/leaderboard", label: "Leaderboard", icon: TrendingUp },
+  { href: "/wallet", label: "Wallet", icon: Wallet },
+  { href: "/referrals", label: "Referrals", icon: Users },
+  { href: "/notifications", label: "More", icon: MoreHorizontal },
+];
+
+function TopHeader() {
   const { user, logout } = useAuth();
   const logoutMutation = useLogout();
+  const { theme, setTheme } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
-  const links = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/tasks", label: "Tasks", icon: CheckSquare },
-    { href: "/wallet", label: "Wallet", icon: Wallet },
-    { href: "/referrals", label: "Referrals", icon: Users },
-    { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/membership", label: "Membership", icon: Star },
-    { href: "/notifications", label: "Notifications", icon: Bell },
-  ];
+  const { data: notifications } = useGetNotifications({
+    query: { ...getGetNotificationsQueryOptions(), enabled: !!user },
+  });
+  const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        logout();
-      }
-    });
+    setMenuOpen(false);
+    logoutMutation.mutate(undefined, { onSuccess: logout });
   };
 
+  const effectiveTheme =
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme;
+
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-14 flex items-center px-3 gap-2">
+      <div className="flex-1 bg-muted rounded-full flex items-center px-3 py-1.5 gap-2">
+        <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-xs text-muted-foreground truncate">Search tasks, users, categories...</span>
+      </div>
 
-      {/* Sidebar */}
-      <aside className={`
-        fixed top-0 left-0 z-50 h-screen w-64 flex flex-col 
-        bg-card border-r border-border transition-transform duration-300
-        lg:translate-x-0
-        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-      `}>
-        <div className="p-6 flex items-center justify-between">
-          <Link href="/dashboard" className="text-xl font-bold text-primary flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
-              T
-            </div>
-            TaskEarn
-          </Link>
-          <button className="lg:hidden" onClick={() => setIsMobileOpen(false)}>
-            <X className="w-6 h-6 text-muted-foreground" />
-          </button>
-        </div>
+      <Link href="/notifications" className="relative p-1.5 shrink-0">
+        <Bell className="w-5 h-5 text-muted-foreground" />
+        {unreadCount > 0 && (
+          <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </Link>
 
-        <div className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
-          {links.map((link) => {
-            const Icon = link.icon;
-            const isActive = location === link.href;
-            return (
-              <Link 
-                key={link.href} 
-                href={link.href}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors
-                  ${isActive 
-                    ? "bg-primary/10 text-primary font-medium" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }
-                `}
-                onClick={() => setIsMobileOpen(false)}
-              >
-                <Icon className="w-5 h-5" />
-                {link.label}
-              </Link>
-            );
-          })}
-          
-          {user?.isAdmin && (
-            <Link 
-              href="/admin"
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors mt-4
-                ${location.startsWith("/admin") 
-                  ? "bg-primary/10 text-primary font-medium" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }
-              `}
-              onClick={() => setIsMobileOpen(false)}
-            >
-              <Settings className="w-5 h-5" />
-              Admin Panel
-            </Link>
-          )}
-        </div>
+      <button
+        className="p-1.5 shrink-0 text-muted-foreground"
+        onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
+      >
+        {effectiveTheme === "dark" ? (
+          <Sun className="w-5 h-5" />
+        ) : (
+          <Moon className="w-5 h-5" />
+        )}
+      </button>
 
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <div className="text-sm font-medium truncate">{user?.name}</div>
-              <div className="text-xs text-muted-foreground truncate">{user?.levelName || 'Explorer'}</div>
-            </div>
+      <div className="relative shrink-0">
+        <button
+          className="flex items-center gap-1.5"
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">
+            {user?.name?.charAt(0).toUpperCase() ?? "U"}
           </div>
-          <Button variant="outline" className="w-full justify-start gap-2" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
-        </div>
-      </aside>
-    </>
+          <span className="text-sm font-semibold hidden sm:block max-w-[80px] truncate">
+            {user?.name ?? "User"}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
+        </button>
+
+        {menuOpen && (
+          <div className="absolute right-0 top-full mt-1 w-44 bg-background border border-border rounded-xl shadow-xl py-1 z-50">
+            <div className="px-3 py-2 border-b border-border">
+              <p className="text-sm font-semibold truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{user?.levelName ?? "Explorer"}</p>
+            </div>
+            {user?.isAdmin && (
+              <button
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                onClick={() => { setMenuOpen(false); setLocation("/admin"); }}
+              >
+                <Settings className="w-4 h-4" />
+                Admin Panel
+              </button>
+            )}
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-muted"
+              onClick={handleLogout}
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function BottomNav() {
+  const [location] = useLocation();
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-bottom">
+      <div className="flex items-center justify-around h-16">
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive =
+            location === href ||
+            (href === "/dashboard" && (location === "/" || location === "/dashboard"));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex flex-col items-center gap-0.5 py-1 flex-1 transition-colors ${
+                isActive ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[9px] font-medium leading-none">{label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { user, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // Redirect to login if not authenticated and trying to access protected route
   useEffect(() => {
-    if (!isLoading && !user && !location.startsWith('/auth') && location !== '/') {
-      setLocation('/auth/login');
+    if (!isLoading && !user && !location.startsWith("/auth") && location !== "/") {
+      setLocation("/auth/login");
     }
   }, [user, isLoading, location, setLocation]);
 
   if (isLoading) {
-    return <div className="h-screen w-full flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  // Not authenticated layouts (Landing, Auth)
-  if (!user || location === '/' || location.startsWith('/auth') || location === '/quiz') {
+  const isAuthPage = location.startsWith("/auth") || location === "/" || location === "/quiz";
+
+  if (!user || isAuthPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  // Authenticated Dashboard Layout
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-      
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30 flex items-center px-4 lg:px-8">
-          <button 
-            className="lg:hidden mr-4 p-2 -ml-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setIsMobileOpen(true)}
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          
-          <div className="ml-auto flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-full text-sm font-medium">
-              <span className="text-muted-foreground">Balance:</span>
-              <span className="text-success">${user?.balance?.toFixed(2) || '0.00'}</span>
-            </div>
-          </div>
-        </header>
-        
-        <main className="flex-1 p-4 lg:p-8">
-          {children}
-        </main>
-      </div>
+    <div className="min-h-screen bg-background">
+      <TopHeader />
+      <main className="pt-14 pb-20">
+        {children}
+      </main>
+      <BottomNav />
     </div>
   );
 }

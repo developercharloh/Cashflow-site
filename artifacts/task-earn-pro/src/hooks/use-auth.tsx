@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useGetMe, User } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryOptions, User } from "@workspace/api-client-react";
 
 interface AuthContextType {
   user: User | null;
@@ -14,10 +14,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem("token"));
   
   const { data: user, isLoading: isUserLoading, refetch } = useGetMe({
-    query: {
-      enabled: !!token,
-      retry: false,
-    }
+    query: { ...getGetMeQueryOptions(), enabled: !!token, retry: false },
   });
 
   useEffect(() => {
