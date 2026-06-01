@@ -30,6 +30,8 @@ export const usersTable = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   isBanned: boolean("is_banned").notNull().default(false),
   quizCompleted: boolean("quiz_completed").notNull().default(false),
+  transcriptionMinutes: real("transcription_minutes").notNull().default(0),
+  membershipPurchased: boolean("membership_purchased").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -8,8 +8,11 @@ export const tasksTable = pgTable("tasks", {
   description: text("description").notNull(),
   instructions: text("instructions"),
   category: text("category").notNull(),
+  taskType: text("task_type").notNull().default("standard"), // standard | transcription
   reward: real("reward").notNull(),
   estimatedMinutes: integer("estimated_minutes").notNull(),
+  timeLimitSeconds: integer("time_limit_seconds"), // null = no timer
+  minutesCost: real("minutes_cost"), // for transcription tasks
   difficulty: text("difficulty").notNull().default("easy"),
   minLevel: integer("min_level").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),

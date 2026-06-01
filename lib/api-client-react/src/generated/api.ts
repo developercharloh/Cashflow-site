@@ -30,6 +30,7 @@ import type {
   AuthResponse,
   BanUserInput,
   Bank,
+  BuyMinutesInput,
   ChartDataPoint,
   CheckInResult,
   DashboardStats,
@@ -62,6 +63,7 @@ import type {
   TaskInput,
   TaskUpdate,
   Transaction,
+  UpgradeInitInput,
   User,
   UserTask,
   VerifyEmailInput,
@@ -2087,6 +2089,225 @@ export function useGetBanks<TData = Awaited<ReturnType<typeof getBanks>>, TError
 
 
 
+
+export const getInitializeUpgradeUrl = () => {
+
+
+
+
+  return `/api/paystack/upgrade/initialize`
+}
+
+/**
+ * @summary Initialize Paystack payment to upgrade membership
+ */
+export const initializeUpgrade = async (upgradeInitInput: UpgradeInitInput, options?: RequestInit): Promise<DepositInitResponse> => {
+
+  return customFetch<DepositInitResponse>(getInitializeUpgradeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      upgradeInitInput,)
+  }
+);}
+
+
+
+
+export const getInitializeUpgradeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeUpgrade>>, TError,{data: BodyType<UpgradeInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof initializeUpgrade>>, TError,{data: BodyType<UpgradeInitInput>}, TContext> => {
+
+const mutationKey = ['initializeUpgrade'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof initializeUpgrade>>, {data: BodyType<UpgradeInitInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  initializeUpgrade(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InitializeUpgradeMutationResult = NonNullable<Awaited<ReturnType<typeof initializeUpgrade>>>
+    export type InitializeUpgradeMutationBody = BodyType<UpgradeInitInput>
+    export type InitializeUpgradeMutationError = ErrorType<void>
+
+    /**
+ * @summary Initialize Paystack payment to upgrade membership
+ */
+export const useInitializeUpgrade = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeUpgrade>>, TError,{data: BodyType<UpgradeInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof initializeUpgrade>>,
+        TError,
+        {data: BodyType<UpgradeInitInput>},
+        TContext
+      > => {
+      return useMutation(getInitializeUpgradeMutationOptions(options));
+    }
+
+export const getVerifyUpgradeUrl = (reference: string,) => {
+
+
+
+
+  return `/api/paystack/upgrade/verify/${reference}`
+}
+
+/**
+ * @summary Verify membership upgrade payment
+ */
+export const verifyUpgrade = async (reference: string, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getVerifyUpgradeUrl(reference),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getVerifyUpgradeQueryKey = (reference: string,) => {
+    return [
+    `/api/paystack/upgrade/verify/${reference}`
+    ] as const;
+    }
+
+
+export const getVerifyUpgradeQueryOptions = <TData = Awaited<ReturnType<typeof verifyUpgrade>>, TError = ErrorType<unknown>>(reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof verifyUpgrade>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getVerifyUpgradeQueryKey(reference);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof verifyUpgrade>>> = ({ signal }) => verifyUpgrade(reference, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(reference), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof verifyUpgrade>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type VerifyUpgradeQueryResult = NonNullable<Awaited<ReturnType<typeof verifyUpgrade>>>
+export type VerifyUpgradeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verify membership upgrade payment
+ */
+
+export function useVerifyUpgrade<TData = Awaited<ReturnType<typeof verifyUpgrade>>, TError = ErrorType<unknown>>(
+ reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof verifyUpgrade>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getVerifyUpgradeQueryOptions(reference,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBuyTranscriptionMinutesUrl = () => {
+
+
+
+
+  return `/api/paystack/transcription/buy`
+}
+
+/**
+ * @summary Buy transcription minutes via Paystack
+ */
+export const buyTranscriptionMinutes = async (buyMinutesInput: BuyMinutesInput, options?: RequestInit): Promise<DepositInitResponse> => {
+
+  return customFetch<DepositInitResponse>(getBuyTranscriptionMinutesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      buyMinutesInput,)
+  }
+);}
+
+
+
+
+export const getBuyTranscriptionMinutesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyTranscriptionMinutes>>, TError,{data: BodyType<BuyMinutesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof buyTranscriptionMinutes>>, TError,{data: BodyType<BuyMinutesInput>}, TContext> => {
+
+const mutationKey = ['buyTranscriptionMinutes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof buyTranscriptionMinutes>>, {data: BodyType<BuyMinutesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  buyTranscriptionMinutes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BuyTranscriptionMinutesMutationResult = NonNullable<Awaited<ReturnType<typeof buyTranscriptionMinutes>>>
+    export type BuyTranscriptionMinutesMutationBody = BodyType<BuyMinutesInput>
+    export type BuyTranscriptionMinutesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Buy transcription minutes via Paystack
+ */
+export const useBuyTranscriptionMinutes = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyTranscriptionMinutes>>, TError,{data: BodyType<BuyMinutesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof buyTranscriptionMinutes>>,
+        TError,
+        {data: BodyType<BuyMinutesInput>},
+        TContext
+      > => {
+      return useMutation(getBuyTranscriptionMinutesMutationOptions(options));
+    }
 
 export const getPaystackWebhookUrl = () => {
 

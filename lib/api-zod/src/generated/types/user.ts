@@ -26,5 +26,7 @@ export interface User {
   isAdmin: boolean;
   quizCompleted: boolean;
   isBanned?: boolean;
+  transcriptionMinutes?: number;
+  membershipPurchased?: boolean;
   createdAt: string;
 }

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
 
@@ -50,7 +50,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
 
 router.get("/tasks/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task) { res.status(404).json({ error: "Task not found" }); return; }
     res.json(task);
@@ -62,12 +62,26 @@ router.get("/tasks/:id", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task || !task.isActive) { res.status(404).json({ error: "Task not found" }); return; }
 
+    // Check transcription minutes
+    if (task.taskType === "transcription" && task.minutesCost) {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+      if (user.transcriptionMinutes < task.minutesCost) {
+        res.status(400).json({
+          error: `This task requires ${task.minutesCost} transcription minutes. You have ${user.transcriptionMinutes.toFixed(1)} minutes. Please purchase more.`,
+          requiresMinutes: true,
+          minutesNeeded: task.minutesCost,
+        });
+        return;
+      }
+    }
+
     const [existing] = await db.select().from(userTasksTable)
       .where(and(eq(userTasksTable.userId, req.userId!), eq(userTasksTable.taskId, id)));
+    if (existing?.status === "completed") { res.status(400).json({ error: "Task already completed" }); return; }
     if (existing) { res.json(existing); return; }
 
     const [ut] = await db.insert(userTasksTable).values({
@@ -75,7 +89,7 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
       taskId: id,
       status: "started",
     }).returning();
-    res.json(ut);
+    res.json({ ...ut, timeLimitSeconds: task.timeLimitSeconds });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -84,7 +98,7 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task) { res.status(404).json({ error: "Task not found" }); return; }
 
@@ -97,6 +111,27 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
       .where(and(eq(userTasksTable.userId, req.userId!), eq(userTasksTable.taskId, id), eq(userTasksTable.status, "completed")));
     if (existing) {
       res.status(400).json({ error: "Task already completed" }); return;
+    }
+
+    // Validate time limit
+    const [inProgress] = await db.select().from(userTasksTable)
+      .where(and(eq(userTasksTable.userId, req.userId!), eq(userTasksTable.taskId, id)));
+    if (inProgress && task.timeLimitSeconds) {
+      const elapsed = (Date.now() - new Date(inProgress.startedAt).getTime()) / 1000;
+      if (elapsed > task.timeLimitSeconds + 30) { // 30s grace
+        res.status(400).json({ error: "Time limit exceeded. Task expired." });
+        return;
+      }
+    }
+
+    // Deduct transcription minutes
+    if (task.taskType === "transcription" && task.minutesCost) {
+      if (user.transcriptionMinutes < task.minutesCost) {
+        res.status(400).json({ error: "Insufficient transcription minutes" }); return;
+      }
+      await db.update(usersTable).set({
+        transcriptionMinutes: user.transcriptionMinutes - task.minutesCost,
+      }).where(eq(usersTable.id, req.userId!));
     }
 
     const reward = task.reward;
@@ -159,10 +194,7 @@ router.post("/tasks/daily-checkin", requireAuth, async (req: AuthRequest, res) =
     if (user.lastCheckIn) {
       const lastDate = new Date(user.lastCheckIn);
       const sameDay = lastDate.toDateString() === now.toDateString();
-      if (sameDay) {
-        res.status(400).json({ error: "Already checked in today" });
-        return;
-      }
+      if (sameDay) { res.status(400).json({ error: "Already checked in today" }); return; }
     }
 
     const yesterday = new Date(now);

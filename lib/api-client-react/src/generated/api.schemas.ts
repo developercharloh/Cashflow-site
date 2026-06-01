@@ -60,6 +60,8 @@ export interface User {
   isAdmin: boolean;
   quizCompleted: boolean;
   isBanned?: boolean;
+  transcriptionMinutes?: number;
+  membershipPurchased?: boolean;
   createdAt: string;
 }
 
@@ -122,8 +124,13 @@ export interface Task {
   title: string;
   description: string;
   category: string;
+  taskType: string;
   reward: number;
   estimatedMinutes: number;
+  /** @nullable */
+  timeLimitSeconds?: number | null;
+  /** @nullable */
+  minutesCost?: number | null;
   difficulty: string;
   minLevel: number;
   isActive: boolean;
@@ -227,6 +234,14 @@ export type VerifyPendingResultCreditedItem = {
 export interface VerifyPendingResult {
   count: number;
   credited?: VerifyPendingResultCreditedItem[];
+}
+
+export interface UpgradeInitInput {
+  targetLevel: number;
+}
+
+export interface BuyMinutesInput {
+  package: string;
 }
 
 export interface DepositInitInput {

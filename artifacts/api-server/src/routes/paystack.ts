@@ -327,9 +327,8 @@ router.post("/paystack/webhook", async (req, res) => {
 
   if (event.event === "charge.success") {
     const reference = event.data.reference;
-    const amountUsd = event.data.metadata?.amountUsd ?? event.data.amount / 100;
-    const userId = event.data.metadata?.userId;
-
+    const meta = event.data.metadata ?? {};
+    const userId = meta.userId;
     if (!userId) { res.sendStatus(200); return; }
 
     const existing = await db.select().from(transactionsTable)
@@ -339,6 +338,37 @@ router.post("/paystack/webhook", async (req, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) { res.sendStatus(200); return; }
 
+    // Membership upgrade
+    if (meta.type === "upgrade") {
+      const targetLevel = Number(meta.targetLevel);
+      if (targetLevel && user.level < targetLevel) {
+        await db.update(usersTable).set({ level: targetLevel, membershipPurchased: true }).where(eq(usersTable.id, userId));
+        if (existing[0]) await db.update(transactionsTable).set({ status: "completed" }).where(eq(transactionsTable.id, existing[0].id));
+        const pkgName = meta.packageName ?? "new tier";
+        await db.insert(notificationsTable).values({
+          userId, type: "level_up", title: `Welcome to ${pkgName}!`,
+          message: `Your membership has been upgraded to ${pkgName}. Enjoy your new perks!`,
+        });
+      }
+      res.sendStatus(200); return;
+    }
+
+    // Transcription minutes purchase
+    if (meta.type === "transcription_minutes") {
+      const minutes = Number(meta.minutes);
+      if (minutes > 0) {
+        await db.update(usersTable).set({ transcriptionMinutes: user.transcriptionMinutes + minutes }).where(eq(usersTable.id, userId));
+        if (existing[0]) await db.update(transactionsTable).set({ status: "completed" }).where(eq(transactionsTable.id, existing[0].id));
+        await db.insert(notificationsTable).values({
+          userId, type: "deposit", title: "Transcription Minutes Added",
+          message: `${minutes} transcription minutes have been added to your account.`,
+        });
+      }
+      res.sendStatus(200); return;
+    }
+
+    // Standard deposit
+    const amountUsd = meta.amountUsd ?? event.data.amount / 100;
     await db.update(usersTable).set({
       balance: user.balance + amountUsd,
       totalEarned: user.totalEarned + amountUsd,
@@ -350,9 +380,7 @@ router.post("/paystack/webhook", async (req, res) => {
     }
 
     await db.insert(notificationsTable).values({
-      userId,
-      type: "deposit",
-      title: "Deposit Successful",
+      userId, type: "deposit", title: "Deposit Successful",
       message: `$${Number(amountUsd).toFixed(2)} has been added to your wallet.`,
     });
   }
@@ -403,5 +431,160 @@ router.post("/paystack/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-export { PUBLIC_KEY };
+// ─── Upgrade packages ─────────────────────────────────────────────────────────
+const UPGRADE_PACKAGES: Record<number, { name: string; price: number }> = {
+  2: { name: "Builder",      price: 20  },
+  3: { name: "Professional", price: 50  },
+  4: { name: "Elite",        price: 100 },
+};
+
+// ─── Transcription minute bundles ─────────────────────────────────────────────
+const MINUTE_BUNDLES: Record<string, { minutes: number; price: number; label: string }> = {
+  starter:  { minutes: 10,  price: 2,  label: "10 min – $2"  },
+  basic:    { minutes: 30,  price: 5,  label: "30 min – $5"  },
+  standard: { minutes: 60,  price: 9,  label: "60 min – $9"  },
+  premium:  { minutes: 120, price: 15, label: "120 min – $15" },
+};
+
+// ─── Initialize membership upgrade payment ────────────────────────────────────
+router.post("/paystack/upgrade/initialize", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { targetLevel } = req.body;
+    const pkg = UPGRADE_PACKAGES[targetLevel];
+    if (!pkg) { res.status(400).json({ error: "Invalid target level" }); return; }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    if (user.level >= targetLevel) { res.status(400).json({ error: "Already at this level or higher" }); return; }
+
+    const reference = `upg_${req.userId}_lvl${targetLevel}_${Date.now()}`;
+    const amountKobo = Math.round(pkg.price * 100);
+
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        amount: amountKobo,
+        reference,
+        callback_url: CALLBACK_URL,
+        metadata: { userId: req.userId, targetLevel, type: "upgrade", packageName: pkg.name },
+        channels: ["card", "bank", "ussd", "mobile_money"],
+      }),
+    });
+
+    const data = await response.json() as any;
+    if (!data.status) { res.status(400).json({ error: data.message ?? "Paystack error" }); return; }
+
+    await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      amount: pkg.price,
+      status: "pending",
+      description: `${pkg.name} membership upgrade – $${pkg.price}`,
+      method: "paystack_upgrade",
+      accountDetails: reference,
+    });
+
+    res.json({ authorizationUrl: data.data.authorization_url, accessCode: data.data.access_code, reference: data.data.reference });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Verify membership upgrade ────────────────────────────────────────────────
+router.get("/paystack/upgrade/verify/:reference", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { reference } = req.params;
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${SECRET_KEY}` },
+    });
+    const data = await response.json() as any;
+    if (!data.status || data.data.status !== "success") {
+      res.status(400).json({ error: "Payment not successful" }); return;
+    }
+
+    const meta = data.data.metadata;
+    const userId: number = Number(meta?.userId ?? req.userId);
+    const targetLevel: number = Number(meta?.targetLevel);
+    if (!targetLevel || !UPGRADE_PACKAGES[targetLevel]) {
+      res.status(400).json({ error: "Invalid upgrade metadata" }); return;
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (user.level >= targetLevel) { res.json({ message: "Already upgraded", alreadyApplied: true }); return; }
+
+    await db.update(usersTable).set({ level: targetLevel, membershipPurchased: true }).where(eq(usersTable.id, userId));
+
+    const existing = await db.select().from(transactionsTable)
+      .where(eq(transactionsTable.accountDetails, reference));
+    if (existing[0]) {
+      await db.update(transactionsTable).set({ status: "completed" }).where(eq(transactionsTable.id, existing[0].id));
+    }
+
+    await db.insert(notificationsTable).values({
+      userId,
+      type: "level_up",
+      title: `Welcome to ${UPGRADE_PACKAGES[targetLevel].name}!`,
+      message: `Your membership has been upgraded to ${UPGRADE_PACKAGES[targetLevel].name}. Enjoy your new perks!`,
+    });
+
+    res.json({ message: `Upgraded to ${UPGRADE_PACKAGES[targetLevel].name}`, newLevel: targetLevel });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Buy transcription minutes ────────────────────────────────────────────────
+router.post("/paystack/transcription/buy", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { package: pkg } = req.body;
+    const bundle = MINUTE_BUNDLES[pkg];
+    if (!bundle) { res.status(400).json({ error: "Invalid package. Choose: starter, basic, standard, premium" }); return; }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+    const reference = `txmin_${req.userId}_${pkg}_${Date.now()}`;
+    const amountKobo = Math.round(bundle.price * 100);
+
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        amount: amountKobo,
+        reference,
+        callback_url: CALLBACK_URL,
+        metadata: { userId: req.userId, minutes: bundle.minutes, price: bundle.price, type: "transcription_minutes", package: pkg },
+        channels: ["card", "bank", "ussd", "mobile_money"],
+      }),
+    });
+
+    const data = await response.json() as any;
+    if (!data.status) { res.status(400).json({ error: data.message ?? "Paystack error" }); return; }
+
+    await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      amount: bundle.price,
+      status: "pending",
+      description: `Transcription minutes – ${bundle.label}`,
+      method: "paystack_transcription",
+      accountDetails: reference,
+    });
+
+    res.json({ authorizationUrl: data.data.authorization_url, accessCode: data.data.access_code, reference: data.data.reference });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Webhook: handle upgrade + transcription events ───────────────────────────
+// (already handled in main webhook above via charge.success metadata.type)
+
+export { PUBLIC_KEY, UPGRADE_PACKAGES, MINUTE_BUNDLES };
 export default router;

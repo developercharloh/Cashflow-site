@@ -11,8 +11,13 @@ export interface Task {
   title: string;
   description: string;
   category: string;
+  taskType: string;
   reward: number;
   estimatedMinutes: number;
+  /** @nullable */
+  timeLimitSeconds?: number | null;
+  /** @nullable */
+  minutesCost?: number | null;
   difficulty: string;
   minLevel: number;
   isActive: boolean;

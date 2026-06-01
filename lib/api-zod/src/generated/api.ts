@@ -55,6 +55,8 @@ export const LoginResponse = zod.object({
   "isAdmin": zod.boolean(),
   "quizCompleted": zod.boolean(),
   "isBanned": zod.boolean().optional(),
+  "transcriptionMinutes": zod.number().optional(),
+  "membershipPurchased": zod.boolean().optional(),
   "createdAt": zod.string()
 }),
   "token": zod.string()
@@ -90,6 +92,8 @@ export const GetMeResponse = zod.object({
   "isAdmin": zod.boolean(),
   "quizCompleted": zod.boolean(),
   "isBanned": zod.boolean().optional(),
+  "transcriptionMinutes": zod.number().optional(),
+  "membershipPurchased": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 
@@ -213,8 +217,11 @@ export const GetTasksResponseItem = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.string(),
+  "taskType": zod.string(),
   "reward": zod.number(),
   "estimatedMinutes": zod.number(),
+  "timeLimitSeconds": zod.number().nullish(),
+  "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
   "isActive": zod.boolean(),
@@ -236,8 +243,11 @@ export const GetTaskResponse = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.string(),
+  "taskType": zod.string(),
   "reward": zod.number(),
   "estimatedMinutes": zod.number(),
+  "timeLimitSeconds": zod.number().nullish(),
+  "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
   "isActive": zod.boolean(),
@@ -428,6 +438,46 @@ export const GetBanksResponse = zod.array(GetBanksResponseItem)
 
 
 /**
+ * @summary Initialize Paystack payment to upgrade membership
+ */
+export const InitializeUpgradeBody = zod.object({
+  "targetLevel": zod.number()
+})
+
+export const InitializeUpgradeResponse = zod.object({
+  "authorizationUrl": zod.string(),
+  "accessCode": zod.string(),
+  "reference": zod.string()
+})
+
+
+/**
+ * @summary Verify membership upgrade payment
+ */
+export const VerifyUpgradeParams = zod.object({
+  "reference": zod.coerce.string()
+})
+
+export const VerifyUpgradeResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Buy transcription minutes via Paystack
+ */
+export const BuyTranscriptionMinutesBody = zod.object({
+  "package": zod.string()
+})
+
+export const BuyTranscriptionMinutesResponse = zod.object({
+  "authorizationUrl": zod.string(),
+  "accessCode": zod.string(),
+  "reference": zod.string()
+})
+
+
+/**
  * @summary Get user's referral info and stats
  */
 export const GetReferralInfoResponse = zod.object({
@@ -583,8 +633,11 @@ export const AdminGetTasksResponseItem = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.string(),
+  "taskType": zod.string(),
   "reward": zod.number(),
   "estimatedMinutes": zod.number(),
+  "timeLimitSeconds": zod.number().nullish(),
+  "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
   "isActive": zod.boolean(),
@@ -632,8 +685,11 @@ export const AdminUpdateTaskResponse = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.string(),
+  "taskType": zod.string(),
   "reward": zod.number(),
   "estimatedMinutes": zod.number(),
+  "timeLimitSeconds": zod.number().nullish(),
+  "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
   "isActive": zod.boolean(),

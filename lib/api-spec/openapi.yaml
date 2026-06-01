@@ -511,6 +511,65 @@ paths:
                 items:
                   $ref: "#/components/schemas/Bank"
 
+  /paystack/upgrade/initialize:
+    post:
+      operationId: initializeUpgrade
+      tags: [wallet]
+      summary: Initialize Paystack payment to upgrade membership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpgradeInitInput"
+      responses:
+        "200":
+          description: Authorization URL returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositInitResponse"
+        "400":
+          description: Error
+
+  /paystack/upgrade/verify/{reference}:
+    get:
+      operationId: verifyUpgrade
+      tags: [wallet]
+      summary: Verify membership upgrade payment
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upgrade applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /paystack/transcription/buy:
+    post:
+      operationId: buyTranscriptionMinutes
+      tags: [wallet]
+      summary: Buy transcription minutes via Paystack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyMinutesInput"
+      responses:
+        "200":
+          description: Redirect URL for payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositInitResponse"
+
   /paystack/webhook:
     post:
       operationId: paystackWebhook
@@ -971,6 +1030,10 @@ components:
           type: boolean
         isBanned:
           type: boolean
+        transcriptionMinutes:
+          type: number
+        membershipPurchased:
+          type: boolean
         createdAt:
           type: string
 
@@ -1069,7 +1132,7 @@ components:
     # ── Tasks ─────────────────────────────────────────────────────────────────
     Task:
       type: object
-      required: [id, title, description, category, reward, estimatedMinutes, difficulty, minLevel, isActive]
+      required: [id, title, description, category, taskType, reward, estimatedMinutes, difficulty, minLevel, isActive]
       properties:
         id:
           type: integer
@@ -1079,10 +1142,16 @@ components:
           type: string
         category:
           type: string
+        taskType:
+          type: string
         reward:
           type: number
         estimatedMinutes:
           type: integer
+        timeLimitSeconds:
+          type: ["integer", "null"]
+        minutesCost:
+          type: ["number", "null"]
         difficulty:
           type: string
         minLevel:
@@ -1263,6 +1332,20 @@ components:
                 type: string
               amount:
                 type: number
+
+    UpgradeInitInput:
+      type: object
+      required: [targetLevel]
+      properties:
+        targetLevel:
+          type: integer
+
+    BuyMinutesInput:
+      type: object
+      required: [package]
+      properties:
+        package:
+          type: string
 
     DepositInitInput:
       type: object
