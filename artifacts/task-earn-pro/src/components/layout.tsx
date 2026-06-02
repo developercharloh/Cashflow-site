@@ -32,7 +32,9 @@ function TopHeader() {
 
   const handleLogout = () => {
     setMenuOpen(false);
-    logoutMutation.mutate(undefined, { onSuccess: logout });
+    logout();
+    setLocation("/auth/login");
+    logoutMutation.mutate(undefined);
   };
 
   const effectiveTheme =
