@@ -220,41 +220,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Wallet Balance Card */}
-      <div className="mx-4 mb-4 rounded-2xl p-4 text-white" style={{ background: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)" }}>
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs font-semibold opacity-70">Wallet Balance</p>
-          <p className="text-xs opacity-50">USD</p>
-        </div>
-        <p className="text-3xl font-bold mb-0.5">{formatMoney(balance)}</p>
-        <p className="text-xs opacity-50 mb-4">Available to withdraw</p>
-
-        <Link href="/wallet">
-          <button className="w-full py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 mb-4 transition-opacity hover:opacity-90"
-            style={{ background: "linear-gradient(90deg, #16a34a, #22c55e)" }}>
-            <span>Withdraw Money</span>
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
-        </Link>
-
-        <div className="flex items-center justify-around">
-          {[
-            { label: "M-Pesa", color: "#00a651", letter: "M" },
-            { label: "Airtel", color: "#e4002b", letter: "A" },
-            { label: "Bank", color: "#2563eb", icon: <Wallet className="w-4 h-4 text-white" /> },
-            { label: "PayPal", color: "#003087", letter: "P" },
-            { label: "More", color: "#374151", icon: <span className="text-white text-lg font-bold">···</span> },
-          ].map(({ label, color, letter, icon }) => (
-            <div key={label} className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: color }}>
-                {icon ?? <span className="text-white text-sm font-bold">{letter}</span>}
-              </div>
-              <span className="text-[9px] text-white/60">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Tasks + Binary Trading */}
       <div className="grid grid-cols-2 gap-3 px-4 mb-4">
         {/* Available Tasks */}
