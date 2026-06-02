@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
 
@@ -105,6 +105,25 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (task.minLevel > user.level) {
       res.status(400).json({ error: "Insufficient membership level" }); return;
+    }
+
+    // Level 1 (Starter) daily limit: 1 task per day
+    if (user.level === 1) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayCompletions = await db.select().from(userTasksTable)
+        .where(and(
+          eq(userTasksTable.userId, req.userId!),
+          eq(userTasksTable.status, "completed"),
+          gte(userTasksTable.completedAt, todayStart)
+        ));
+      if (todayCompletions.length >= 1) {
+        res.status(403).json({
+          error: "You've used your 1 free task for today. Upgrade your membership to complete unlimited tasks and earn more.",
+          limitReached: true,
+        });
+        return;
+      }
     }
 
     const [existing] = await db.select().from(userTasksTable)

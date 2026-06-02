@@ -459,7 +459,18 @@ function TaskCard({ task, taskIndex, userMinutes, onComplete, onBuyMinutes }: {
         setModalOpen(false);
         onComplete();
       },
-      onError: (err: any) => toast({ title: "Error", description: err.message ?? "Failed to complete task", variant: "destructive" }),
+      onError: (err: any) => {
+        if (err.limitReached) {
+          setModalOpen(false);
+          toast({
+            title: "Daily limit reached 🔒",
+            description: "You've completed your 1 free task today. Come back tomorrow or upgrade for unlimited tasks.",
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Error", description: err.message ?? "Failed to complete task", variant: "destructive" });
+        }
+      },
     });
   };
 
@@ -617,16 +628,20 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Upgrade nudge for level 1 */}
+      {/* Starter daily limit banner */}
       {userLevel === 1 && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-          <Lock className="w-5 h-5 text-amber-400 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-300">Starter tasks earn up to $0.15</p>
-            <p className="text-xs text-muted-foreground">Upgrade your membership to unlock tasks paying $0.50 – $10.00+</p>
+        <div className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/8 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎯</span>
+            <p className="text-sm font-bold text-amber-300">Starter Plan — 1 Free Task Per Day</p>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Complete your daily free task to earn <span className="text-amber-400 font-semibold">$0.10</span>. Come back tomorrow for another, or upgrade to unlock <span className="font-semibold text-white">unlimited tasks</span> paying up to <span className="text-green-400 font-semibold">$10.00+</span> each.
+          </p>
           <a href="/membership">
-            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs">Upgrade</Button>
+            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white text-xs mt-1 gap-1.5">
+              <Zap className="w-3 h-3" /> Upgrade for Unlimited Tasks
+            </Button>
           </a>
         </div>
       )}
