@@ -11,16 +11,16 @@ import { cn } from "@/lib/utils";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const MARKETS = [
-  { id: "1HZ10V",  group: "Continuous Indices (1s)", name: "Volatility 10 (1s) Index",  vol: 0.0005, base: 5000 },
-  { id: "1HZ25V",  group: "Continuous Indices (1s)", name: "Volatility 25 (1s) Index",  vol: 0.0013, base: 3200 },
-  { id: "1HZ50V",  group: "Continuous Indices (1s)", name: "Volatility 50 (1s) Index",  vol: 0.0027, base: 2100 },
-  { id: "1HZ75V",  group: "Continuous Indices (1s)", name: "Volatility 75 (1s) Index",  vol: 0.0045, base: 1400 },
-  { id: "1HZ100V", group: "Continuous Indices (1s)", name: "Volatility 100 (1s) Index", vol: 0.007,  base: 850  },
-  { id: "R_10",    group: "Volatility Indices",      name: "Volatility 10 Index",       vol: 0.0005, base: 5200 },
-  { id: "R_25",    group: "Volatility Indices",      name: "Volatility 25 Index",       vol: 0.0013, base: 3400 },
-  { id: "R_50",    group: "Volatility Indices",      name: "Volatility 50 Index",       vol: 0.0027, base: 2300 },
-  { id: "R_75",    group: "Volatility Indices",      name: "Volatility 75 Index",       vol: 0.0045, base: 1600 },
-  { id: "R_100",   group: "Volatility Indices",      name: "Volatility 100 Index",      vol: 0.007,  base: 950  },
+  { id: "R_10",    name: "Volatility 10",     vol: 0.0005, base: 5200 },
+  { id: "1HZ10V",  name: "Volatility 10 (1s)", vol: 0.0005, base: 5000 },
+  { id: "R_25",    name: "Volatility 25",     vol: 0.0013, base: 3400 },
+  { id: "1HZ25V",  name: "Volatility 25 (1s)", vol: 0.0013, base: 3200 },
+  { id: "R_50",    name: "Volatility 50",     vol: 0.0027, base: 2300 },
+  { id: "1HZ50V",  name: "Volatility 50 (1s)", vol: 0.0027, base: 2100 },
+  { id: "R_75",    name: "Volatility 75",     vol: 0.0045, base: 1600 },
+  { id: "1HZ75V",  name: "Volatility 75 (1s)", vol: 0.0045, base: 1400 },
+  { id: "R_100",   name: "Volatility 100",    vol: 0.007,  base: 950  },
+  { id: "1HZ100V", name: "Volatility 100 (1s)", vol: 0.007, base: 850  },
 ];
 
 const TRADE_TYPES = [
@@ -273,24 +273,14 @@ export default function BinaryTradingPage() {
         <select
           value={marketId}
           onChange={e => setMarketId(e.target.value)}
-          className="flex-1 min-w-0 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary truncate">
-          <optgroup label="Continuous Indices (1s)">
-            {MARKETS.filter(m => m.group === "Continuous Indices (1s)").map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Volatility Indices">
-            {MARKETS.filter(m => m.group === "Volatility Indices").map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </optgroup>
+          className="flex-1 min-w-0 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+          {MARKETS.map(m => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
         </select>
         <div className="text-right shrink-0">
           <p className="text-[9px] text-muted-foreground leading-none">{accountMode === "demo" ? "Virtual" : "Real"}</p>
           <p className="text-sm font-bold text-green-400 leading-tight">${balance.toFixed(2)}</p>
-          <p className={cn("text-[9px] font-bold leading-none", sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
-            {sessionPnl >= 0 ? "+" : ""}${sessionPnl.toFixed(2)}
-          </p>
         </div>
       </div>
 
@@ -338,6 +328,49 @@ export default function BinaryTradingPage() {
       {/* ── Trade panel ── */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-3 pt-3 space-y-3 pb-24">
+
+          {/* Total P&L */}
+          {(() => {
+            const wins = recentResults.filter(r => r.win).length;
+            const losses = recentResults.length - wins;
+            const totalStaked = recentResults.reduce((s, r) => s + r.stake, 0);
+            return (
+              <div className="rounded-xl bg-card border border-border px-4 py-2.5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Total P&amp;L</p>
+                  <p className={cn("text-xl font-extrabold leading-tight", sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
+                    {sessionPnl >= 0 ? "+" : ""}${Math.abs(sessionPnl).toFixed(2)}
+                  </p>
+                </div>
+                <div className="flex gap-3 text-center">
+                  <div>
+                    <p className="text-[9px] text-muted-foreground">Staked</p>
+                    <p className="text-xs font-bold">${totalStaked.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-green-400">Wins</p>
+                    <p className="text-xs font-bold text-green-400">{wins}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-red-400">Losses</p>
+                    <p className="text-xs font-bold text-red-400">{losses}</p>
+                  </div>
+                  {recentResults.length > 0 && (
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">Rate</p>
+                      <p className="text-xs font-bold">{Math.round(wins / recentResults.length * 100)}%</p>
+                    </div>
+                  )}
+                </div>
+                {recentResults.length > 0 && (
+                  <button onClick={() => { setRecentResults([]); setSessionPnl(0); }}
+                    className="text-[10px] text-muted-foreground hover:text-foreground shrink-0">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Trade type */}
           <div className="flex overflow-x-auto gap-1 no-scrollbar">
