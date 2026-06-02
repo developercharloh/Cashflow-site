@@ -121,6 +121,7 @@ export default function WalletPage() {
 
   // Deposit form state
   const [depositAmount, setDepositAmount] = useState("");
+  const [depositPhone, setDepositPhone] = useState("");
 
   // Bank withdrawal state (Paystack)
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -131,6 +132,12 @@ export default function WalletPage() {
   // Manual withdrawal state (M-Pesa / Airtel / PayPal)
   const [manualAmount, setManualAmount] = useState("");
   const [manualAccount, setManualAccount] = useState("");
+
+  // Exchange rates
+  const DEPOSIT_RATE = 134;    // 1 USD = 134 KES (deposit)
+  const WITHDRAWAL_RATE = 122; // 1 USD = 122 KES (withdrawal)
+
+  const isMobileMoney = (id: string) => id === "mpesa" || id === "airtel";
 
   const { data: wallet, isLoading } = useGetWallet();
   const { data: transactions } = useGetTransactions(
@@ -156,7 +163,7 @@ export default function WalletPage() {
 
   const close = () => {
     setStage({ view: "none" });
-    setDepositAmount("");
+    setDepositAmount(""); setDepositPhone("");
     setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
     setManualAmount(""); setManualAccount("");
   };
@@ -182,17 +189,16 @@ export default function WalletPage() {
   const handleDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
     const amt = parseFloat(depositAmount);
     if (!amt || amt < 1) { toast({ title: "Minimum deposit is $1", variant: "destructive" }); return; }
-    const channels = PAYSTACK_CHANNELS[method.id] ?? ["card", "bank", "ussd", "mobile_money"];
+    if (isMobileMoney(method.id) && !depositPhone.trim()) {
+      toast({ title: "Phone number required", description: "Enter your M-Pesa/Airtel phone number.", variant: "destructive" }); return;
+    }
     depositMutation.mutate(
-      { data: { amount: amt } } as any,
+      { data: { amount: amt, method: method.id, phone: depositPhone.trim() || undefined } } as any,
       {
         onSuccess: (data: any) => { window.location.href = data.authorizationUrl; },
         onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
       }
     );
-    // Note: channel filtering is handled by Paystack's own UI unless we pass `channels` in the init.
-    // The backend currently sends all channels — acceptable for now, Paystack shows the relevant UI.
-    void channels;
   };
 
   const handleBankWithdraw = () => {
@@ -416,6 +422,8 @@ export default function WalletPage() {
               </div>
             </DialogHeader>
             <div className="space-y-4 pt-1">
+
+              {/* USD amount */}
               <div>
                 <Label>Amount (USD)</Label>
                 <Input
@@ -423,12 +431,55 @@ export default function WalletPage() {
                   value={depositAmount}
                   onChange={e => setDepositAmount(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Minimum $1.00 · You will be redirected to Paystack to complete payment</p>
+                <p className="text-xs text-muted-foreground mt-1">Minimum $1.00</p>
               </div>
+
+              {/* KES equivalent — auto-calculated, read-only, only for mobile money */}
+              {isMobileMoney(stage.method.id) && (
+                <>
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      KES Amount
+                      <span className="text-[10px] font-normal bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">Auto · Locked</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        readOnly
+                        value={
+                          depositAmount && parseFloat(depositAmount) >= 1
+                            ? `KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()}`
+                            : ""
+                        }
+                        placeholder="KES — enter USD above"
+                        className="bg-muted/60 text-muted-foreground cursor-not-allowed select-none"
+                        tabIndex={-1}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Rate: 1 USD = {DEPOSIT_RATE} KES · This exact amount will be charged — you cannot edit it
+                    </p>
+                  </div>
+
+                  {/* Phone number */}
+                  <div>
+                    <Label>M-Pesa / Airtel Phone Number</Label>
+                    <Input
+                      type="tel"
+                      placeholder="e.g. 0712345678 or +254712345678"
+                      value={depositPhone}
+                      onChange={e => setDepositPhone(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">You will receive an STK push on this number</p>
+                  </div>
+                </>
+              )}
+
               <Button className="w-full" onClick={() => handleDeposit(stage.method)} disabled={depositMutation.isPending}>
                 {depositMutation.isPending
                   ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Redirecting…</>
-                  : `Pay with ${stage.method.label} →`}
+                  : `Pay ${depositAmount && parseFloat(depositAmount) >= 1 && isMobileMoney(stage.method.id)
+                      ? `KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()}`
+                      : `with ${stage.method.label}`} →`}
               </Button>
               <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
                 ← Choose a different method
@@ -524,14 +575,37 @@ export default function WalletPage() {
                 <div>
                   <Label>Amount (USD)</Label>
                   <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $5.00</p>
+                </div>
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    You Will Receive (KES)
+                    <span className="text-[10px] font-normal bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">Auto · Locked</span>
+                  </Label>
+                  <Input
+                    readOnly
+                    value={
+                      manualAmount && parseFloat(manualAmount) >= 5
+                        ? `KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()}`
+                        : ""
+                    }
+                    placeholder="KES — enter USD above"
+                    className="bg-muted/60 text-muted-foreground cursor-not-allowed select-none"
+                    tabIndex={-1}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Rate: 1 USD = {WITHDRAWAL_RATE} KES</p>
                 </div>
                 <div>
                   <Label>M-Pesa Phone Number</Label>
                   <Input placeholder="e.g. +254 700 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Must be registered Safaricom number</p>
+                  <p className="text-xs text-muted-foreground mt-1">Must be a registered Safaricom number</p>
                 </div>
                 <Button className="w-full" onClick={() => handleManualWithdraw("mpesa")} disabled={manualWithdrawMutation.isPending}>
-                  {manualWithdrawMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</> : "Withdraw via M-Pesa"}
+                  {manualWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
+                    : manualAmount && parseFloat(manualAmount) >= 5
+                      ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via M-Pesa`
+                      : "Withdraw via M-Pesa"}
                 </Button>
               </div>
             )}
@@ -542,14 +616,37 @@ export default function WalletPage() {
                 <div>
                   <Label>Amount (USD)</Label>
                   <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $5.00</p>
+                </div>
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    You Will Receive (KES)
+                    <span className="text-[10px] font-normal bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">Auto · Locked</span>
+                  </Label>
+                  <Input
+                    readOnly
+                    value={
+                      manualAmount && parseFloat(manualAmount) >= 5
+                        ? `KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()}`
+                        : ""
+                    }
+                    placeholder="KES — enter USD above"
+                    className="bg-muted/60 text-muted-foreground cursor-not-allowed select-none"
+                    tabIndex={-1}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Rate: 1 USD = {WITHDRAWAL_RATE} KES</p>
                 </div>
                 <div>
                   <Label>Airtel Phone Number</Label>
                   <Input placeholder="e.g. +254 733 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Must be registered Airtel number</p>
+                  <p className="text-xs text-muted-foreground mt-1">Must be a registered Airtel number</p>
                 </div>
                 <Button className="w-full" onClick={() => handleManualWithdraw("airtel")} disabled={manualWithdrawMutation.isPending}>
-                  {manualWithdrawMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</> : "Withdraw via Airtel Money"}
+                  {manualWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
+                    : manualAmount && parseFloat(manualAmount) >= 5
+                      ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via Airtel`
+                      : "Withdraw via Airtel Money"}
                 </Button>
               </div>
             )}

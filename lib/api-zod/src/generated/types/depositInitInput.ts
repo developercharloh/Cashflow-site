@@ -8,4 +8,6 @@
 
 export interface DepositInitInput {
   amount: number;
+  method?: string;
+  phone?: string;
 }

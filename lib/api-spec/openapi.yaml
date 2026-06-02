@@ -1353,6 +1353,10 @@ components:
       properties:
         amount:
           type: number
+        method:
+          type: string
+        phone:
+          type: string
 
     DepositInitResponse:
       type: object

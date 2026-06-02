@@ -10,60 +10,97 @@ const SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
 const PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY!;
 const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL!;
 
+// ─── Exchange rates ───────────────────────────────────────────────────────────
+const DEPOSIT_RATE_KES = 134;    // 1 USD = 134 KES for incoming payments
+const WITHDRAWAL_RATE_KES = 122; // 1 USD = 122 KES for outgoing payments (KES users receive)
+
+// Convert actual Paystack amount (smallest unit, i.e. cents/kobo) → USD
+// Always derives from actual payment received — never from stored metadata
+function paystackAmountToUsd(amountSmallest: number, currency: string): number {
+  if (currency === "KES") return Math.round((amountSmallest / 100 / DEPOSIT_RATE_KES) * 10000) / 10000;
+  if (currency === "USD") return Math.round((amountSmallest / 100) * 10000) / 10000;
+  // Fallback — treat as KES (our primary currency)
+  return Math.round((amountSmallest / 100 / DEPOSIT_RATE_KES) * 10000) / 10000;
+}
+
+// Validate actual payment vs expected within ±5% tolerance
+function isValidAmount(actualUsd: number, expectedUsd: number): boolean {
+  if (!expectedUsd || expectedUsd <= 0) return false;
+  return Math.abs(actualUsd - expectedUsd) / expectedUsd <= 0.05;
+}
+
 // ─── Initiate deposit ────────────────────────────────────────────────────────
 router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { amount } = req.body; // amount in USD dollars
+    const { amount, method, phone } = req.body; // amount in USD
     if (!amount || amount < 1) {
-      res.status(400).json({ error: "Minimum deposit is $1" });
-      return;
+      res.status(400).json({ error: "Minimum deposit is $1" }); return;
+    }
+
+    const isMobileMoney = method === "mpesa" || method === "airtel";
+
+    // Mobile money requires a phone number
+    if (isMobileMoney && !phone) {
+      res.status(400).json({ error: "Phone number is required for M-Pesa / Airtel Money" }); return;
     }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    // Paystack works in kobo/pesewas (smallest unit). We treat $1 = 100 units for USD.
-    // Actually Paystack accepts NGN/GHS/ZAR/KES/USD — use KES (Kenya Shilling) * 100 for kobo
-    // We store earnings in USD but charge in KES: 1 USD ≈ 130 KES (use amount * 13000 for kobo)
-    // For simplicity, we'll use NGN and let user choose currency on their end.
-    // Best practice: send amount in the smallest currency unit (kobo for NGN, cents for USD)
-    const amountKobo = Math.round(amount * 100); // treat as USD cents → Paystack currency
+    // Convert USD → KES for mobile money (deposit rate: 1 USD = 134 KES)
+    // For card/bank we still charge in KES so Paystack shows the correct amount
+    const amountKes = Math.round(amount * DEPOSIT_RATE_KES);   // e.g. $2 → 268 KES
+    const amountKobo = amountKes * 100;                        // Paystack uses smallest unit (1 KES = 100 kobo)
+
+    // Restrict channels by payment method
+    const channels = isMobileMoney
+      ? ["mobile_money"]
+      : method === "bank"
+        ? ["bank", "ussd"]
+        : ["card"];
 
     const reference = `dep_${req.userId}_${Date.now()}`;
 
+    const paystackBody: Record<string, unknown> = {
+      email: user.email,
+      amount: amountKobo,         // exact KES kobo — user cannot edit on Paystack page
+      currency: "KES",
+      reference,
+      callback_url: CALLBACK_URL,
+      channels,
+      metadata: {
+        userId: req.userId,
+        expectedUsd: amount,       // used for validation on verify
+        amountKes,
+        currency: "KES",
+        method: method ?? "card",
+        type: "deposit",
+      },
+    };
+
+    // Pre-fill phone for M-Pesa STK push
+    if (isMobileMoney && phone) {
+      paystackBody["mobile_money"] = { phone };
+    }
+
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: user.email,
-        amount: amountKobo,
-        reference,
-        callback_url: CALLBACK_URL,
-        metadata: {
-          userId: req.userId,
-          amountUsd: amount,
-          type: "deposit",
-        },
-        channels: ["card", "bank", "ussd", "mobile_money"],
-      }),
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(paystackBody),
     });
 
     const data = await response.json() as any;
     if (!data.status) {
-      res.status(400).json({ error: data.message ?? "Paystack error" });
-      return;
+      res.status(400).json({ error: data.message ?? "Paystack error" }); return;
     }
 
-    // Record a pending deposit transaction
+    // Record pending transaction with expected USD amount
     await db.insert(transactionsTable).values({
       userId: req.userId!,
       type: "deposit",
-      amount,
+      amount,                      // stored in USD
       status: "pending",
-      description: `Deposit of $${amount.toFixed(2)} via Paystack`,
+      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via ${method ?? "card"}`,
       method: "paystack",
       accountDetails: reference,
     });
@@ -104,27 +141,45 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
       return;
     }
 
-    const amountUsd: number = data.data.metadata?.amountUsd ?? data.data.amount / 100;
-    const userId: number = Number(data.data.metadata?.userId ?? req.userId!);
+    const meta = data.data.metadata ?? {};
+    const userId: number = Number(meta.userId ?? req.userId!);
+    const currency: string = data.data.currency ?? "KES";
+    const expectedUsd: number = Number(meta.expectedUsd ?? 0);
+
+    // Credit based on ACTUAL amount received from Paystack — never from metadata USD
+    const actualUsd = paystackAmountToUsd(data.data.amount, currency);
+
+    // Validate: actual payment must be within ±5% of expected
+    if (expectedUsd > 0 && !isValidAmount(actualUsd, expectedUsd)) {
+      req.log.warn({ actualUsd, expectedUsd, reference }, "Deposit amount mismatch — flagging");
+      await db.update(transactionsTable).set({
+        status: "rejected",
+        rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
+      }).where(eq(transactionsTable.accountDetails, reference));
+      res.status(400).json({
+        error: `Payment amount mismatch. Received KES ${(data.data.amount / 100).toFixed(0)}, expected KES ${Math.round(expectedUsd * DEPOSIT_RATE_KES)}. Contact support if you believe this is an error.`,
+      });
+      return;
+    }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
 
     await db.update(usersTable).set({
-      balance: user.balance + amountUsd,
-      totalEarned: user.totalEarned + amountUsd,
+      balance: user.balance + actualUsd,
+      totalEarned: user.totalEarned + actualUsd,
     }).where(eq(usersTable.id, userId));
 
-    // Mark transaction complete
+    // Mark transaction complete with actual credited amount
     if (txn) {
-      await db.update(transactionsTable).set({ status: "completed" })
+      await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
         .where(eq(transactionsTable.id, txn.id));
     } else {
       await db.insert(transactionsTable).values({
         userId,
         type: "deposit",
-        amount: amountUsd,
+        amount: actualUsd,
         status: "completed",
-        description: `Deposit of $${Number(amountUsd).toFixed(2)} via Paystack`,
+        description: `Deposit of $${actualUsd.toFixed(2)} (KES ${(data.data.amount / 100).toFixed(0)}) via Paystack`,
         method: "paystack",
         accountDetails: reference,
       });
@@ -134,10 +189,10 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
       userId,
       type: "deposit",
       title: "Deposit Successful",
-      message: `$${Number(amountUsd).toFixed(2)} has been added to your wallet.`,
+      message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
     });
 
-    res.json({ message: "Deposit credited", amount: amountUsd });
+    res.json({ message: "Deposit credited", amount: actualUsd });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -264,25 +319,39 @@ router.post("/paystack/deposit/verify-pending", requireAuth, async (req: AuthReq
         const data = await response.json() as any;
 
         if (data.status && data.data.status === "success") {
-          const amountUsd: number = Number(data.data.metadata?.amountUsd ?? data.data.amount / 100);
+          const meta = data.data.metadata ?? {};
+          const currency: string = data.data.currency ?? "KES";
+          const expectedUsd: number = Number(meta.expectedUsd ?? 0);
+          // Always credit actual amount received — never metadata USD
+          const actualUsd = paystackAmountToUsd(data.data.amount, currency);
+
+          // Reject if amount mismatch > 5%
+          if (expectedUsd > 0 && !isValidAmount(actualUsd, expectedUsd)) {
+            await db.update(transactionsTable).set({
+              status: "rejected",
+              rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
+            }).where(eq(transactionsTable.id, txn.id));
+            continue;
+          }
+
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
 
           await db.update(usersTable).set({
-            balance: user.balance + amountUsd,
-            totalEarned: user.totalEarned + amountUsd,
+            balance: user.balance + actualUsd,
+            totalEarned: user.totalEarned + actualUsd,
           }).where(eq(usersTable.id, req.userId!));
 
-          await db.update(transactionsTable).set({ status: "completed" })
+          await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
             .where(eq(transactionsTable.id, txn.id));
 
           await db.insert(notificationsTable).values({
             userId: req.userId!,
             type: "deposit",
             title: "Deposit Confirmed",
-            message: `$${amountUsd.toFixed(2)} has been credited to your wallet.`,
+            message: `$${actualUsd.toFixed(2)} has been credited to your wallet.`,
           });
 
-          credited.push({ ref, amount: amountUsd });
+          credited.push({ ref, amount: actualUsd });
         }
       } catch {
         // skip individual failures
@@ -367,21 +436,35 @@ router.post("/paystack/webhook", async (req, res) => {
       res.sendStatus(200); return;
     }
 
-    // Standard deposit
-    const amountUsd = meta.amountUsd ?? event.data.amount / 100;
+    // Standard deposit — credit based on ACTUAL amount received, not metadata
+    const currency: string = event.data.currency ?? "KES";
+    const expectedUsd: number = Number(meta.expectedUsd ?? 0);
+    const actualUsd = paystackAmountToUsd(event.data.amount, currency);
+
+    // Reject if amount mismatch > 5%
+    if (expectedUsd > 0 && !isValidAmount(actualUsd, expectedUsd)) {
+      if (existing[0]) {
+        await db.update(transactionsTable).set({
+          status: "rejected",
+          rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
+        }).where(eq(transactionsTable.id, existing[0].id));
+      }
+      res.sendStatus(200); return;
+    }
+
     await db.update(usersTable).set({
-      balance: user.balance + amountUsd,
-      totalEarned: user.totalEarned + amountUsd,
+      balance: user.balance + actualUsd,
+      totalEarned: user.totalEarned + actualUsd,
     }).where(eq(usersTable.id, userId));
 
     if (existing[0]) {
-      await db.update(transactionsTable).set({ status: "completed" })
+      await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
         .where(eq(transactionsTable.id, existing[0].id));
     }
 
     await db.insert(notificationsTable).values({
       userId, type: "deposit", title: "Deposit Successful",
-      message: `$${Number(amountUsd).toFixed(2)} has been added to your wallet.`,
+      message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
     });
   }
 

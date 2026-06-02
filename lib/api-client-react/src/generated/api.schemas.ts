@@ -246,6 +246,8 @@ export interface BuyMinutesInput {
 
 export interface DepositInitInput {
   amount: number;
+  method?: string;
+  phone?: string;
 }
 
 export interface DepositInitResponse {

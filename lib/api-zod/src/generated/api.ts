@@ -374,7 +374,9 @@ export const RequestWithdrawalResponse = zod.object({
  * @summary Initialize a Paystack deposit
  */
 export const InitializeDepositBody = zod.object({
-  "amount": zod.number()
+  "amount": zod.number(),
+  "method": zod.string().optional(),
+  "phone": zod.string().optional()
 })
 
 export const InitializeDepositResponse = zod.object({
