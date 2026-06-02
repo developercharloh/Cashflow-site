@@ -8,7 +8,7 @@ const router = Router();
 
 router.post("/auth/register", async (req, res) => {
   try {
-    const { email, password, name, phone, referralCode } = req.body;
+    const { email, password, name, phone, country, referralCode } = req.body;
     if (!email || !password || !name) {
       res.status(400).json({ error: "Name, email, and password are required" });
       return;
@@ -41,6 +41,7 @@ router.post("/auth/register", async (req, res) => {
       password: hashed,
       name,
       phone: phone ?? null,
+      country: country ?? null,
       referralCode: code,
       referredBy: referredById ?? null,
       isEmailVerified: true,

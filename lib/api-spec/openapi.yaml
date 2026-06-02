@@ -938,7 +938,7 @@ components:
     # ── Auth ──────────────────────────────────────────────────────────────────
     RegisterInput:
       type: object
-      required: [email, password, name, phone]
+      required: [email, password, name]
       properties:
         email:
           type: string
@@ -947,6 +947,8 @@ components:
         name:
           type: string
         phone:
+          type: string
+        country:
           type: string
         referralCode:
           type: ["string", "null"]

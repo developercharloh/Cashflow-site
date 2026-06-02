@@ -108,7 +108,7 @@ export default function Dashboard() {
     <div className="pb-4">
       {/* Welcome */}
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-bold text-foreground">Welcome back, {firstName}! 👋</h1>
+        <h1 className="text-2xl font-bold text-foreground">Hi, {firstName}! 👋</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Complete tasks, earn points and withdraw real money.</p>
       </div>
 

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useGetMe, getGetMeQueryOptions, User, setAuthTokenGetter } from "@workspace/api-client-react";
 
-// Tell the API client to always read the token from localStorage
 setAuthTokenGetter(() => localStorage.getItem("token"));
 
 interface AuthContextType {
@@ -13,38 +12,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_EMAIL = "carol@example.com";
-const DEMO_PASSWORD = "password";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem("token"));
-  const [autoLogging, setAutoLogging] = useState(false);
 
   const { data: user, isLoading: isUserLoading, refetch } = useGetMe({
     query: { ...getGetMeQueryOptions(), enabled: !!token, retry: false },
   });
-
-  // Auto-login with demo account if no token
-  useEffect(() => {
-    if (!token && !autoLogging) {
-      setAutoLogging(true);
-      fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.token) {
-            localStorage.setItem("token", d.token);
-            setTokenState(d.token);
-            setTimeout(() => refetch(), 0);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setAutoLogging(false));
-    }
-  }, []);
 
   useEffect(() => {
     if (token) {
@@ -63,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokenState(null);
   };
 
-  const isLoading = autoLogging || (!!token && isUserLoading);
+  const isLoading = !!token && isUserLoading;
 
   return (
     <AuthContext.Provider value={{ user: user || null, isLoading, setToken, logout }}>

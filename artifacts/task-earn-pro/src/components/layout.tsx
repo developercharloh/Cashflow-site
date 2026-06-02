@@ -130,6 +130,12 @@ function BottomNav() {
   );
 }
 
+function RedirectToLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/auth/login"); }, [setLocation]);
+  return null;
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -149,11 +155,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    // Redirect unauthenticated users to login
+    return <RedirectToLogin />;
   }
 
   return (
