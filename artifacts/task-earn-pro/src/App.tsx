@@ -23,7 +23,6 @@ import AdminTasks from "@/pages/admin/tasks";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
 import BinaryTradingPage from "@/pages/binary-trading";
-import AccumulatorsPage from "@/pages/accumulators";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,7 +51,6 @@ function Router() {
         <Route path="/referrals" component={Referrals} />
         <Route path="/leaderboard" component={Leaderboard} />
         <Route path="/binary" component={BinaryTradingPage} />
-        <Route path="/accumulators" component={AccumulatorsPage} />
         <Route path="/membership" component={Membership} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/admin" component={AdminDashboard} />
