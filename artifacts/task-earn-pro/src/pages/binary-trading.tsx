@@ -34,8 +34,16 @@ const CONTRACT_TICKS: Record<TradeTypeId, number> = {
 
 const PAYOUTS: Record<Direction, number> = {
   rise: 1.85, fall: 1.85, even: 1.90, odd: 1.90,
-  matches: 9.00, differs: 1.10, over: 2.20, under: 2.20,
+  matches: 9.00, differs: 1.10,
+  over: 0, under: 0, // dynamic — use getPayout()
 };
+
+/** Over [n]: digits > n → (9-n) winning digits. Under [n]: digits < n → n winning digits. */
+function getPayout(dir: "over" | "under", barrier: number): number {
+  const winCount = dir === "over" ? 9 - barrier : barrier;
+  if (winCount <= 0) return 9.50;
+  return Math.round(0.95 / (winCount / 10) * 100) / 100;
+}
 
 const STAKE_PRESETS = [0.5, 1, 2, 5, 10];
 
@@ -44,6 +52,7 @@ interface Contract {
   id: string; direction: Direction; tradeType: TradeTypeId;
   stake: number; entryPrice: number; ticksTotal: number;
   ticksRemaining: number; isDemo: boolean; barrier: number;
+  payoutMultiplier: number;
 }
 interface TradeResult {
   id: string; direction: Direction; stake: number;
@@ -89,7 +98,8 @@ export default function BinaryTradingPage() {
   const [tradeType, setTradeType] = useState<TradeTypeId>("rise-fall");
   const [stake, setStake] = useState(1);
   const [selectedDigit, setSelectedDigit] = useState(5);
-  const [barrier, setBarrier] = useState(5);
+  const [overBarrier, setOverBarrier] = useState(4);   // 0–8
+  const [underBarrier, setUnderBarrier] = useState(5); // 1–9
 
   const contractsRef = useRef<Contract[]>([]);
   const [activeContracts, setActiveContracts] = useState<Contract[]>([]);
@@ -149,7 +159,7 @@ export default function BinaryTradingPage() {
       case "over":    win = lastDigit > contract.barrier; break;
       case "under":   win = lastDigit < contract.barrier; break;
     }
-    const payout = win ? Math.round(contract.stake * PAYOUTS[contract.direction] * 100) / 100 : 0;
+    const payout = win ? Math.round(contract.stake * contract.payoutMultiplier * 100) / 100 : 0;
     const netChange = Math.round((payout - contract.stake) * 100) / 100;
     setDemoBalance(p => { const nb = Math.max(0, Math.round((p + netChange) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
     setSessionPnl(p => Math.round((p + netChange) * 100) / 100);
@@ -165,20 +175,28 @@ export default function BinaryTradingPage() {
       return;
     }
     const ticksTotal = CONTRACT_TICKS[tradeType];
+    const barrierVal = tradeType === "matches-differs" ? selectedDigit
+      : dir === "over" ? overBarrier
+      : dir === "under" ? underBarrier
+      : 5;
+    const payoutMultiplier = (dir === "over" || dir === "under")
+      ? getPayout(dir, barrierVal)
+      : PAYOUTS[dir];
     const contract: Contract = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       direction: dir, tradeType, stake,
       entryPrice: priceRef.current, ticksTotal,
       ticksRemaining: ticksTotal,
       isDemo: accountMode === "demo",
-      barrier: tradeType === "matches-differs" ? selectedDigit : barrier,
+      barrier: barrierVal,
+      payoutMultiplier,
     };
     if (accountMode === "demo") {
       setDemoBalance(p => { const nb = Math.max(0, Math.round((p - stake) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
     }
     contractsRef.current = [...contractsRef.current, contract];
     setActiveContracts([...contractsRef.current]);
-  }, [accountMode, demoBalance, realBalance, stake, tradeType, selectedDigit, barrier, toast]);
+  }, [accountMode, demoBalance, realBalance, stake, tradeType, selectedDigit, overBarrier, underBarrier, toast]);
 
   // ── Auto-trading ────────────────────────────────────────────────────────────
   const startAutoTrading = useCallback((dir: Direction) => {
@@ -225,11 +243,11 @@ export default function BinaryTradingPage() {
   const priceMax = Math.max(...priceHistory.map(p => p.price)) * 1.0005;
   const activeContract = activeContracts[0];
 
-  const displayPayout = PAYOUTS[
-    tradeType === "rise-fall" ? "rise" :
-    tradeType === "even-odd" ? "even" :
-    tradeType === "matches-differs" ? "differs" : "over"
-  ];
+  const displayPayout =
+    tradeType === "over-under" ? getPayout("over", overBarrier)
+    : tradeType === "rise-fall" ? PAYOUTS.rise
+    : tradeType === "even-odd" ? PAYOUTS.even
+    : PAYOUTS.differs;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -364,20 +382,43 @@ export default function BinaryTradingPage() {
             </div>
           )}
 
-          {/* Over/Under barrier picker */}
+          {/* Over/Under barrier pickers — separate per direction */}
           {tradeType === "over-under" && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5 font-medium">Barrier (1–9)</p>
-              <div className="grid grid-cols-9 gap-1">
-                {[1,2,3,4,5,6,7,8,9].map(d => (
-                  <button key={d} onClick={() => setBarrier(d)}
-                    className={cn("aspect-square rounded-lg text-xs font-bold",
-                      barrier === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
-                    {d}
-                  </button>
-                ))}
+            <div className="space-y-2.5">
+              {/* Over: barrier 0–8, winning digits = (9-n)/10 */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] font-semibold text-green-400">Over — last digit &gt; barrier</p>
+                  <span className="text-[11px] text-green-400 font-bold">×{getPayout("over", overBarrier).toFixed(2)} · {(9 - overBarrier) * 10}% win</span>
+                </div>
+                <div className="grid grid-cols-9 gap-1">
+                  {[0,1,2,3,4,5,6,7,8].map(d => (
+                    <button key={d} onClick={() => setOverBarrier(d)}
+                      className={cn("rounded-lg py-1 flex flex-col items-center gap-0 transition-colors",
+                        overBarrier === d ? "bg-green-600 text-white" : "bg-muted text-muted-foreground hover:bg-green-600/30")}>
+                      <span className="text-xs font-bold">{d}</span>
+                      <span className="text-[8px] opacity-70">{(9-d)*10}%</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">Over {barrier}: digit &gt; {barrier} · Under {barrier}: digit &lt; {barrier}</p>
+              {/* Under: barrier 1–9, winning digits = n/10 */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] font-semibold text-red-400">Under — last digit &lt; barrier</p>
+                  <span className="text-[11px] text-red-400 font-bold">×{getPayout("under", underBarrier).toFixed(2)} · {underBarrier * 10}% win</span>
+                </div>
+                <div className="grid grid-cols-9 gap-1">
+                  {[1,2,3,4,5,6,7,8,9].map(d => (
+                    <button key={d} onClick={() => setUnderBarrier(d)}
+                      className={cn("rounded-lg py-1 flex flex-col items-center gap-0 transition-colors",
+                        underBarrier === d ? "bg-red-600 text-white" : "bg-muted text-muted-foreground hover:bg-red-600/30")}>
+                      <span className="text-xs font-bold">{d}</span>
+                      <span className="text-[8px] opacity-70">{d*10}%</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -430,12 +471,14 @@ export default function BinaryTradingPage() {
               </>)}
               {tradeType === "over-under" && (<>
                 <button onClick={() => startAutoTrading("over")}
-                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold text-sm transition-all">
-                  Over {barrier}
+                  className="flex flex-col items-center justify-center py-3.5 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold transition-all">
+                  <span className="text-sm">Over {overBarrier} ▲</span>
+                  <span className="text-[10px] opacity-80">×{getPayout("over", overBarrier).toFixed(2)} · {(9 - overBarrier) * 10}% win</span>
                 </button>
                 <button onClick={() => startAutoTrading("under")}
-                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-sm transition-all">
-                  Under {barrier}
+                  className="flex flex-col items-center justify-center py-3.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold transition-all">
+                  <span className="text-sm">Under {underBarrier} ▼</span>
+                  <span className="text-[10px] opacity-80">×{getPayout("under", underBarrier).toFixed(2)} · {underBarrier * 10}% win</span>
                 </button>
               </>)}
             </div>

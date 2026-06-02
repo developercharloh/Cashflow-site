@@ -7,12 +7,16 @@ const router = Router();
 
 type Direction = "rise" | "fall" | "even" | "odd" | "matches" | "differs" | "over" | "under";
 
-const PAYOUTS: Record<Direction, number> = {
-  rise: 1.85, fall: 1.85,
-  even: 1.90, odd: 1.90,
-  matches: 9.00, differs: 1.10,
-  over: 2.20, under: 2.20,
+const STATIC_PAYOUTS: Partial<Record<Direction, number>> = {
+  rise: 1.85, fall: 1.85, even: 1.90, odd: 1.90, matches: 9.00, differs: 1.10,
 };
+
+/** Over [n]: 9-n winning digits. Under [n]: n winning digits. 5% house edge. */
+function overUnderPayout(dir: "over" | "under", barrier: number): number {
+  const winCount = dir === "over" ? 9 - barrier : barrier;
+  if (winCount <= 0) return 9.50;
+  return Math.round(0.95 / (winCount / 10) * 100) / 100;
+}
 
 function generateWin(direction: Direction, lastDigit: number, barrier: number): boolean {
   switch (direction) {
@@ -35,9 +39,12 @@ router.post("/binary/trade", requireAuth, async (req: AuthRequest, res) => {
     }
 
     const dir = direction as Direction;
+    const barrierN = parseInt(String(barrier));
     const lastDigit = Math.floor(Math.random() * 10);
-    const win = generateWin(dir, lastDigit, parseInt(String(barrier)));
-    const multiplier = PAYOUTS[dir] ?? 1.85;
+    const win = generateWin(dir, lastDigit, barrierN);
+    const multiplier = (dir === "over" || dir === "under")
+      ? overUnderPayout(dir, barrierN)
+      : (STATIC_PAYOUTS[dir] ?? 1.85);
     const payout = win ? Math.round(stake * multiplier * 100) / 100 : 0;
     const netChange = Math.round((payout - stake) * 100) / 100;
 
