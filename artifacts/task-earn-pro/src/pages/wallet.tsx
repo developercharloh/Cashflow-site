@@ -135,7 +135,7 @@ export default function WalletPage() {
 
   // Exchange rates
   const DEPOSIT_RATE = 134;    // 1 USD = 134 KES (deposit)
-  const WITHDRAWAL_RATE = 122; // 1 USD = 122 KES (withdrawal)
+  const WITHDRAWAL_RATE = 121; // 1 USD = 121 KES (withdrawal)
 
   const isMobileMoney = (id: string) => id === "mpesa" || id === "airtel";
 

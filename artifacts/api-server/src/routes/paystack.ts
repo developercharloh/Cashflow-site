@@ -12,7 +12,7 @@ const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL!;
 
 // ─── Exchange rates ───────────────────────────────────────────────────────────
 const DEPOSIT_RATE_KES = 134;    // 1 USD = 134 KES for incoming payments
-const WITHDRAWAL_RATE_KES = 122; // 1 USD = 122 KES for outgoing payments (KES users receive)
+const WITHDRAWAL_RATE_KES = 121; // 1 USD = 121 KES for outgoing payments (KES users receive)
 
 // Convert actual Paystack amount (smallest unit, i.e. cents/kobo) → USD
 // Always derives from actual payment received — never from stored metadata
@@ -541,7 +541,8 @@ router.post("/paystack/upgrade/initialize", requireAuth, async (req: AuthRequest
     if (user.level >= targetLevel) { res.status(400).json({ error: "Already at this level or higher" }); return; }
 
     const reference = `upg_${req.userId}_lvl${targetLevel}_${Date.now()}`;
-    const amountKobo = Math.round(pkg.price * 100);
+    const amountKes = Math.round(pkg.price * DEPOSIT_RATE_KES);
+    const amountKobo = amountKes * 100;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -549,10 +550,11 @@ router.post("/paystack/upgrade/initialize", requireAuth, async (req: AuthRequest
       body: JSON.stringify({
         email: user.email,
         amount: amountKobo,
+        currency: "KES",
         reference,
         callback_url: CALLBACK_URL,
-        metadata: { userId: req.userId, targetLevel, type: "upgrade", packageName: pkg.name },
-        channels: ["card", "bank", "ussd", "mobile_money"],
+        metadata: { userId: req.userId, targetLevel, type: "upgrade", packageName: pkg.name, expectedUsd: pkg.price, amountKes, currency: "KES" },
+        channels: ["card", "bank", "ussd", "mobile_money", "mobile_money"],
       }),
     });
 
@@ -633,7 +635,8 @@ router.post("/paystack/transcription/buy", requireAuth, async (req: AuthRequest,
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
     const reference = `txmin_${req.userId}_${pkg}_${Date.now()}`;
-    const amountKobo = Math.round(bundle.price * 100);
+    const amountKes = Math.round(bundle.price * DEPOSIT_RATE_KES);
+    const amountKobo = amountKes * 100;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -641,9 +644,10 @@ router.post("/paystack/transcription/buy", requireAuth, async (req: AuthRequest,
       body: JSON.stringify({
         email: user.email,
         amount: amountKobo,
+        currency: "KES",
         reference,
         callback_url: CALLBACK_URL,
-        metadata: { userId: req.userId, minutes: bundle.minutes, price: bundle.price, type: "transcription_minutes", package: pkg },
+        metadata: { userId: req.userId, minutes: bundle.minutes, price: bundle.price, type: "transcription_minutes", package: pkg, expectedUsd: bundle.price, amountKes, currency: "KES" },
         channels: ["card", "bank", "ussd", "mobile_money"],
       }),
     });
