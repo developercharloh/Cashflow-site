@@ -42,7 +42,7 @@ export default function Login() {
     loginMutation.mutate({ data: values }, {
       onSuccess: (data) => {
         setToken(data.token);
-        setLocation(!data.user.quizCompleted ? "/quiz" : "/dashboard");
+        setLocation("/dashboard");
       },
       onError: () => {
         toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });

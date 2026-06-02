@@ -148,7 +148,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAuthPage = location.startsWith("/auth") || location === "/quiz";
+  const isAuthPage = location.startsWith("/auth");
 
   if (isAuthPage) {
     return <div className="min-h-screen bg-background">{children}</div>;

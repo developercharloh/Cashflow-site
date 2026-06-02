@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, transactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword, comparePassword, signToken, generateReferralCode, generateOTP } from "../lib/auth";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
@@ -45,7 +45,18 @@ router.post("/auth/register", async (req, res) => {
       referralCode: code,
       referredBy: referredById ?? null,
       isEmailVerified: true,
+      quizCompleted: true,
+      balance: 0.10,
+      totalEarned: 0.10,
     }).returning();
+
+    await db.insert(transactionsTable).values({
+      userId: user.id,
+      type: "bonus",
+      amount: 0.10,
+      status: "completed",
+      description: "Welcome bonus",
+    });
 
     const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
     res.status(201).json({
