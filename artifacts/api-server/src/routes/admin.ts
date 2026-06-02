@@ -36,7 +36,7 @@ router.get("/admin/users", requireAdmin, async (req: AuthRequest, res) => {
 
 router.patch("/admin/users/:id/ban", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const { banned } = req.body;
     const [user] = await db.update(usersTable).set({ isBanned: !!banned })
       .where(eq(usersTable.id, id)).returning();
@@ -77,7 +77,7 @@ router.post("/admin/tasks", requireAdmin, async (req: AuthRequest, res) => {
 
 router.patch("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const updates = req.body;
     const [task] = await db.update(tasksTable).set({ ...updates, updatedAt: new Date() })
       .where(eq(tasksTable.id, id)).returning();
@@ -90,7 +90,7 @@ router.patch("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => 
 
 router.delete("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     await db.update(tasksTable).set({ isActive: false }).where(eq(tasksTable.id, id));
     res.json({ message: "Task deactivated" });
   } catch (err) {
@@ -130,7 +130,7 @@ router.get("/admin/withdrawals", requireAdmin, async (req: AuthRequest, res) => 
 
 router.patch("/admin/withdrawals/:id/approve", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id));
     if (!txn) { res.status(404).json({ error: "Transaction not found" }); return; }
 
@@ -167,7 +167,7 @@ router.patch("/admin/withdrawals/:id/approve", requireAdmin, async (req: AuthReq
 
 router.patch("/admin/withdrawals/:id/reject", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const { reason } = req.body;
     const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id));
     if (!txn) { res.status(404).json({ error: "Transaction not found" }); return; }

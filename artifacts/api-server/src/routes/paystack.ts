@@ -82,7 +82,7 @@ router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest
 // ─── Verify deposit (called after redirect) ──────────────────────────────────
 router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { reference } = req.params;
+    const reference = String(req.params["reference"]);
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: { Authorization: `Bearer ${SECRET_KEY}` },
@@ -104,8 +104,8 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
       return;
     }
 
-    const amountUsd = data.data.metadata?.amountUsd ?? data.data.amount / 100;
-    const userId = data.data.metadata?.userId ?? req.userId!;
+    const amountUsd: number = data.data.metadata?.amountUsd ?? data.data.amount / 100;
+    const userId: number = Number(data.data.metadata?.userId ?? req.userId!);
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
 
@@ -496,7 +496,7 @@ router.post("/paystack/upgrade/initialize", requireAuth, async (req: AuthRequest
 // ─── Verify membership upgrade ────────────────────────────────────────────────
 router.get("/paystack/upgrade/verify/:reference", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { reference } = req.params;
+    const reference = String(req.params["reference"]);
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: { Authorization: `Bearer ${SECRET_KEY}` },
     });
@@ -505,9 +505,9 @@ router.get("/paystack/upgrade/verify/:reference", requireAuth, async (req: AuthR
       res.status(400).json({ error: "Payment not successful" }); return;
     }
 
-    const meta = data.data.metadata;
-    const userId: number = Number(meta?.userId ?? req.userId);
-    const targetLevel: number = Number(meta?.targetLevel);
+    const meta = data.data.metadata ?? {};
+    const userId = Number(meta.userId ?? req.userId) as number;
+    const targetLevel = Number(meta.targetLevel) as number;
     if (!targetLevel || !UPGRADE_PACKAGES[targetLevel]) {
       res.status(400).json({ error: "Invalid upgrade metadata" }); return;
     }
@@ -515,7 +515,9 @@ router.get("/paystack/upgrade/verify/:reference", requireAuth, async (req: AuthR
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (user.level >= targetLevel) { res.json({ message: "Already upgraded", alreadyApplied: true }); return; }
 
-    await db.update(usersTable).set({ level: targetLevel, membershipPurchased: true }).where(eq(usersTable.id, userId));
+    await db.update(usersTable)
+      .set({ level: targetLevel, membershipPurchased: true })
+      .where(eq(usersTable.id, userId));
 
     const existing = await db.select().from(transactionsTable)
       .where(eq(transactionsTable.accountDetails, reference));

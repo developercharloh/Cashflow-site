@@ -180,6 +180,8 @@ function sanitizeUser(user: typeof usersTable.$inferSelect) {
     isAdmin: user.isAdmin,
     quizCompleted: user.quizCompleted,
     isBanned: user.isBanned,
+    transcriptionMinutes: user.transcriptionMinutes,
+    membershipPurchased: user.membershipPurchased,
     createdAt: user.createdAt.toISOString(),
   };
 }

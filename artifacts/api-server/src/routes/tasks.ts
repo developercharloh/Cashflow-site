@@ -50,7 +50,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
 
 router.get("/tasks/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(String(req.params["id"]));
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task) { res.status(404).json({ error: "Task not found" }); return; }
     res.json(task);
@@ -62,7 +62,7 @@ router.get("/tasks/:id", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(String(req.params["id"]));
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task || !task.isActive) { res.status(404).json({ error: "Task not found" }); return; }
 
@@ -98,7 +98,7 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(String(req.params["id"]));
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task) { res.status(404).json({ error: "Task not found" }); return; }
 

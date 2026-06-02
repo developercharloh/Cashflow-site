@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetMembershipLevels, useInitializeUpgrade, useVerifyUpgrade, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useGetMembershipLevels, useInitializeUpgrade, verifyUpgrade, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,6 @@ function UpgradeModal({ targetLevel, levelName, price, onClose }: {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const upgradeMutation = useInitializeUpgrade();
-  const verifyMutation = useVerifyUpgrade();
   const [loading, setLoading] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -63,21 +62,19 @@ function UpgradeModal({ targetLevel, levelName, price, onClose }: {
     });
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!reference) return;
     setVerifying(true);
-    verifyMutation.mutate({ reference }, {
-      onSuccess: (res: any) => {
-        toast({ title: "Upgrade Successful! 🎉", description: res.message ?? `Welcome to ${levelName}!` });
-        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        setVerifying(false);
-        onClose();
-      },
-      onError: (err: any) => {
-        toast({ title: "Verification Failed", description: err.message ?? "Payment not confirmed yet. Try again in a moment.", variant: "destructive" });
-        setVerifying(false);
-      },
-    });
+    try {
+      const res = await verifyUpgrade(reference);
+      toast({ title: "Upgrade Successful! 🎉", description: (res as any).message ?? `Welcome to ${levelName}!` });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Verification Failed", description: err?.message ?? "Payment not confirmed yet. Try again in a moment.", variant: "destructive" });
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const colors = LEVEL_COLORS[targetLevel];
@@ -137,7 +134,7 @@ export default function Membership() {
   const currentLevel = user?.level ?? 1;
   const currentLevelData = levels.find(l => l.level === currentLevel);
   const nextLevel = levels.find(l => l.level === currentLevel + 1);
-  const totalEarned = user?.totalEarned ?? user?.balance ?? 0;
+  const totalEarned = user?.balance ?? 0;
   const progressToNext = nextLevel
     ? Math.min(100, ((totalEarned - (currentLevelData?.minEarnings ?? 0)) / ((nextLevel.minEarnings ?? 0) - (currentLevelData?.minEarnings ?? 0))) * 100)
     : 100;

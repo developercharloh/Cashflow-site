@@ -28,7 +28,7 @@ router.get("/notifications", requireAuth, async (req: AuthRequest, res) => {
 
 router.patch("/notifications/:id/read", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [notif] = await db.update(notificationsTable).set({ isRead: true })
       .where(eq(notificationsTable.id, id))
       .returning();
