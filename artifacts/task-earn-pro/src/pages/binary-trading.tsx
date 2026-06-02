@@ -116,8 +116,16 @@ export default function BinaryTradingPage() {
   const [autoDirection, setAutoDirection] = useState<Direction | null>(null);
   const [sessionPnl, setSessionPnl] = useState(0);
 
+  const [martingale, setMartingale] = useState(false);
+  const martingaleRef = useRef(false);
+  const martingaleStakeRef = useRef(1);
+  const baseStakeRef = useRef(1);
+
   const realBalance = user?.balance ?? 0;
   const balance = accountMode === "demo" ? demoBalance : realBalance;
+
+  // ── Sync martingale ref ──────────────────────────────────────────────────────
+  useEffect(() => { martingaleRef.current = martingale; }, [martingale]);
 
   // ── Reset ticks default when trade type changes ──────────────────────────────
   useEffect(() => { setTickCount(DEFAULT_TICKS[tradeType]); }, [tradeType]);
@@ -149,6 +157,10 @@ export default function BinaryTradingPage() {
         if (!resp.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
         setRecentResults(p => [{ id: contract.id, direction: contract.direction, stake: contract.stake, win: data.win, payout: data.payout, netChange: data.netChange, lastDigit: data.lastDigit }, ...p].slice(0, 15));
         setSessionPnl(p => Math.round((p + data.netChange) * 100) / 100);
+        if (martingaleRef.current && autoRef.current) {
+          if (data.win) { martingaleStakeRef.current = baseStakeRef.current; }
+          else { martingaleStakeRef.current = Math.round(martingaleStakeRef.current * 200) / 100; }
+        }
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       } catch { toast({ title: "Network error", variant: "destructive" }); }
       return;
@@ -172,11 +184,16 @@ export default function BinaryTradingPage() {
     setDemoBalance(p => { const nb = Math.max(0, Math.round((p + netChange) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
     setSessionPnl(p => Math.round((p + netChange) * 100) / 100);
     setRecentResults(p => [{ id: contract.id, direction: contract.direction, stake: contract.stake, win, payout, netChange, lastDigit }, ...p].slice(0, 15));
+    if (martingaleRef.current && autoRef.current) {
+      if (win) { martingaleStakeRef.current = baseStakeRef.current; }
+      else { martingaleStakeRef.current = Math.round(martingaleStakeRef.current * 200) / 100; }
+    }
   }, [queryClient, token, toast]);
 
   // ── Place trade ─────────────────────────────────────────────────────────────
   const placeTrade = useCallback((dir: Direction) => {
-    const stakeNum = parseFloat(stake) || 0;
+    const baseStake = parseFloat(stake) || 0;
+    const stakeNum = (martingaleRef.current && autoRef.current) ? martingaleStakeRef.current : baseStake;
     const bal = accountMode === "demo" ? demoBalance : realBalance;
     if (stakeNum <= 0 || bal < stakeNum) {
       toast({ title: "Insufficient balance", description: accountMode === "real" ? "Deposit funds to trade real money." : "Reset your demo balance.", variant: "destructive" });
@@ -209,10 +226,13 @@ export default function BinaryTradingPage() {
 
   // ── Auto-trading ────────────────────────────────────────────────────────────
   const startAutoTrading = useCallback((dir: Direction) => {
+    const sn = parseFloat(stake) || 1;
+    baseStakeRef.current = sn;
+    martingaleStakeRef.current = sn;
     autoRef.current = true; autoDirRef.current = dir;
     setIsAutoTrading(true); setAutoDirection(dir);
     placeTrade(dir);
-  }, [placeTrade]);
+  }, [placeTrade, stake]);
 
   const stopAutoTrading = useCallback(() => {
     autoRef.current = false; autoDirRef.current = null;
@@ -381,6 +401,26 @@ export default function BinaryTradingPage() {
                 {tt.label}
               </button>
             ))}
+          </div>
+
+          {/* Martingale toggle */}
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-card border border-border">
+            <div>
+              <p className="text-xs font-semibold">Martingale</p>
+              <p className="text-[10px] text-muted-foreground">Doubles stake after every loss, resets on win</p>
+            </div>
+            <button
+              onClick={() => !isAutoTrading && setMartingale(m => !m)}
+              disabled={isAutoTrading}
+              className={cn(
+                "relative w-10 h-5 rounded-full transition-colors shrink-0 disabled:opacity-50",
+                martingale ? "bg-primary" : "bg-muted border border-border",
+              )}>
+              <span className={cn(
+                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
+                martingale ? "left-[calc(100%-1.125rem)]" : "left-0.5",
+              )} />
+            </button>
           </div>
 
           {/* Stake + Ticks */}

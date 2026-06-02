@@ -13,9 +13,9 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/binary", label: "Binary", icon: BarChart2 },
+  { href: "/accumulators", label: "Accum", icon: TrendingUp },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/referrals", label: "Referrals", icon: Users },
-  { href: "/notifications", label: "More", icon: MoreHorizontal },
 ];
 
 function TopHeader() {
