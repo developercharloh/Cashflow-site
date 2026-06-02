@@ -11,11 +11,16 @@ import { cn } from "@/lib/utils";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const MARKETS = [
-  { id: "R_10",  name: "Volatility 10 Index",  vol: 0.0005, base: 5000 },
-  { id: "R_25",  name: "Volatility 25 Index",  vol: 0.0013, base: 3200 },
-  { id: "R_50",  name: "Volatility 50 Index",  vol: 0.0027, base: 2100 },
-  { id: "R_75",  name: "Volatility 75 Index",  vol: 0.0045, base: 1400 },
-  { id: "R_100", name: "Volatility 100 Index", vol: 0.007,  base: 850  },
+  { id: "1HZ10V",  group: "Continuous Indices (1s)", name: "Volatility 10 (1s) Index",  vol: 0.0005, base: 5000 },
+  { id: "1HZ25V",  group: "Continuous Indices (1s)", name: "Volatility 25 (1s) Index",  vol: 0.0013, base: 3200 },
+  { id: "1HZ50V",  group: "Continuous Indices (1s)", name: "Volatility 50 (1s) Index",  vol: 0.0027, base: 2100 },
+  { id: "1HZ75V",  group: "Continuous Indices (1s)", name: "Volatility 75 (1s) Index",  vol: 0.0045, base: 1400 },
+  { id: "1HZ100V", group: "Continuous Indices (1s)", name: "Volatility 100 (1s) Index", vol: 0.007,  base: 850  },
+  { id: "R_10",    group: "Volatility Indices",      name: "Volatility 10 Index",       vol: 0.0005, base: 5200 },
+  { id: "R_25",    group: "Volatility Indices",      name: "Volatility 25 Index",       vol: 0.0013, base: 3400 },
+  { id: "R_50",    group: "Volatility Indices",      name: "Volatility 50 Index",       vol: 0.0027, base: 2300 },
+  { id: "R_75",    group: "Volatility Indices",      name: "Volatility 75 Index",       vol: 0.0045, base: 1600 },
+  { id: "R_100",   group: "Volatility Indices",      name: "Volatility 100 Index",      vol: 0.007,  base: 950  },
 ];
 
 const TRADE_TYPES = [
@@ -28,7 +33,7 @@ const TRADE_TYPES = [
 type TradeTypeId = typeof TRADE_TYPES[number]["id"];
 type Direction = "rise" | "fall" | "even" | "odd" | "matches" | "differs" | "over" | "under";
 
-const CONTRACT_TICKS: Record<TradeTypeId, number> = {
+const DEFAULT_TICKS: Record<TradeTypeId, number> = {
   "rise-fall": 5, "even-odd": 1, "matches-differs": 1, "over-under": 1,
 };
 
@@ -45,7 +50,6 @@ function getPayout(dir: "over" | "under", barrier: number): number {
   return Math.round(0.95 / (winCount / 10) * 100) / 100;
 }
 
-const STAKE_PRESETS = [0.5, 1, 2, 5, 10];
 
 interface PricePoint { price: number; idx: number; }
 interface Contract {
@@ -96,7 +100,8 @@ export default function BinaryTradingPage() {
   const [currentPrice, setCurrentPrice] = useState(priceRef.current);
 
   const [tradeType, setTradeType] = useState<TradeTypeId>("rise-fall");
-  const [stake, setStake] = useState(1);
+  const [stake, setStake] = useState("1.00");
+  const [tickCount, setTickCount] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
   const [overBarrier, setOverBarrier] = useState(4);   // 0–8
   const [underBarrier, setUnderBarrier] = useState(5); // 1–9
@@ -113,6 +118,9 @@ export default function BinaryTradingPage() {
 
   const realBalance = user?.balance ?? 0;
   const balance = accountMode === "demo" ? demoBalance : realBalance;
+
+  // ── Reset ticks default when trade type changes ──────────────────────────────
+  useEffect(() => { setTickCount(DEFAULT_TICKS[tradeType]); }, [tradeType]);
 
   // ── Reset market ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -168,13 +176,14 @@ export default function BinaryTradingPage() {
 
   // ── Place trade ─────────────────────────────────────────────────────────────
   const placeTrade = useCallback((dir: Direction) => {
+    const stakeNum = parseFloat(stake) || 0;
     const bal = accountMode === "demo" ? demoBalance : realBalance;
-    if (bal < stake) {
+    if (stakeNum <= 0 || bal < stakeNum) {
       toast({ title: "Insufficient balance", description: accountMode === "real" ? "Deposit funds to trade real money." : "Reset your demo balance.", variant: "destructive" });
       autoRef.current = false; autoDirRef.current = null; setIsAutoTrading(false); setAutoDirection(null);
       return;
     }
-    const ticksTotal = CONTRACT_TICKS[tradeType];
+    const ticksTotal = tickCount;
     const barrierVal = tradeType === "matches-differs" ? selectedDigit
       : dir === "over" ? overBarrier
       : dir === "under" ? underBarrier
@@ -184,7 +193,7 @@ export default function BinaryTradingPage() {
       : PAYOUTS[dir];
     const contract: Contract = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      direction: dir, tradeType, stake,
+      direction: dir, tradeType, stake: stakeNum,
       entryPrice: priceRef.current, ticksTotal,
       ticksRemaining: ticksTotal,
       isDemo: accountMode === "demo",
@@ -192,11 +201,11 @@ export default function BinaryTradingPage() {
       payoutMultiplier,
     };
     if (accountMode === "demo") {
-      setDemoBalance(p => { const nb = Math.max(0, Math.round((p - stake) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
+      setDemoBalance(p => { const nb = Math.max(0, Math.round((p - stakeNum) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
     }
     contractsRef.current = [...contractsRef.current, contract];
     setActiveContracts([...contractsRef.current]);
-  }, [accountMode, demoBalance, realBalance, stake, tradeType, selectedDigit, overBarrier, underBarrier, toast]);
+  }, [accountMode, demoBalance, realBalance, stake, tickCount, tradeType, selectedDigit, overBarrier, underBarrier, toast]);
 
   // ── Auto-trading ────────────────────────────────────────────────────────────
   const startAutoTrading = useCallback((dir: Direction) => {
@@ -243,47 +252,46 @@ export default function BinaryTradingPage() {
   const priceMax = Math.max(...priceHistory.map(p => p.price)) * 1.0005;
   const activeContract = activeContracts[0];
 
-  const displayPayout =
-    tradeType === "over-under" ? getPayout("over", overBarrier)
-    : tradeType === "rise-fall" ? PAYOUTS.rise
-    : tradeType === "even-odd" ? PAYOUTS.even
-    : PAYOUTS.differs;
+  const stakeNum = parseFloat(stake) || 0;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
 
-      {/* ── Account bar ── */}
-      <div className="flex items-center justify-between px-3 py-2 bg-card border-b border-border shrink-0">
-        <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+      {/* ── Account bar + market dropdown ── */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-card border-b border-border shrink-0">
+        <div className="flex rounded-lg border border-border overflow-hidden text-xs shrink-0">
           <button onClick={() => setAccountMode("demo")}
-            className={cn("px-3 py-1.5 font-semibold transition-colors", accountMode === "demo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+            className={cn("px-2.5 py-1.5 font-semibold transition-colors", accountMode === "demo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
             Demo
           </button>
           <button onClick={() => setAccountMode("real")}
-            className={cn("px-3 py-1.5 font-semibold transition-colors", accountMode === "real" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+            className={cn("px-2.5 py-1.5 font-semibold transition-colors", accountMode === "real" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
             Real
           </button>
         </div>
-        <div className="text-center">
-          <p className="text-[10px] text-muted-foreground">{accountMode === "demo" ? "Virtual" : "Real"} Balance</p>
-          <p className="text-base font-bold text-green-400 leading-tight">${balance.toFixed(2)}</p>
+        <select
+          value={marketId}
+          onChange={e => setMarketId(e.target.value)}
+          className="flex-1 min-w-0 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary truncate">
+          <optgroup label="Continuous Indices (1s)">
+            {MARKETS.filter(m => m.group === "Continuous Indices (1s)").map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Volatility Indices">
+            {MARKETS.filter(m => m.group === "Volatility Indices").map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </optgroup>
+        </select>
+        <div className="text-right shrink-0">
+          <p className="text-[9px] text-muted-foreground leading-none">{accountMode === "demo" ? "Virtual" : "Real"}</p>
+          <p className="text-sm font-bold text-green-400 leading-tight">${balance.toFixed(2)}</p>
+          <p className={cn("text-[9px] font-bold leading-none", sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
+            {sessionPnl >= 0 ? "+" : ""}${sessionPnl.toFixed(2)}
+          </p>
         </div>
-        <div className={cn("text-right", sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
-          <p className="text-[10px] text-muted-foreground">Session P&L</p>
-          <p className="text-sm font-bold leading-tight">{sessionPnl >= 0 ? "+" : ""}${sessionPnl.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* ── Market selector ── */}
-      <div className="flex overflow-x-auto px-3 py-1.5 gap-1.5 bg-card border-b border-border shrink-0 no-scrollbar">
-        {MARKETS.map(m => (
-          <button key={m.id} onClick={() => setMarketId(m.id)}
-            className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap shrink-0 transition-colors",
-              marketId === m.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
-            {m.id}
-          </button>
-        ))}
       </div>
 
       {/* ── Chart ── */}
@@ -342,26 +350,33 @@ export default function BinaryTradingPage() {
             ))}
           </div>
 
-          {/* Stake */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-muted-foreground font-medium">Stake (USD)</span>
-              <span className="text-xs text-muted-foreground">Payout ×{displayPayout.toFixed(2)} = <span className="text-green-400 font-bold">${(stake * displayPayout).toFixed(2)}</span></span>
+          {/* Stake + Ticks */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Stake (USD)</p>
+              <input
+                type="number"
+                min="0.01"
+                step="0.50"
+                value={stake}
+                onChange={e => setStake(e.target.value)}
+                onBlur={e => {
+                  const v = parseFloat(e.target.value);
+                  setStake(isNaN(v) || v < 0.01 ? "0.50" : v.toFixed(2));
+                }}
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm font-bold text-center focus:outline-none focus:ring-1 focus:ring-primary"
+              />
             </div>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => setStake(s => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))}
-                className="w-8 h-8 rounded-lg bg-muted text-lg font-bold flex items-center justify-center hover:bg-muted/80">−</button>
-              <div className="flex-1 grid grid-cols-5 gap-1">
-                {STAKE_PRESETS.map(p => (
-                  <button key={p} onClick={() => setStake(p)}
-                    className={cn("py-1.5 rounded-lg text-xs font-bold transition-colors",
-                      stake === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80")}>
-                    ${p}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setStake(s => Math.round((s + 0.5) * 10) / 10)}
-                className="w-8 h-8 rounded-lg bg-muted text-lg font-bold flex items-center justify-center hover:bg-muted/80">+</button>
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Number of Ticks</p>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={tickCount}
+                onChange={e => setTickCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm font-bold text-center focus:outline-none focus:ring-1 focus:ring-primary"
+              />
             </div>
           </div>
 
@@ -378,43 +393,33 @@ export default function BinaryTradingPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">Matches: last digit = {selectedDigit} (×9 payout) · Differs: ≠ {selectedDigit} (×1.10)</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Matches: last digit = {selectedDigit} · Differs: last digit ≠ {selectedDigit}</p>
             </div>
           )}
 
-          {/* Over/Under barrier pickers — separate per direction */}
+          {/* Over/Under barrier pickers */}
           {tradeType === "over-under" && (
-            <div className="space-y-2.5">
-              {/* Over: barrier 0–8, winning digits = (9-n)/10 */}
+            <div className="space-y-2">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] font-semibold text-green-400">Over — last digit &gt; barrier</p>
-                  <span className="text-[11px] text-green-400 font-bold">×{getPayout("over", overBarrier).toFixed(2)} · {(9 - overBarrier) * 10}% win</span>
-                </div>
+                <p className="text-[11px] font-semibold text-green-400 mb-1">Over — last digit above</p>
                 <div className="grid grid-cols-9 gap-1">
                   {[0,1,2,3,4,5,6,7,8].map(d => (
                     <button key={d} onClick={() => setOverBarrier(d)}
-                      className={cn("rounded-lg py-1 flex flex-col items-center gap-0 transition-colors",
+                      className={cn("rounded-lg py-1.5 text-xs font-bold transition-colors",
                         overBarrier === d ? "bg-green-600 text-white" : "bg-muted text-muted-foreground hover:bg-green-600/30")}>
-                      <span className="text-xs font-bold">{d}</span>
-                      <span className="text-[8px] opacity-70">{(9-d)*10}%</span>
+                      {d}
                     </button>
                   ))}
                 </div>
               </div>
-              {/* Under: barrier 1–9, winning digits = n/10 */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] font-semibold text-red-400">Under — last digit &lt; barrier</p>
-                  <span className="text-[11px] text-red-400 font-bold">×{getPayout("under", underBarrier).toFixed(2)} · {underBarrier * 10}% win</span>
-                </div>
+                <p className="text-[11px] font-semibold text-red-400 mb-1">Under — last digit below</p>
                 <div className="grid grid-cols-9 gap-1">
                   {[1,2,3,4,5,6,7,8,9].map(d => (
                     <button key={d} onClick={() => setUnderBarrier(d)}
-                      className={cn("rounded-lg py-1 flex flex-col items-center gap-0 transition-colors",
+                      className={cn("rounded-lg py-1.5 text-xs font-bold transition-colors",
                         underBarrier === d ? "bg-red-600 text-white" : "bg-muted text-muted-foreground hover:bg-red-600/30")}>
-                      <span className="text-xs font-bold">{d}</span>
-                      <span className="text-[8px] opacity-70">{d*10}%</span>
+                      {d}
                     </button>
                   ))}
                 </div>
@@ -422,13 +427,8 @@ export default function BinaryTradingPage() {
             </div>
           )}
 
-          {/* Duration */}
-          <p className="text-xs text-muted-foreground">
-            Duration: <span className="text-foreground font-semibold">{CONTRACT_TICKS[tradeType]} tick{CONTRACT_TICKS[tradeType] > 1 ? "s" : ""}</span> (~{CONTRACT_TICKS[tradeType]}s)
-          </p>
-
           {/* Real account — no balance nudge */}
-          {accountMode === "real" && realBalance < stake && (
+          {accountMode === "real" && realBalance < stakeNum && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
               <Wallet className="w-4 h-4 shrink-0" />
               <span>Insufficient real balance. </span>
@@ -471,14 +471,12 @@ export default function BinaryTradingPage() {
               </>)}
               {tradeType === "over-under" && (<>
                 <button onClick={() => startAutoTrading("over")}
-                  className="flex flex-col items-center justify-center py-3.5 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold transition-all">
-                  <span className="text-sm">Over {overBarrier} ▲</span>
-                  <span className="text-[10px] opacity-80">×{getPayout("over", overBarrier).toFixed(2)} · {(9 - overBarrier) * 10}% win</span>
+                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold text-sm transition-all">
+                  Over {overBarrier} ▲
                 </button>
                 <button onClick={() => startAutoTrading("under")}
-                  className="flex flex-col items-center justify-center py-3.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold transition-all">
-                  <span className="text-sm">Under {underBarrier} ▼</span>
-                  <span className="text-[10px] opacity-80">×{getPayout("under", underBarrier).toFixed(2)} · {underBarrier * 10}% win</span>
+                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-sm transition-all">
+                  Under {underBarrier} ▼
                 </button>
               </>)}
             </div>
@@ -487,7 +485,7 @@ export default function BinaryTradingPage() {
               <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-primary">Auto: <span className="uppercase">{autoDirection}</span> · ${stake}/contract</p>
+                  <p className="text-sm font-bold text-primary">Auto: <span className="uppercase">{autoDirection}</span> · ${stakeNum.toFixed(2)}/contract</p>
                   <p className="text-xs text-muted-foreground">Buying continuously until stopped</p>
                 </div>
               </div>
