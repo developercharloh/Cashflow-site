@@ -123,11 +123,19 @@ export default function BinaryTradingPage() {
   const martingaleStakeRef = useRef(1);
   const baseStakeRef = useRef(1);
 
+  const [takeProfitInput, setTakeProfitInput] = useState("");
+  const [stopLossInput, setStopLossInput]     = useState("");
+  const takeProfitRef  = useRef<number | null>(null);
+  const stopLossRef    = useRef<number | null>(null);
+  const sessionPnlRef  = useRef(0);
+
   const realBalance = user?.balance ?? 0;
   const balance = accountMode === "demo" ? demoBalance : realBalance;
 
   // ── Sync refs ─────────────────────────────────────────────────────────────────
   useEffect(() => { martingaleRef.current = martingale; }, [martingale]);
+  useEffect(() => { takeProfitRef.current = takeProfitInput ? parseFloat(takeProfitInput) : null; }, [takeProfitInput]);
+  useEffect(() => { stopLossRef.current   = stopLossInput   ? parseFloat(stopLossInput)   : null; }, [stopLossInput]);
   useEffect(() => { setTickCount(DEFAULT_TICKS[tradeType]); }, [tradeType]);
 
   // ── Reset market ──────────────────────────────────────────────────────────────
@@ -144,6 +152,22 @@ export default function BinaryTradingPage() {
     setAutoDirection(null);
   }, [marketId]);
 
+  // ── TP / SL check (called after every resolved contract) ─────────────────────
+  const checkTPSL = useCallback((newPnl: number) => {
+    if (!autoRef.current) return;
+    const tp = takeProfitRef.current;
+    const sl = stopLossRef.current;
+    if (tp !== null && newPnl >= tp) {
+      autoRef.current = false; autoDirRef.current = null;
+      setIsAutoTrading(false); setAutoDirection(null);
+      toast({ title: `🎯 Take Profit hit! +$${newPnl.toFixed(2)}`, description: "Auto trading stopped." });
+    } else if (sl !== null && newPnl <= -Math.abs(sl)) {
+      autoRef.current = false; autoDirRef.current = null;
+      setIsAutoTrading(false); setAutoDirection(null);
+      toast({ title: `🛑 Stop Loss triggered! -$${Math.abs(newPnl).toFixed(2)}`, description: "Auto trading stopped.", variant: "destructive" });
+    }
+  }, [toast]);
+
   // ── Resolve binary contract ───────────────────────────────────────────────────
   const resolveContract = useCallback(async (contract: Contract, exitPrice: number) => {
     if (!contract.isDemo) {
@@ -156,11 +180,14 @@ export default function BinaryTradingPage() {
         const data = await resp.json();
         if (!resp.ok) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
         setRecentResults(p => [{ id: contract.id, direction: contract.direction, stake: contract.stake, win: data.win, payout: data.payout, netChange: data.netChange, lastDigit: data.lastDigit }, ...p].slice(0, 15));
-        setSessionPnl(p => Math.round((p + data.netChange) * 100) / 100);
+        const newPnl = Math.round((sessionPnlRef.current + data.netChange) * 100) / 100;
+        sessionPnlRef.current = newPnl;
+        setSessionPnl(newPnl);
         if (martingaleRef.current && autoRef.current) {
           if (data.win) { martingaleStakeRef.current = baseStakeRef.current; }
           else { martingaleStakeRef.current = Math.round(martingaleStakeRef.current * 200) / 100; }
         }
+        checkTPSL(newPnl);
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       } catch { toast({ title: "Network error", variant: "destructive" }); }
       return;
@@ -181,13 +208,16 @@ export default function BinaryTradingPage() {
     const payout = win ? Math.round(contract.stake * contract.payoutMultiplier * 100) / 100 : 0;
     const netChange = Math.round((payout - contract.stake) * 100) / 100;
     setDemoBalance(p => { const nb = Math.max(0, Math.round((p + netChange) * 100) / 100); localStorage.setItem("binary_demo", nb.toFixed(2)); return nb; });
-    setSessionPnl(p => Math.round((p + netChange) * 100) / 100);
+    const newPnl = Math.round((sessionPnlRef.current + netChange) * 100) / 100;
+    sessionPnlRef.current = newPnl;
+    setSessionPnl(newPnl);
     setRecentResults(p => [{ id: contract.id, direction: contract.direction, stake: contract.stake, win, payout, netChange, lastDigit }, ...p].slice(0, 15));
     if (martingaleRef.current && autoRef.current) {
       if (win) { martingaleStakeRef.current = baseStakeRef.current; }
       else { martingaleStakeRef.current = Math.round(martingaleStakeRef.current * 200) / 100; }
     }
-  }, [queryClient, token, toast]);
+    checkTPSL(newPnl);
+  }, [queryClient, token, toast, checkTPSL]);
 
   // ── Place trade ───────────────────────────────────────────────────────────────
   const placeTrade = useCallback((dir: Direction) => {
@@ -419,7 +449,7 @@ export default function BinaryTradingPage() {
                       )}
                     </div>
                     {recentResults.length > 0 && (
-                      <button onClick={() => { setRecentResults([]); setSessionPnl(0); }}
+                      <button onClick={() => { setRecentResults([]); setSessionPnl(0); sessionPnlRef.current = 0; }}
                         className="text-[10px] text-muted-foreground hover:text-foreground shrink-0">
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
@@ -446,6 +476,34 @@ export default function BinaryTradingPage() {
                     martingale ? "left-[calc(100%-1.125rem)]" : "left-0.5",
                   )} />
                 </button>
+              </div>
+
+              {/* Take Profit + Stop Loss */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[11px] font-medium mb-1 text-green-400 uppercase tracking-wider">Take Profit ($)</p>
+                  <input
+                    type="number" min="0.01" step="1"
+                    value={takeProfitInput}
+                    disabled={isAutoTrading}
+                    onChange={e => setTakeProfitInput(e.target.value)}
+                    placeholder="e.g. 10.00"
+                    className="w-full bg-muted border border-green-500/30 rounded-lg px-3 py-2 text-sm font-bold text-center text-green-400 placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50"
+                  />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Stop when P&L ≥ +$X</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium mb-1 text-red-400 uppercase tracking-wider">Stop Loss ($)</p>
+                  <input
+                    type="number" min="0.01" step="1"
+                    value={stopLossInput}
+                    disabled={isAutoTrading}
+                    onChange={e => setStopLossInput(e.target.value)}
+                    placeholder="e.g. 5.00"
+                    className="w-full bg-muted border border-red-500/30 rounded-lg px-3 py-2 text-sm font-bold text-center text-red-400 placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:opacity-50"
+                  />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Stop when P&L ≤ -$X</p>
+                </div>
               </div>
 
               {/* Stake + Ticks */}
@@ -616,7 +674,7 @@ export default function BinaryTradingPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Results</p>
-                    <button onClick={() => { setRecentResults([]); setSessionPnl(0); }}
+                    <button onClick={() => { setRecentResults([]); setSessionPnl(0); sessionPnlRef.current = 0; }}
                       className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
                       <RefreshCw className="w-3 h-3" /> Clear
                     </button>
