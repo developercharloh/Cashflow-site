@@ -85,7 +85,7 @@ export default function BinaryTradingPage() {
   const [accountMode, setAccountMode] = useState<"demo" | "real">("demo");
   const [demoBalance, setDemoBalance] = useState(() => {
     const s = localStorage.getItem("binary_demo");
-    return s ? parseFloat(s) : 1000;
+    return s ? parseFloat(s) : 10000;
   });
 
   const [marketId, setMarketId] = useState("R_10");
@@ -619,14 +619,14 @@ export default function BinaryTradingPage() {
           )}
 
           {/* Demo balance reset */}
-          {accountMode === "demo" && demoBalance < 5 && (
+          {accountMode === "demo" && (
             <button onClick={() => {
-              setDemoBalance(1000);
-              localStorage.setItem("binary_demo", "1000");
+              setDemoBalance(10000);
+              localStorage.setItem("binary_demo", "10000");
               setSessionPnl(0);
-              toast({ title: "Demo reset", description: "Virtual balance restored to $1,000" });
+              toast({ title: "Demo reset", description: "Virtual balance restored to $10,000" });
             }} className="w-full py-2.5 rounded-xl border border-border text-xs text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5" /> Reset Demo to $1,000
+              <RefreshCw className="w-3.5 h-3.5" /> Reset Demo to $10,000
             </button>
           )}
         </div>
