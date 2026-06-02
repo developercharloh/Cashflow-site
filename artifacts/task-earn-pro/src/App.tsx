@@ -22,6 +22,7 @@ import AdminUsers from "@/pages/admin/users";
 import AdminTasks from "@/pages/admin/tasks";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
+import BinaryTradingPage from "@/pages/binary-trading";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,22 +36,6 @@ function RedirectToDashboard() {
   return null;
 }
 
-function BinaryTradingPage() {
-  return (
-    <div className="px-4 pt-4">
-      <div className="rounded-2xl p-6 text-white text-center" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)" }}>
-        <div className="text-4xl mb-3">📈</div>
-        <h2 className="text-xl font-bold mb-2">Binary Trading</h2>
-        <p className="text-white/60 text-sm mb-4">Practice trading with virtual funds and compete for real rewards.</p>
-        <div className="bg-white/10 rounded-xl p-4 mb-4">
-          <p className="text-xs text-white/50 mb-1">Virtual Balance</p>
-          <p className="text-2xl font-bold">$1,000.00</p>
-        </div>
-        <p className="text-white/40 text-xs">Full trading platform coming soon</p>
-      </div>
-    </div>
-  );
-}
 
 function Router() {
   return (

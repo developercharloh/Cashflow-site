@@ -10,6 +10,7 @@ import notificationsRouter from "./notifications";
 import leaderboardRouter from "./leaderboard";
 import adminRouter from "./admin";
 import paystackRouter from "./paystack";
+import binaryRouter from "./binary";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(notificationsRouter);
 router.use(leaderboardRouter);
 router.use(adminRouter);
 router.use(paystackRouter);
+router.use(binaryRouter);
 
 export default router;
