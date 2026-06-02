@@ -633,10 +633,10 @@ export default function Tasks() {
         <div className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/8 p-4 space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎯</span>
-            <p className="text-sm font-bold text-amber-300">Starter Plan — 1 Free Task Per Day</p>
+            <p className="text-sm font-bold text-amber-300">Starter Plan — 2 Free Tasks Per Day</p>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Complete your daily free task to earn <span className="text-amber-400 font-semibold">$0.10</span>. Come back tomorrow for another, or upgrade to unlock <span className="font-semibold text-white">unlimited tasks</span> paying up to <span className="text-green-400 font-semibold">$10.00+</span> each.
+            You have access to <span className="text-amber-400 font-semibold">2 tasks</span> — a <span className="font-semibold text-white">Daily Check-In</span> and a <span className="font-semibold text-white">Survey</span>, each earning <span className="text-green-400 font-semibold">$0.15</span>. Upgrade to unlock unlimited higher-paying tasks up to <span className="text-green-400 font-semibold">$10.00+</span> each.
           </p>
           <a href="/membership">
             <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white text-xs mt-1 gap-1.5">

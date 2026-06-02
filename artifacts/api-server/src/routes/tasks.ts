@@ -107,7 +107,7 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
       res.status(400).json({ error: "Insufficient membership level" }); return;
     }
 
-    // Level 1 (Starter) daily limit: 1 task per day
+    // Level 1 (Starter) daily limit: 2 tasks per day
     if (user.level === 1) {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -117,9 +117,9 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
           eq(userTasksTable.status, "completed"),
           gte(userTasksTable.completedAt, todayStart)
         ));
-      if (todayCompletions.length >= 1) {
+      if (todayCompletions.length >= 2) {
         res.status(403).json({
-          error: "You've used your 1 free task for today. Upgrade your membership to complete unlimited tasks and earn more.",
+          error: "You've completed both free tasks for today. Upgrade your membership to unlock unlimited tasks and earn more.",
           limitReached: true,
         });
         return;
@@ -220,7 +220,8 @@ router.post("/tasks/daily-checkin", requireAuth, async (req: AuthRequest, res) =
     yesterday.setDate(yesterday.getDate() - 1);
     const wasYesterday = user.lastCheckIn && new Date(user.lastCheckIn).toDateString() === yesterday.toDateString();
     const streak = wasYesterday ? user.streakDays + 1 : 1;
-    const reward = Math.min(0.5 + (streak - 1) * 0.1, 2.0);
+    // Starter (level 1): fixed $0.15 check-in; higher levels earn streak bonuses
+    const reward = user.level === 1 ? 0.15 : Math.min(0.5 + (streak - 1) * 0.1, 2.0);
 
     await db.update(usersTable).set({
       balance: user.balance + reward,
