@@ -359,7 +359,7 @@ export default function BinaryTradingPage() {
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Total P&amp;L</p>
                   <p className={cn("text-xl font-extrabold leading-tight", sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
-                    {sessionPnl >= 0 ? "+" : ""}${Math.abs(sessionPnl).toFixed(2)}
+                    {sessionPnl >= 0 ? "+$" : "-$"}{Math.abs(sessionPnl).toFixed(2)}
                   </p>
                 </div>
                 <div className="flex gap-3 text-center">

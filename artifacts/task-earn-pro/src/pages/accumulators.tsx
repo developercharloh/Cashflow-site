@@ -212,7 +212,7 @@ export default function AccumulatorsPage() {
     setActiveContract(null);
     toast({
       title: profit >= 0 ? "Sold — profit taken!" : "Sold at a loss",
-      description: `${profit >= 0 ? "+" : ""}$${profit.toFixed(2)} after ${c.ticks} ticks`,
+      description: `${profit >= 0 ? "+$" : "-$"}${Math.abs(profit).toFixed(2)} after ${c.ticks} ticks`,
     });
   }, [toast]);
 
@@ -331,7 +331,7 @@ export default function AccumulatorsPage() {
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Total P&L</p>
                   <p className={cn("text-xl font-extrabold leading-tight",
                     sessionPnl >= 0 ? "text-green-400" : "text-red-400")}>
-                    {sessionPnl >= 0 ? "+" : ""}${Math.abs(sessionPnl).toFixed(2)}
+                    {sessionPnl >= 0 ? "+$" : "-$"}{Math.abs(sessionPnl).toFixed(2)}
                   </p>
                 </div>
                 <div className="flex gap-3 text-center">
@@ -347,7 +347,7 @@ export default function AccumulatorsPage() {
                     <div>
                       <p className="text-[9px] text-muted-foreground">Net</p>
                       <p className={cn("text-xs font-bold", totalProfit >= 0 ? "text-green-400" : "text-red-400")}>
-                        {totalProfit >= 0 ? "+" : ""}${totalProfit.toFixed(2)}
+                        {totalProfit >= 0 ? "+$" : "-$"}{Math.abs(totalProfit).toFixed(2)}
                       </p>
                     </div>
                   )}
@@ -475,7 +475,7 @@ export default function AccumulatorsPage() {
                       <span className="text-muted-foreground/60 shrink-0">stake ${r.stake.toFixed(2)}</span>
                     </div>
                     <span className={cn("font-bold shrink-0", r.profit >= 0 ? "text-green-400" : "text-red-400")}>
-                      {r.profit >= 0 ? "+" : ""}${r.profit.toFixed(2)}
+                      {r.profit >= 0 ? "+$" : "-$"}{Math.abs(r.profit).toFixed(2)}
                     </span>
                   </div>
                 ))}
