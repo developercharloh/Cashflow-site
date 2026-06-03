@@ -34,6 +34,8 @@ import type {
   ChartDataPoint,
   CheckInResult,
   DashboardStats,
+  DepositChargeInput,
+  DepositChargeResponse,
   DepositInitInput,
   DepositInitResponse,
   ForgotPasswordInput,
@@ -1863,6 +1865,77 @@ export const useInitializeDeposit = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getInitializeDepositMutationOptions(options));
+    }
+
+export const getChargeDepositUrl = () => {
+
+
+
+
+  return `/api/paystack/deposit/charge`
+}
+
+/**
+ * @summary Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+ */
+export const chargeDeposit = async (depositChargeInput: DepositChargeInput, options?: RequestInit): Promise<DepositChargeResponse> => {
+
+  return customFetch<DepositChargeResponse>(getChargeDepositUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      depositChargeInput,)
+  }
+);}
+
+
+
+
+export const getChargeDepositMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chargeDeposit>>, TError,{data: BodyType<DepositChargeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof chargeDeposit>>, TError,{data: BodyType<DepositChargeInput>}, TContext> => {
+
+const mutationKey = ['chargeDeposit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chargeDeposit>>, {data: BodyType<DepositChargeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  chargeDeposit(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChargeDepositMutationResult = NonNullable<Awaited<ReturnType<typeof chargeDeposit>>>
+    export type ChargeDepositMutationBody = BodyType<DepositChargeInput>
+    export type ChargeDepositMutationError = ErrorType<void>
+
+    /**
+ * @summary Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+ */
+export const useChargeDeposit = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chargeDeposit>>, TError,{data: BodyType<DepositChargeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof chargeDeposit>>,
+        TError,
+        {data: BodyType<DepositChargeInput>},
+        TContext
+      > => {
+      return useMutation(getChargeDepositMutationOptions(options));
     }
 
 export const getVerifyPendingDepositsUrl = () => {

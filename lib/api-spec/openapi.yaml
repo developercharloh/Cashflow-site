@@ -458,6 +458,27 @@ paths:
         "400":
           description: Validation error
 
+  /paystack/deposit/charge:
+    post:
+      operationId: chargeDeposit
+      tags: [wallet]
+      summary: Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositChargeInput"
+      responses:
+        "200":
+          description: STK push initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositChargeResponse"
+        "400":
+          description: Validation error
+
   /paystack/deposit/verify-pending:
     post:
       operationId: verifyPendingDeposits
@@ -1377,6 +1398,28 @@ components:
         method:
           type: string
         phone:
+          type: string
+
+    DepositChargeInput:
+      type: object
+      required: [amount, phone, provider]
+      properties:
+        amount:
+          type: number
+        phone:
+          type: string
+        provider:
+          type: string
+
+    DepositChargeResponse:
+      type: object
+      required: [status, reference]
+      properties:
+        status:
+          type: string
+        reference:
+          type: string
+        message:
           type: string
 
     DepositInitResponse:

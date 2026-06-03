@@ -116,6 +116,77 @@ router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest
   }
 });
 
+// ─── Charge deposit (M-Pesa / Airtel direct STK push — no redirect) ─────────
+router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { amount, phone, provider } = req.body; // amount in USD
+    if (!amount || amount < 0.1) {
+      res.status(400).json({ error: "Minimum deposit is $0.10" }); return;
+    }
+    if (!phone) {
+      res.status(400).json({ error: "Phone number is required" }); return;
+    }
+    if (!["mpesa", "airtel"].includes(provider)) {
+      res.status(400).json({ error: "Invalid provider — must be mpesa or airtel" }); return;
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+    const amountKes = Math.round(amount * DEPOSIT_RATE_KES);
+    const amountKobo = amountKes * 100;
+    const reference = `dep_${req.userId}_${Date.now()}`;
+
+    const chargeBody = {
+      email: user.email,
+      amount: amountKobo,
+      currency: "KES",
+      mobile_money: { phone, provider },
+      reference,
+      metadata: {
+        userId: req.userId,
+        expectedUsd: amount,
+        amountKes,
+        currency: "KES",
+        method: provider,
+        type: "deposit",
+      },
+    };
+
+    const response = await fetch("https://api.paystack.co/charge", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(chargeBody),
+    });
+
+    const data = await response.json() as any;
+    if (!data.status) {
+      res.status(400).json({ error: data.message ?? "Paystack error" }); return;
+    }
+
+    // Record pending transaction
+    await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      amount,
+      status: "pending",
+      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via ${provider === "mpesa" ? "M-Pesa" : "Airtel Money"}`,
+      method: "paystack",
+      accountDetails: reference,
+    });
+
+    res.json({
+      status: data.data?.status ?? "pending",
+      reference,
+      message: data.data?.display_text
+        ?? `STK push sent to ${phone}. Enter your M-Pesa PIN to complete.`,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── Verify deposit (called after redirect) ──────────────────────────────────
 router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthRequest, res) => {
   try {
