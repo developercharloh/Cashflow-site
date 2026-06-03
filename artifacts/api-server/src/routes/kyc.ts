@@ -5,30 +5,38 @@ import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requ
 
 const router = Router();
 
-const CLIENT_ID = process.env.DIDIT_CLIENT_ID ?? "d32f2c6e-b8c7-4d1b-9212-e7d552ab0863";
-const CLIENT_SECRET = process.env.DIDIT_CLIENT_SECRET!;
-const DIDIT_TOKEN_URL = "https://apx.didit.me/auth/v2/token/";
-const DIDIT_SESSIONS_URL = "https://apx.didit.me/v2/sessions/";
-const CALLBACK_URL = "https://taskearn-pro.vercel.app/profile?kyc=done";
+// ── Didit v3 config ──────────────────────────────────────────────────────────
+const DIDIT_API_KEY    = process.env.DIDIT_API_KEY ?? "XPncOgSxZabQyclDBr21gfPohDPhs77Yef1pGoCYeKY";
+const DIDIT_WORKFLOW_ID = process.env.DIDIT_WORKFLOW_ID ?? "6958dd4e-b834-4e4d-80a7-c64f1e30a6c8";
+const DIDIT_BASE_URL   = "https://verification.didit.me";
+const CALLBACK_URL     = "https://taskearn-pro.vercel.app/profile?kyc=done";
 
-async function getAccessToken(): Promise<string> {
-  if (!CLIENT_SECRET) throw new Error("DIDIT_CLIENT_SECRET environment variable is not set");
-  // Didit requires Basic auth header — credentials in body always returns 403
-  const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
-  const res = await fetch(DIDIT_TOKEN_URL, {
+interface DiditSession {
+  session_id: string;
+  url: string;
+  status: string;
+}
+
+async function createDiditSession(vendorData: string): Promise<DiditSession> {
+  const res = await fetch(`${DIDIT_BASE_URL}/v3/session/`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Authorization": `Basic ${credentials}`,
+      "x-api-key": DIDIT_API_KEY,
+      "Content-Type": "application/json",
     },
-    body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+    body: JSON.stringify({
+      workflow_id: DIDIT_WORKFLOW_ID,
+      vendor_data: vendorData,
+      callback: CALLBACK_URL,
+      callback_method: "both",
+    }),
   });
   const data = await res.json() as any;
-  if (!data.access_token) {
-    const detail = data.error_description ?? data.error ?? data.detail ?? JSON.stringify(data);
-    throw new Error(`Didit auth failed (${res.status}): ${detail}`);
+  if (!res.ok || !data.url) {
+    const detail = data.detail ?? data.message ?? JSON.stringify(data);
+    throw new Error(`Didit session error (${res.status}): ${detail}`);
   }
-  return data.access_token;
+  return { session_id: data.session_id, url: data.url, status: data.status };
 }
 
 // ─── GET /kyc/status ──────────────────────────────────────────────────────────
@@ -41,7 +49,6 @@ router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
 
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    // Also get latest submission details
     const [sub] = await db.select().from(kycSubmissionsTable)
       .where(eq(kycSubmissionsTable.userId, req.userId!))
       .orderBy(desc(kycSubmissionsTable.submittedAt))
@@ -65,7 +72,7 @@ router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// ─── POST /kyc/submit — collect personal info + create Didit session ──────────
+// ─── POST /kyc/submit — collect personal info + create Didit v3 session ──────
 router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { fullName, dateOfBirth, country, phoneNumber, nationalId } = req.body;
@@ -86,27 +93,13 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
       res.status(429).json({ error: "Maximum KYC submissions reached. Contact support." }); return;
     }
 
-    // Create Didit session
-    let token: string;
+    // Create Didit v3 session
+    let session: DiditSession;
     try {
-      token = await getAccessToken();
-    } catch (authErr) {
-      req.log.error(authErr, "Didit auth error");
-      res.status(503).json({ error: (authErr as Error).message }); return;
-    }
-    const sessionRes = await fetch(DIDIT_SESSIONS_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ callback: CALLBACK_URL, vendor_data: String(req.userId) }),
-    });
-    const session = await sessionRes.json() as any;
-    const sessionUrl: string = session.url ?? session.session_url;
-    const sessionId: string = session.session_id ?? session.id;
-
-    if (!sessionUrl) {
-      req.log.error({ session }, "Didit session creation failed");
-      res.status(400).json({ error: session.detail ?? session.message ?? `Didit error ${sessionRes.status}: ${JSON.stringify(session)}` });
-      return;
+      session = await createDiditSession(String(req.userId));
+    } catch (err) {
+      req.log.error(err, "Didit session creation error");
+      res.status(503).json({ error: (err as Error).message }); return;
     }
 
     // Save submission record
@@ -118,15 +111,15 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
       phoneNumber,
       nationalId,
       kycStatus: "pending_review",
-      diditSessionId: sessionId,
+      diditSessionId: session.session_id,
     });
 
     // Update user status
     await db.update(usersTable)
-      .set({ kycStatus: "pending", kycSessionId: sessionId })
+      .set({ kycStatus: "pending", kycSessionId: session.session_id })
       .where(eq(usersTable.id, req.userId!));
 
-    res.json({ url: sessionUrl, sessionId });
+    res.json({ url: session.url, sessionId: session.session_id });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -204,7 +197,7 @@ router.put("/kyc/admin/submissions/:id/review", requireAuth, requireAdmin, async
   }
 });
 
-// ─── POST /kyc/session — legacy: create session without pre-form ──────────────
+// ─── POST /kyc/session — create session directly (no pre-form) ───────────────
 router.post("/kyc/session", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
@@ -212,31 +205,23 @@ router.post("/kyc/session", requireAuth, async (req: AuthRequest, res) => {
     if (user.kycStatus === "approved") {
       res.status(400).json({ error: "Identity already verified" }); return;
     }
-    const token = await getAccessToken();
-    const sessionRes = await fetch(DIDIT_SESSIONS_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ callback: CALLBACK_URL, vendor_data: String(req.userId) }),
-    });
-    const session = await sessionRes.json() as any;
-    const sessionUrl: string = session.url ?? session.session_url;
-    const sessionId: string = session.session_id ?? session.id;
-    if (!sessionUrl) {
-      res.status(400).json({ error: session.detail ?? "Failed to create verification session" }); return;
-    }
-    await db.update(usersTable).set({ kycStatus: "pending", kycSessionId: sessionId }).where(eq(usersTable.id, req.userId!));
-    res.json({ url: sessionUrl, sessionId });
+    const session = await createDiditSession(String(req.userId));
+    await db.update(usersTable)
+      .set({ kycStatus: "pending", kycSessionId: session.session_id })
+      .where(eq(usersTable.id, req.userId!));
+    res.json({ url: session.url, sessionId: session.session_id });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ─── POST /kyc/webhook — Didit calls this on completion ──────────────────────
+// ─── POST /kyc/webhook — Didit calls this on verification completion ──────────
 router.post("/kyc/webhook", async (req, res) => {
   try {
     const payload = req.body as any;
-    const status: string = (payload.status ?? "").toUpperCase();
+    // Didit v3 sends: status (Approved/Declined/In Review), vendor_data, session_id
+    const rawStatus: string = (payload.status ?? "").toLowerCase();
     const vendorData: string = payload.vendor_data ?? payload.vendorData ?? "";
     const sessionId: string = payload.session_id ?? payload.sessionId ?? "";
     const faceMatchScore: number | undefined = payload.face_match_score ?? payload.faceMatchScore;
@@ -245,12 +230,13 @@ router.post("/kyc/webhook", async (req, res) => {
     if (!userId || isNaN(userId)) { res.status(400).json({ error: "Invalid vendor_data" }); return; }
 
     const kycStatus =
-      status === "APPROVED" || status === "COMPLETED" ? "approved" :
-      status === "DECLINED" || status === "REJECTED" ? "rejected" : "pending";
+      rawStatus === "approved" || rawStatus === "completed" ? "approved" :
+      rawStatus === "declined" || rawStatus === "rejected" ? "rejected" : "pending";
 
-    await db.update(usersTable).set({ kycStatus, kycSessionId: sessionId || undefined }).where(eq(usersTable.id, userId));
+    await db.update(usersTable)
+      .set({ kycStatus, kycSessionId: sessionId || undefined })
+      .where(eq(usersTable.id, userId));
 
-    // Update matching submission record
     if (sessionId) {
       await db.update(kycSubmissionsTable).set({
         kycStatus,
