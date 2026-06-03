@@ -12,6 +12,7 @@ const DIDIT_SESSIONS_URL = "https://apx.didit.me/v2/sessions/";
 const CALLBACK_URL = "https://taskearn-pro.vercel.app/profile?kyc=done";
 
 async function getAccessToken(): Promise<string> {
+  if (!CLIENT_SECRET) throw new Error("DIDIT_CLIENT_SECRET environment variable is not set");
   const body = new URLSearchParams({
     grant_type: "client_credentials",
     client_id: CLIENT_ID,
@@ -23,7 +24,10 @@ async function getAccessToken(): Promise<string> {
     body: body.toString(),
   });
   const data = await res.json() as any;
-  if (!data.access_token) throw new Error(data.error_description ?? "Failed to get Didit token");
+  if (!data.access_token) {
+    const detail = data.error_description ?? data.error ?? data.detail ?? JSON.stringify(data);
+    throw new Error(`Didit auth failed (${res.status}): ${detail}`);
+  }
   return data.access_token;
 }
 
@@ -83,7 +87,13 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
     }
 
     // Create Didit session
-    const token = await getAccessToken();
+    let token: string;
+    try {
+      token = await getAccessToken();
+    } catch (authErr) {
+      req.log.error(authErr, "Didit auth error");
+      res.status(503).json({ error: (authErr as Error).message }); return;
+    }
     const sessionRes = await fetch(DIDIT_SESSIONS_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -95,7 +105,7 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
 
     if (!sessionUrl) {
       req.log.error({ session }, "Didit session creation failed");
-      res.status(400).json({ error: session.detail ?? session.message ?? "Failed to start verification" });
+      res.status(400).json({ error: session.detail ?? session.message ?? `Didit error ${sessionRes.status}: ${JSON.stringify(session)}` });
       return;
     }
 
