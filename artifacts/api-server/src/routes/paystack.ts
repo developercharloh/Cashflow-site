@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { db, usersTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -283,13 +283,142 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
   }
 });
 
+// ─── Instant M-Pesa / Airtel Money withdrawal via Paystack Transfers ─────────
+router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { amount, phone, provider } = req.body; // amount in USD, provider: "mpesa"|"airtel"
+
+    if (!amount || amount < 0.5) {
+      res.status(400).json({ error: "Minimum withdrawal is $0.50" }); return;
+    }
+    if (!phone) {
+      res.status(400).json({ error: "Phone number is required" }); return;
+    }
+    if (!["mpesa", "airtel"].includes(provider)) {
+      res.status(400).json({ error: "Provider must be mpesa or airtel" }); return;
+    }
+
+    // Normalise phone → local Kenyan format 07XXXXXXXXX
+    let normalizedPhone = phone.replace(/\s+/g, "").replace(/^\+/, "");
+    if (normalizedPhone.startsWith("254")) normalizedPhone = "0" + normalizedPhone.slice(3);
+    if (!normalizedPhone.startsWith("0")) normalizedPhone = "0" + normalizedPhone;
+    if (!/^07\d{8}$/.test(normalizedPhone)) {
+      res.status(400).json({ error: "Invalid phone number. Use format: 0712345678" }); return;
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    if (user.kycStatus !== "approved") {
+      res.status(403).json({ error: "Identity verification required before withdrawal.", code: "KYC_REQUIRED" }); return;
+    }
+    if (user.balance < amount) {
+      res.status(400).json({ error: "Insufficient balance" }); return;
+    }
+
+    // Convert USD → KES (withdrawal rate: 1 USD = 121 KES)
+    const amountKes = Math.round(amount * WITHDRAWAL_RATE_KES);
+    const amountKobo = amountKes * 100; // Paystack smallest unit
+
+    // Atomic balance deduct
+    const updated = await db.update(usersTable).set({
+      balance: sql`${usersTable.balance} - ${amount}`,
+      pendingEarnings: sql`${usersTable.pendingEarnings} + ${amount}`,
+      totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amount}`,
+    }).where(sql`${usersTable.id} = ${req.userId!} AND ${usersTable.balance} >= ${amount}`).returning({ id: usersTable.id });
+
+    if (updated.length === 0) {
+      res.status(400).json({ error: "Insufficient balance" }); return;
+    }
+
+    const bankCode = provider === "airtel" ? "AIRTEL" : "MPESA";
+    const providerLabel = provider === "airtel" ? "Airtel Money" : "M-Pesa";
+
+    // Step 1: Create mobile money transfer recipient
+    const recipientRes = await fetch("https://api.paystack.co/transferrecipient", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "mobile_money",
+        name: user.name ?? user.email,
+        account_number: normalizedPhone,
+        bank_code: bankCode,
+        currency: "KES",
+      }),
+    });
+    const recipientData = await recipientRes.json() as any;
+    if (!recipientData.status) {
+      // Refund if recipient creation fails
+      await db.update(usersTable).set({
+        balance: sql`${usersTable.balance} + ${amount}`,
+        pendingEarnings: sql`${usersTable.pendingEarnings} - ${amount}`,
+        totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${amount}`,
+      }).where(eq(usersTable.id, req.userId!));
+      res.status(400).json({ error: recipientData.message ?? "Failed to create recipient" }); return;
+    }
+    const recipientCode = recipientData.data.recipient_code;
+
+    // Step 2: Initiate transfer
+    const transferRes = await fetch("https://api.paystack.co/transfer", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "balance",
+        amount: amountKobo,
+        currency: "KES",
+        recipient: recipientCode,
+        reason: `TaskEarn Pro ${providerLabel} withdrawal for user ${req.userId}`,
+      }),
+    });
+    const transferData = await transferRes.json() as any;
+    if (!transferData.status) {
+      // Refund if transfer initiation fails
+      await db.update(usersTable).set({
+        balance: sql`${usersTable.balance} + ${amount}`,
+        pendingEarnings: sql`${usersTable.pendingEarnings} - ${amount}`,
+        totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${amount}`,
+      }).where(eq(usersTable.id, req.userId!));
+      res.status(400).json({ error: transferData.message ?? "Transfer failed" }); return;
+    }
+
+    const transferCode = transferData.data.transfer_code;
+
+    const [txn] = await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "withdrawal",
+      amount,
+      status: "pending",
+      description: `${providerLabel} withdrawal of $${amount.toFixed(2)} (KES ${amountKes}) to ${normalizedPhone}`,
+      method: provider === "airtel" ? "airtel" : "mpesa",
+      accountDetails: JSON.stringify({ phone: normalizedPhone, provider, transferCode }),
+    }).returning();
+
+    await db.insert(notificationsTable).values({
+      userId: req.userId!,
+      type: "withdrawal",
+      title: "Withdrawal Initiated",
+      message: `$${amount.toFixed(2)} is being sent to ${normalizedPhone} via ${providerLabel}. You'll receive it shortly.`,
+    });
+
+    res.json({
+      id: txn.id,
+      status: txn.status,
+      amount: txn.amount,
+      description: txn.description,
+      transferCode,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── Initiate withdrawal via Paystack Transfers ──────────────────────────────
 router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, bankCode, accountNumber, accountName } = req.body;
 
-    if (!amount || amount < 50) {
-      res.status(400).json({ error: "Minimum withdrawal is $50" });
+    if (!amount || amount < 0.5) {
+      res.status(400).json({ error: "Minimum withdrawal is $0.50" });
       return;
     }
     if (!bankCode || !accountNumber || !accountName) {
