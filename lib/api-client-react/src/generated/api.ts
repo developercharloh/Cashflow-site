@@ -663,6 +663,76 @@ export const useVerifyEmail = <TError = ErrorType<unknown>,
       return useMutation(getVerifyEmailMutationOptions(options));
     }
 
+export const getClaimWelcomeGiftUrl = () => {
+
+
+
+
+  return `/api/auth/claim-welcome-gift`
+}
+
+/**
+ * @summary Claim one-time Starter Gift Card ($0.10)
+ */
+export const claimWelcomeGift = async ( options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getClaimWelcomeGiftUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getClaimWelcomeGiftMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimWelcomeGift>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimWelcomeGift>>, TError,void, TContext> => {
+
+const mutationKey = ['claimWelcomeGift'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimWelcomeGift>>, void> = () => {
+
+
+          return  claimWelcomeGift(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimWelcomeGiftMutationResult = NonNullable<Awaited<ReturnType<typeof claimWelcomeGift>>>
+
+    export type ClaimWelcomeGiftMutationError = ErrorType<void>
+
+    /**
+ * @summary Claim one-time Starter Gift Card ($0.10)
+ */
+export const useClaimWelcomeGift = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimWelcomeGift>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimWelcomeGift>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getClaimWelcomeGiftMutationOptions(options));
+    }
+
 export const getGetQuizQuestionsUrl = () => {
 
 

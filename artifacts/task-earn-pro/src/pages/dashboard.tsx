@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useGetDashboardStats,
@@ -6,6 +8,7 @@ import {
   useGetTasks,
   useGetReferralInfo,
   useGetNotifications,
+  useClaimWelcomeGift,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +62,22 @@ function activityIcon(type: string) {
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [giftClaimed, setGiftClaimed] = useState(false);
+  const claimGiftMutation = useClaimWelcomeGift();
+
+  const showGiftModal = user && !user.welcomeGiftClaimed && !giftClaimed;
+
+  const handleClaimGift = () => {
+    claimGiftMutation.mutate(undefined, {
+      onSuccess: () => {
+        setGiftClaimed(true);
+        queryClient.invalidateQueries();
+        toast({ title: "🎁 Gift Card Claimed!", description: "$0.10 has been added to your balance." });
+      },
+      onError: () => setGiftClaimed(true),
+    });
+  };
 
   const { data: stats, refetch: refetchStats } = useGetDashboardStats();
   const { data: activity } = useGetRecentActivity();
@@ -96,6 +115,45 @@ export default function Dashboard() {
 
   return (
     <div className="pb-4">
+      {/* Starter Gift Card Modal */}
+      {showGiftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+            {/* Card gradient background */}
+            <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 text-white">
+              <div className="flex items-center gap-2 mb-1">
+                <Gift className="w-5 h-5" />
+                <span className="text-xs font-semibold uppercase tracking-widest opacity-80">New Member Reward</span>
+              </div>
+              <h2 className="text-2xl font-extrabold mt-2">Starter Gift Card</h2>
+              <p className="text-4xl font-black mt-1">$0.10</p>
+              <p className="text-sm opacity-80 mt-2">One-time bonus for new members only</p>
+              {/* Decorative circles */}
+              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
+              <div className="absolute -right-2 top-10 w-16 h-16 rounded-full bg-white/10" />
+            </div>
+            <div className="bg-card px-6 py-5">
+              <p className="text-sm text-muted-foreground mb-4">
+                Welcome to TaskEarn Pro! Claim your <strong className="text-foreground">free $0.10 Starter Gift Card</strong> — credited instantly to your balance.
+              </p>
+              <button
+                onClick={handleClaimGift}
+                disabled={claimGiftMutation.isPending}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base hover:opacity-90 transition disabled:opacity-60"
+              >
+                {claimGiftMutation.isPending ? "Claiming..." : "🎁 Claim Gift Card"}
+              </button>
+              <button
+                onClick={() => setGiftClaimed(true)}
+                className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-foreground transition"
+              >
+                Claim later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Welcome */}
       <div className="px-4 pt-4 pb-3">
         <h1 className="text-2xl font-bold text-foreground">Hi, {firstName}! 👋</h1>

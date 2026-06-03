@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRegister } from "@workspace/api-client-react";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -118,7 +117,6 @@ export default function Register() {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
-  const { setToken } = useAuth();
   const registerMutation = useRegister();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -128,9 +126,9 @@ export default function Register() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     registerMutation.mutate({ data: values } as any, {
-      onSuccess: (data: any) => {
-        setToken(data.token);
-        setLocation("/dashboard");
+      onSuccess: () => {
+        toast({ title: "Account created! 🎁", description: "Log in to claim your free Starter Gift Card." });
+        setLocation("/auth/login");
       },
       onError: (error: any) => {
         toast({ title: "Registration failed", description: error?.data?.error ?? error.message ?? "An error occurred.", variant: "destructive" });

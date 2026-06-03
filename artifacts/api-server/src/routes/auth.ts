@@ -46,17 +46,7 @@ router.post("/auth/register", async (req, res) => {
       referredBy: referredById ?? null,
       isEmailVerified: true,
       quizCompleted: true,
-      balance: 0.10,
-      totalEarned: 0.10,
     }).returning();
-
-    await db.insert(transactionsTable).values({
-      userId: user.id,
-      type: "bonus",
-      amount: 0.10,
-      status: "completed",
-      description: "Welcome bonus",
-    });
 
     const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
     res.status(201).json({
@@ -173,6 +163,37 @@ router.post("/auth/verify-email", requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
+router.post("/auth/claim-welcome-gift", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+    if (user.welcomeGiftClaimed) {
+      res.status(400).json({ error: "Starter Gift Card already claimed" });
+      return;
+    }
+    await db.update(usersTable).set({
+      welcomeGiftClaimed: true,
+      balance: user.balance + 0.10,
+      totalEarned: user.totalEarned + 0.10,
+      totalBonusEarnings: user.totalBonusEarnings + 0.10,
+    }).where(eq(usersTable.id, user.id));
+    await db.insert(transactionsTable).values({
+      userId: user.id,
+      type: "bonus",
+      amount: 0.10,
+      status: "completed",
+      description: "Starter Gift Card",
+    });
+    res.json({ message: "Starter Gift Card claimed! $0.10 added to your balance." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 function sanitizeUser(user: typeof usersTable.$inferSelect) {
   return {
     id: user.id,
@@ -191,6 +212,7 @@ function sanitizeUser(user: typeof usersTable.$inferSelect) {
     isEmailVerified: user.isEmailVerified,
     isAdmin: user.isAdmin,
     quizCompleted: user.quizCompleted,
+    welcomeGiftClaimed: user.welcomeGiftClaimed,
     isBanned: user.isBanned,
     transcriptionMinutes: user.transcriptionMinutes,
     membershipPurchased: user.membershipPurchased,
