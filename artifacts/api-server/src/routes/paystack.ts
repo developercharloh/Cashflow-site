@@ -133,6 +133,11 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
+    // Normalize phone to international format (Paystack requires 2547xxxxxxxx, no + prefix)
+    let normalizedPhone = phone.replace(/\s+/g, "").replace(/^\+/, "");
+    if (normalizedPhone.startsWith("0")) normalizedPhone = "254" + normalizedPhone.slice(1);
+    if (!normalizedPhone.startsWith("254")) normalizedPhone = "254" + normalizedPhone;
+
     const amountKes = Math.round(amount * DEPOSIT_RATE_KES);
     const amountKobo = amountKes * 100;
     const reference = `dep_${req.userId}_${Date.now()}`;
@@ -141,7 +146,7 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
       email: user.email,
       amount: amountKobo,
       currency: "KES",
-      mobile_money: { phone, provider },
+      mobile_money: { phone: normalizedPhone, provider },
       reference,
       metadata: {
         userId: req.userId,
