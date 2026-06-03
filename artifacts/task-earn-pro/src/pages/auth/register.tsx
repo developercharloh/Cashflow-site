@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -114,6 +114,8 @@ const formSchema = z.object({
 
 export default function Register() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const refCode = new URLSearchParams(search).get("ref") ?? "";
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
@@ -121,7 +123,7 @@ export default function Register() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", email: "", country: "", password: "", referralCode: "" },
+    defaultValues: { name: "", email: "", country: "", password: "", referralCode: refCode },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
