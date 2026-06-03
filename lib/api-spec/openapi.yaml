@@ -513,6 +513,27 @@ paths:
         "400":
           description: Not successful
 
+  /paystack/withdraw/mobile:
+    post:
+      operationId: paystackWithdrawMobile
+      tags: [wallet]
+      summary: Instant M-Pesa or Airtel Money withdrawal via Paystack Transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileWithdrawInput"
+      responses:
+        "200":
+          description: Transfer initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaystackTransferResult"
+        "400":
+          description: Insufficient balance or bad input
+
   /paystack/withdraw:
     post:
       operationId: paystackWithdraw
@@ -1539,6 +1560,18 @@ components:
           type: string
         reference:
           type: string
+
+    MobileWithdrawInput:
+      type: object
+      required: [amount, phone, provider]
+      properties:
+        amount:
+          type: number
+        phone:
+          type: string
+        provider:
+          type: string
+          enum: [mpesa, airtel]
 
     PaystackWithdrawInput:
       type: object
