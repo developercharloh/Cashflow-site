@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem("token"));
 
-  const { data: user, isLoading: isUserLoading, refetch } = useGetMe({
+  const { data: user, isLoading: isUserLoading } = useGetMe({
     query: { ...getGetMeQueryOptions(), enabled: !!token, retry: false },
   });
 
@@ -28,11 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const setToken = (newToken: string) => {
+    localStorage.setItem("token", newToken);
     setTokenState(newToken);
-    setTimeout(() => refetch(), 0);
   };
 
   const logout = () => {
+    localStorage.removeItem("token");
     setTokenState(null);
   };
 
