@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, tasksTable, transactionsTable, notificationsTable } from "@workspace/db";
+import { db, usersTable, tasksTable, transactionsTable, notificationsTable, userTasksTable } from "@workspace/db";
 import { eq, desc, ilike, or } from "drizzle-orm";
 import { requireAdmin, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
@@ -224,6 +224,37 @@ router.get("/admin/analytics", requireAdmin, async (req: AuthRequest, res) => {
       revenueThisMonth: monthlyRevenue,
       newUsersThisMonth: newUsers.length,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/admin/completions", requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: userTasksTable.id,
+        userId: userTasksTable.userId,
+        taskId: userTasksTable.taskId,
+        status: userTasksTable.status,
+        startedAt: userTasksTable.startedAt,
+        completedAt: userTasksTable.completedAt,
+        userName: usersTable.name,
+        userEmail: usersTable.email,
+        taskTitle: tasksTable.title,
+        reward: tasksTable.reward,
+      })
+      .from(userTasksTable)
+      .leftJoin(usersTable, eq(userTasksTable.userId, usersTable.id))
+      .leftJoin(tasksTable, eq(userTasksTable.taskId, tasksTable.id))
+      .orderBy(userTasksTable.startedAt);
+
+    res.json(rows.map(r => ({
+      ...r,
+      startedAt: r.startedAt.toISOString(),
+      completedAt: r.completedAt?.toISOString() ?? null,
+    })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
