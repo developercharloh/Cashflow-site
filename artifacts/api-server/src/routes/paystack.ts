@@ -411,6 +411,7 @@ router.post("/paystack/webhook", async (req, res) => {
     if (meta.type === "upgrade") {
       const targetLevel = Number(meta.targetLevel);
       if (targetLevel && user.level < targetLevel) {
+        const isFirstPurchase = !user.membershipPurchased;
         await db.update(usersTable).set({ level: targetLevel, membershipPurchased: true }).where(eq(usersTable.id, userId));
         if (existing[0]) await db.update(transactionsTable).set({ status: "completed" }).where(eq(transactionsTable.id, existing[0].id));
         const pkgName = meta.packageName ?? "new tier";
@@ -418,6 +419,31 @@ router.post("/paystack/webhook", async (req, res) => {
           userId, type: "level_up", title: `Welcome to ${pkgName}!`,
           message: `Your membership has been upgraded to ${pkgName}. Enjoy your new perks!`,
         });
+
+        // Credit referrer $4 on the referred user's first package purchase
+        if (isFirstPurchase && user.referredBy) {
+          const [referrer] = await db.select().from(usersTable).where(eq(usersTable.id, user.referredBy));
+          if (referrer) {
+            await db.update(usersTable).set({
+              balance: referrer.balance + 4.0,
+              totalReferralEarnings: referrer.totalReferralEarnings + 4.0,
+              totalEarned: referrer.totalEarned + 4.0,
+            }).where(eq(usersTable.id, referrer.id));
+            await db.insert(transactionsTable).values({
+              userId: referrer.id,
+              type: "referral",
+              amount: 4.0,
+              status: "completed",
+              description: `Referral reward — your referral purchased ${pkgName}`,
+            });
+            await db.insert(notificationsTable).values({
+              userId: referrer.id,
+              type: "referral",
+              title: "Referral Reward! 🎉",
+              message: `Your referral just bought a package. $4.00 has been added to your balance!`,
+            });
+          }
+        }
       }
       res.sendStatus(200); return;
     }

@@ -63,19 +63,28 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [giftClaimed, setGiftClaimed] = useState(false);
   const claimGiftMutation = useClaimWelcomeGift();
 
-  const showGiftModal = user && !user.welcomeGiftClaimed && !giftClaimed;
+  const giftStorageKey = user ? `gift_done_${user.id}` : null;
+  const [giftDone, setGiftDone] = useState(() =>
+    giftStorageKey ? !!localStorage.getItem(giftStorageKey) : false
+  );
+
+  const showGiftModal = !!user && !user.welcomeGiftClaimed && !giftDone;
+
+  const dismissGift = () => {
+    if (giftStorageKey) localStorage.setItem(giftStorageKey, "1");
+    setGiftDone(true);
+  };
 
   const handleClaimGift = () => {
     claimGiftMutation.mutate(undefined, {
       onSuccess: () => {
-        setGiftClaimed(true);
+        dismissGift();
         queryClient.invalidateQueries();
         toast({ title: "🎁 Gift Card Claimed!", description: "$0.10 has been added to your balance." });
       },
-      onError: () => setGiftClaimed(true),
+      onError: dismissGift,
     });
   };
 
@@ -144,7 +153,7 @@ export default function Dashboard() {
                 {claimGiftMutation.isPending ? "Claiming..." : "🎁 Claim Gift Card"}
               </button>
               <button
-                onClick={() => setGiftClaimed(true)}
+                onClick={dismissGift}
                 className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-foreground transition"
               >
                 Claim later

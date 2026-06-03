@@ -28,11 +28,6 @@ router.post("/auth/register", async (req, res) => {
       if (referrer) {
         referredById = referrer.id;
         await db.update(usersTable).set({ referralCount: referrer.referralCount + 1 }).where(eq(usersTable.id, referrer.id));
-        await db.update(usersTable).set({
-          balance: referrer.balance + 1.0,
-          totalReferralEarnings: referrer.totalReferralEarnings + 1.0,
-          totalEarned: referrer.totalEarned + 1.0,
-        }).where(eq(usersTable.id, referrer.id));
       }
     }
 
