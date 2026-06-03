@@ -188,7 +188,7 @@ export default function WalletPage() {
 
   const handleDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
     const amt = parseFloat(depositAmount);
-    if (!amt || amt < 1) { toast({ title: "Minimum deposit is $1", variant: "destructive" }); return; }
+    if (!amt || amt < 0.1) { toast({ title: "Minimum deposit is $0.10", variant: "destructive" }); return; }
     if (isMobileMoney(method.id) && !depositPhone.trim()) {
       toast({ title: "Phone number required", description: "Enter your M-Pesa/Airtel phone number.", variant: "destructive" }); return;
     }
@@ -427,59 +427,55 @@ export default function WalletPage() {
               <div>
                 <Label>Amount (USD)</Label>
                 <Input
-                  type="number" min="1" placeholder="e.g. 10"
+                  type="number" min="0.1" step="0.01" placeholder="e.g. 5"
                   value={depositAmount}
                   onChange={e => setDepositAmount(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Minimum $1.00</p>
+                <p className="text-xs text-muted-foreground mt-1">Minimum $0.10</p>
               </div>
 
-              {/* KES equivalent — auto-calculated, read-only, only for mobile money */}
-              {isMobileMoney(stage.method.id) && (
-                <>
-                  <div>
-                    <Label className="flex items-center gap-1.5">
-                      KES Amount
-                      <span className="text-[10px] font-normal bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">Auto · Locked</span>
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        readOnly
-                        value={
-                          depositAmount && parseFloat(depositAmount) >= 1
-                            ? `KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()}`
-                            : ""
-                        }
-                        placeholder="KES — enter USD above"
-                        className="bg-muted/60 text-muted-foreground cursor-not-allowed select-none"
-                        tabIndex={-1}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Rate: 1 USD = {DEPOSIT_RATE} KES · This exact amount will be charged — you cannot edit it
-                    </p>
-                  </div>
+              {/* KES equivalent — shown for all methods */}
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  Total in KES
+                  <span className="text-[10px] font-normal bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">Auto · Locked</span>
+                </Label>
+                <Input
+                  readOnly
+                  value={
+                    depositAmount && parseFloat(depositAmount) >= 0.1
+                      ? `KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()}`
+                      : ""
+                  }
+                  placeholder="KES — enter USD amount above"
+                  className="bg-muted/60 text-muted-foreground cursor-not-allowed select-none"
+                  tabIndex={-1}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Rate: 1 USD = {DEPOSIT_RATE} KES
+                </p>
+              </div>
 
-                  {/* Phone number */}
-                  <div>
-                    <Label>M-Pesa / Airtel Phone Number</Label>
-                    <Input
-                      type="tel"
-                      placeholder="e.g. 0712345678 or +254712345678"
-                      value={depositPhone}
-                      onChange={e => setDepositPhone(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">You will receive an STK push on this number</p>
-                  </div>
-                </>
+              {/* Phone number — only for mobile money */}
+              {isMobileMoney(stage.method.id) && (
+                <div>
+                  <Label>{stage.method.id === "airtel" ? "Airtel" : "M-Pesa"} Phone Number</Label>
+                  <Input
+                    type="tel"
+                    placeholder="e.g. 0712345678 or +254712345678"
+                    value={depositPhone}
+                    onChange={e => setDepositPhone(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">You will receive an STK push on this number</p>
+                </div>
               )}
 
               <Button className="w-full" onClick={() => handleDeposit(stage.method)} disabled={depositMutation.isPending}>
                 {depositMutation.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Redirecting…</>
-                  : `Pay ${depositAmount && parseFloat(depositAmount) >= 1 && isMobileMoney(stage.method.id)
-                      ? `KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()}`
-                      : `with ${stage.method.label}`} →`}
+                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
+                  : depositAmount && parseFloat(depositAmount) >= 0.1
+                    ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} via ${stage.method.label} →`
+                    : `Checkout →`}
               </Button>
               <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
                 ← Choose a different method

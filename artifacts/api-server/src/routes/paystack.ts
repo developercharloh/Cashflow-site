@@ -33,8 +33,8 @@ function isValidAmount(actualUsd: number, expectedUsd: number): boolean {
 router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, method, phone } = req.body; // amount in USD
-    if (!amount || amount < 1) {
-      res.status(400).json({ error: "Minimum deposit is $1" }); return;
+    if (!amount || amount < 0.1) {
+      res.status(400).json({ error: "Minimum deposit is $0.10" }); return;
     }
 
     const isMobileMoney = method === "mpesa" || method === "airtel";
