@@ -160,7 +160,10 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
     const newTaskEarnings = user.totalTaskEarnings + reward;
 
     let newLevel = user.level;
-    if (newTotalEarned >= 500) newLevel = 4;
+    if (newTotalEarned >= 5000) newLevel = 7;
+    else if (newTotalEarned >= 2000) newLevel = 6;
+    else if (newTotalEarned >= 1000) newLevel = 5;
+    else if (newTotalEarned >= 500) newLevel = 4;
     else if (newTotalEarned >= 200) newLevel = 3;
     else if (newTotalEarned >= 50) newLevel = 2;
 
