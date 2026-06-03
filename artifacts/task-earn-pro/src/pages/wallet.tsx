@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetWallet, useGetTransactions, useRequestWithdrawal,
-  useInitializeDeposit, usePaystackWithdraw, useGetBanks,
+  useInitializeDeposit, usePaystackWithdraw, usePaystackWithdrawMobile, useGetBanks,
   useVerifyPendingDeposits, useGetKycStatus,
   getGetWalletQueryKey, getGetTransactionsQueryKey,
 } from "@workspace/api-client-react";
@@ -86,14 +86,14 @@ const WITHDRAW_METHODS = [
   {
     id: "mpesa",
     label: "M-Pesa",
-    sub: "Safaricom mobile money",
+    sub: "Instant · Paystack Transfer",
     icon: <Smartphone className="w-6 h-6 text-green-600" />,
     color: "border-green-100 bg-green-50/50",
   },
   {
     id: "airtel",
     label: "Airtel Money",
-    sub: "Airtel mobile money",
+    sub: "Instant · Paystack Transfer",
     icon: <Smartphone className="w-6 h-6 text-red-500" />,
     color: "border-red-100 bg-red-50/50",
   },
@@ -171,6 +171,7 @@ export default function WalletPage() {
 
   const depositMutation = useInitializeDeposit();
   const paystackWithdrawMutation = usePaystackWithdraw();
+  const mobileWithdrawMutation = usePaystackWithdrawMobile();
   const manualWithdrawMutation = useRequestWithdrawal();
   const verifyPendingMutation = useVerifyPendingDeposits();
 
@@ -255,6 +256,20 @@ export default function WalletPage() {
         toast({ title: "Withdrawal Initiated", description: "Paystack is processing your bank transfer." });
         close();
         invalidate();
+      },
+      onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleMobileWithdraw = (provider: "mpesa" | "airtel") => {
+    const amt = parseFloat(manualAmount);
+    if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
+    if (!manualAccount) { toast({ title: "Please enter your phone number", variant: "destructive" }); return; }
+    mobileWithdrawMutation.mutate({ data: { amount: amt, phone: manualAccount, provider } }, {
+      onSuccess: () => {
+        const label = provider === "airtel" ? "Airtel Money" : "M-Pesa";
+        toast({ title: "Withdrawal Initiated!", description: `Paystack is sending KES ${Math.round(amt * WITHDRAWAL_RATE).toLocaleString()} to your ${label} number.` });
+        close(); invalidate();
       },
       onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
     });
@@ -709,11 +724,11 @@ export default function WalletPage() {
                   <Input placeholder="e.g. +254 700 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
                   <p className="text-xs text-muted-foreground mt-1">Must be a registered Safaricom number</p>
                 </div>
-                <Button className="w-full" onClick={() => handleManualWithdraw("mpesa")} disabled={manualWithdrawMutation.isPending}>
-                  {manualWithdrawMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
+                <Button className="w-full" onClick={() => handleMobileWithdraw("mpesa")} disabled={mobileWithdrawMutation.isPending}>
+                  {mobileWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending…</>
                     : manualAmount && parseFloat(manualAmount) >= 0.5
-                      ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via M-Pesa`
+                      ? `Send KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via M-Pesa`
                       : "Withdraw via M-Pesa"}
                 </Button>
               </div>
@@ -750,11 +765,11 @@ export default function WalletPage() {
                   <Input placeholder="e.g. +254 733 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
                   <p className="text-xs text-muted-foreground mt-1">Must be a registered Airtel number</p>
                 </div>
-                <Button className="w-full" onClick={() => handleManualWithdraw("airtel")} disabled={manualWithdrawMutation.isPending}>
-                  {manualWithdrawMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
+                <Button className="w-full" onClick={() => handleMobileWithdraw("airtel")} disabled={mobileWithdrawMutation.isPending}>
+                  {mobileWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending…</>
                     : manualAmount && parseFloat(manualAmount) >= 0.5
-                      ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via Airtel`
+                      ? `Send KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via Airtel`
                       : "Withdraw via Airtel Money"}
                 </Button>
               </div>
