@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 async function ensureAdminCredentials() {
   try {
     const hash = await bcrypt.hash("Charloz!1999", 10);
-    const targetEmail = "ckyalo011@gmail.com";
+    const targetEmail = "admin.taskearnpro@gmail.com";
 
     // Try to promote the user with this email (may already exist as regular user)
     const promoted = await db.update(usersTable)

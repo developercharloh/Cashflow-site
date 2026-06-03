@@ -61,7 +61,7 @@ A full-stack premium fintech-style earning platform where users complete tasks (
 
 ## Demo Credentials
 
-- Admin: `ckyalo011@gmail.com` / `Charloz!1999`
+- Admin: `admin.taskearnpro@gmail.com` / `Charloz!1999`
 - User (Elite): `carol@example.com` / `password`
 - User (Builder): `bob@example.com` / `password`
 
