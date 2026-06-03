@@ -60,6 +60,10 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (user.kycStatus !== "approved") {
+      res.status(403).json({ error: "Identity verification required before withdrawal. Please complete KYC on your profile.", code: "KYC_REQUIRED" });
+      return;
+    }
     if (user.balance < amount) {
       res.status(400).json({ error: "Insufficient balance" });
       return;

@@ -3,3 +3,4 @@ export * from "./tasks";
 export * from "./transactions";
 export * from "./notifications";
 export * from "./quiz";
+export * from "./kyc";

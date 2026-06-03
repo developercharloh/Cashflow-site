@@ -299,6 +299,10 @@ router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => 
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    if (user.kycStatus !== "approved") {
+      res.status(403).json({ error: "Identity verification required before withdrawal.", code: "KYC_REQUIRED" });
+      return;
+    }
     if (user.balance < amount) {
       res.status(400).json({ error: "Insufficient balance" });
       return;

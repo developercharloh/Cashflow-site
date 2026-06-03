@@ -1,7 +1,7 @@
 import { useAdminGetAnalytics } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle } from "lucide-react";
+import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle, ShieldCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 
@@ -29,6 +29,7 @@ export default function AdminDashboard() {
     { label: "Revenue This Month", value: `$${analytics.revenueThisMonth.toFixed(2)}`, icon: <BarChart3 className="w-5 h-5 text-purple-500" />, link: "/admin/analytics" },
     { label: "New Users This Month", value: analytics.newUsersThisMonth, icon: <Users className="w-5 h-5 text-teal-500" />, link: "/admin/users" },
     { label: "Total Withdrawals", value: analytics.totalWithdrawals, icon: <AlertCircle className="w-5 h-5 text-orange-500" />, link: "/admin/withdrawals" },
+    { label: "KYC Verifications", value: "Manage", icon: <ShieldCheck className="w-5 h-5 text-emerald-500" />, link: "/admin/kyc" },
   ];
 
   return (

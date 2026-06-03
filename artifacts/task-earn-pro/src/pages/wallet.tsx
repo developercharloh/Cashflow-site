@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   useGetWallet, useGetTransactions, useRequestWithdrawal,
   useInitializeDeposit, usePaystackWithdraw, useGetBanks,
-  useVerifyPendingDeposits,
+  useVerifyPendingDeposits, useGetKycStatus,
   getGetWalletQueryKey, getGetTransactionsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ type Stage =
 export default function WalletPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [, setLocation] = useLocation();
   const [stage, setStage] = useState<Stage>({ view: "none" });
   const [txnType, setTxnType] = useState("all");
 
@@ -150,6 +152,9 @@ export default function WalletPage() {
       enabled: stage.view === "withdraw_form" && (stage as any).method?.id === "bank_paystack",
     },
   });
+
+  const { data: kyc } = useGetKycStatus({ query: { queryKey: ["kycStatus"] } });
+  const isKycApproved = kyc?.kycStatus === "approved";
 
   const depositMutation = useInitializeDeposit();
   const paystackWithdrawMutation = usePaystackWithdraw();
@@ -274,7 +279,14 @@ export default function WalletPage() {
             <Plus className="w-4 h-4" /> Deposit
           </button>
           <button
-            onClick={() => setStage({ view: "withdraw_pick" })}
+            onClick={() => {
+              if (!isKycApproved) {
+                toast({ title: "Identity Verification Required", description: "Complete KYC verification before withdrawing funds.", variant: "destructive" });
+                setLocation("/kyc");
+                return;
+              }
+              setStage({ view: "withdraw_pick" });
+            }}
             className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
             style={{ background: "linear-gradient(90deg,#16a34a,#22c55e)" }}
           >

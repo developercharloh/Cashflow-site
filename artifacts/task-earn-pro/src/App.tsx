@@ -24,6 +24,8 @@ import AdminAnalytics from "@/pages/admin/analytics";
 import BinaryTradingPage from "@/pages/binary-trading";
 import CallbackPage from "@/pages/callback";
 import ProfilePage from "@/pages/profile";
+import KycPage from "@/pages/kyc";
+import AdminKycPage from "@/pages/admin/kyc";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,8 @@ function Router() {
         <Route path="/admin/withdrawals" component={AdminWithdrawals} />
         <Route path="/callback" component={CallbackPage} />
         <Route path="/profile" component={ProfilePage} />
+        <Route path="/kyc" component={KycPage} />
+        <Route path="/admin/kyc" component={AdminKycPage} />
         <Route path="/binary" component={BinaryTradingPage} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route component={NotFound} />

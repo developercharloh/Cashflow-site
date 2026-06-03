@@ -634,6 +634,61 @@ paths:
               schema:
                 $ref: "#/components/schemas/KycSessionResponse"
 
+  /kyc/submit:
+    post:
+      operationId: submitKyc
+      tags: [kyc]
+      summary: Submit personal info for KYC verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycSubmitInput"
+      responses:
+        "200":
+          description: Didit session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycSessionResponse"
+
+  /kyc/admin/submissions:
+    get:
+      operationId: getKycSubmissions
+      tags: [kyc]
+      summary: Admin — list all KYC submissions
+      responses:
+        "200":
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KycSubmission"
+
+  /kyc/admin/submissions/{id}/review:
+    put:
+      operationId: reviewKycSubmission
+      tags: [kyc]
+      summary: Admin — approve, reject, or request resubmission
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycReviewInput"
+      responses:
+        "200":
+          description: Updated
+
   /kyc/webhook:
     post:
       operationId: kycWebhook
@@ -1679,6 +1734,67 @@ components:
           type: number
         newUsersThisMonth:
           type: integer
+
+    KycSubmitInput:
+      type: object
+      required: [fullName, dateOfBirth, country, phoneNumber, nationalId]
+      properties:
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        country:
+          type: string
+        phoneNumber:
+          type: string
+        nationalId:
+          type: string
+
+    KycSubmission:
+      type: object
+      required: [id, userId, fullName, dateOfBirth, country, phoneNumber, nationalId, kycStatus, submittedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userEmail:
+          type: string
+        userName:
+          type: string
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        country:
+          type: string
+        phoneNumber:
+          type: string
+        nationalId:
+          type: string
+        faceMatchScore:
+          type: number
+        kycStatus:
+          type: string
+        rejectionReason:
+          type: string
+        diditSessionId:
+          type: string
+        submittedAt:
+          type: string
+        reviewedAt:
+          type: string
+        reviewedBy:
+          type: integer
+
+    KycReviewInput:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+        rejectionReason:
+          type: string
 
     KycStatusResponse:
       type: object
