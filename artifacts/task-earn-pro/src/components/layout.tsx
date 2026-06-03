@@ -3,8 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/components/theme-provider";
 import {
-  Bell, Moon, Sun, Home, CheckSquare, TrendingUp,
-  Wallet, Users, MoreHorizontal, ChevronDown, Search, Settings, BarChart2
+  Bell, Moon, Sun, Home, CheckSquare,
+  Wallet, Users, ChevronDown, Search, Settings
 } from "lucide-react";
 import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
 import { useState } from "react";
@@ -12,7 +12,6 @@ import { useState } from "react";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/binary", label: "Trade", icon: BarChart2 },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/referrals", label: "Referrals", icon: Users },
 ];
@@ -156,7 +155,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    // Redirect unauthenticated users to login
     return <RedirectToLogin />;
   }
 
