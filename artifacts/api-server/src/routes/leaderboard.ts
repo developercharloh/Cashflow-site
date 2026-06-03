@@ -39,10 +39,13 @@ router.get("/leaderboard", requireAuth, async (req: AuthRequest, res) => {
 
 router.get("/membership/levels", requireAuth, async (_req, res) => {
   res.json([
-    { level: 1, name: "Explorer", description: "Start your earning journey", minEarnings: 0, maxEarnings: 50, taskMultiplier: 1.0, perks: ["Access to basic tasks", "Daily check-in bonus", "Referral program"] },
-    { level: 2, name: "Builder", description: "Build your earning momentum", minEarnings: 50, maxEarnings: 200, taskMultiplier: 1.2, perks: ["All Explorer perks", "Better-paying tasks", "20% reward bonus", "Priority support"] },
-    { level: 3, name: "Professional", description: "Unlock premium opportunities", minEarnings: 200, maxEarnings: 500, taskMultiplier: 1.5, perks: ["All Builder perks", "Premium task access", "50% reward bonus", "Exclusive surveys", "Dedicated support"] },
-    { level: 4, name: "Elite", description: "The highest earning tier", minEarnings: 500, maxEarnings: null, taskMultiplier: 2.0, perks: ["All Professional perks", "Highest-paying tasks", "2x reward multiplier", "Priority withdrawals", "Elite badge", "VIP support"] },
+    { level: 1, name: "🚀 Starter",  description: "Begin your earning journey",          minEarnings: 0,    maxEarnings: 50,   taskMultiplier: 1.0, perks: ["Access to basic tasks", "Daily check-in bonus", "Referral program"] },
+    { level: 2, name: "🥉 Bronze",   description: "Build your earning momentum",          minEarnings: 50,   maxEarnings: 200,  taskMultiplier: 1.2, perks: ["All Starter perks", "Better-paying tasks", "20% reward bonus", "Priority support"] },
+    { level: 3, name: "🥈 Silver",   description: "Unlock premium opportunities",         minEarnings: 200,  maxEarnings: 500,  taskMultiplier: 1.5, perks: ["All Bronze perks", "Premium task access", "50% reward bonus", "Exclusive surveys"] },
+    { level: 4, name: "🥇 Gold",     description: "High-value tasks unlocked",            minEarnings: 500,  maxEarnings: 1000, taskMultiplier: 1.8, perks: ["All Silver perks", "Gold-tier tasks", "80% reward bonus", "Dedicated support"] },
+    { level: 5, name: "🔷 Platinum", description: "Elite earning power",                  minEarnings: 1000, maxEarnings: 2000, taskMultiplier: 2.0, perks: ["All Gold perks", "Platinum tasks", "2x reward multiplier", "Priority withdrawals"] },
+    { level: 6, name: "💎 Diamond",  description: "Top-tier performer",                   minEarnings: 2000, maxEarnings: 5000, taskMultiplier: 2.5, perks: ["All Platinum perks", "Diamond tasks", "2.5x multiplier", "VIP support", "Diamond badge"] },
+    { level: 7, name: "👑 Elite",    description: "The pinnacle of earning excellence",   minEarnings: 5000, maxEarnings: null, taskMultiplier: 3.0, perks: ["All Diamond perks", "Highest-paying tasks", "3x reward multiplier", "Instant withdrawals", "Elite badge", "Dedicated VIP manager"] },
   ]);
 });
 
