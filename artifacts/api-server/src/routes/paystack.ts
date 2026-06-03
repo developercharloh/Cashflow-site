@@ -516,9 +516,12 @@ router.post("/paystack/webhook", async (req, res) => {
 
 // ─── Upgrade packages ─────────────────────────────────────────────────────────
 const UPGRADE_PACKAGES: Record<number, { name: string; price: number }> = {
-  2: { name: "Builder",      price: 20  },
-  3: { name: "Professional", price: 50  },
-  4: { name: "Elite",        price: 100 },
+  2: { name: "🥉 Bronze",   price: 20   },
+  3: { name: "🥈 Silver",   price: 50   },
+  4: { name: "🥇 Gold",     price: 100  },
+  5: { name: "🔷 Platinum", price: 200  },
+  6: { name: "💎 Diamond",  price: 500  },
+  7: { name: "👑 Elite",    price: 1000 },
 };
 
 // ─── Transcription minute bundles ─────────────────────────────────────────────
