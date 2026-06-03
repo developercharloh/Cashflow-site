@@ -133,10 +133,14 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    // Normalize phone to international format (Paystack requires 2547xxxxxxxx, no + prefix)
+    // Paystack M-Pesa charge API requires local Kenyan format: 07XXXXXXXXX (10 digits)
     let normalizedPhone = phone.replace(/\s+/g, "").replace(/^\+/, "");
-    if (normalizedPhone.startsWith("0")) normalizedPhone = "254" + normalizedPhone.slice(1);
-    if (!normalizedPhone.startsWith("254")) normalizedPhone = "254" + normalizedPhone;
+    if (normalizedPhone.startsWith("254")) normalizedPhone = "0" + normalizedPhone.slice(3);
+    if (!normalizedPhone.startsWith("0")) normalizedPhone = "0" + normalizedPhone;
+    if (!/^07\d{8}$/.test(normalizedPhone)) {
+      res.status(400).json({ error: "Invalid phone number. Use format: 0712345678 (Safaricom/Airtel Kenya)" });
+      return;
+    }
 
     const amountKes = Math.round(amount * DEPOSIT_RATE_KES);
     const amountKobo = amountKes * 100;
