@@ -199,8 +199,16 @@ function sanitizeUser(user: typeof usersTable.$inferSelect) {
 }
 
 export function getLevelName(level: number): string {
-  const names: Record<number, string> = { 1: "Explorer", 2: "Builder", 3: "Professional", 4: "Elite" };
-  return names[level] ?? "Explorer";
+  const names: Record<number, string> = {
+    1: "🚀 Starter",
+    2: "🥉 Bronze",
+    3: "🥈 Silver",
+    4: "🥇 Gold",
+    5: "🔷 Platinum",
+    6: "💎 Diamond",
+    7: "👑 Elite",
+  };
+  return names[level] ?? "🚀 Starter";
 }
 
 export default router;
