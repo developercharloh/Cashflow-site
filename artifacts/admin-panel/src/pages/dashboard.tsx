@@ -37,24 +37,52 @@ function StatCard({ icon, label, value, sub, color }: { icon: React.ReactNode; l
   );
 }
 
+function fetchWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out — the server may be cold-starting. Please retry.")), ms)
+    ),
+  ]);
+}
+
 export default function Dashboard() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  useEffect(() => {
-    Promise.all([
-      get<Analytics>("/admin/analytics"),
-      get<AdminUser[]>("/admin/users"),
-    ]).then(([a, u]) => {
+  const load = () => {
+    setLoading(true);
+    setErr("");
+    fetchWithTimeout(
+      Promise.all([
+        get<Analytics>("/admin/analytics"),
+        get<AdminUser[]>("/admin/users"),
+      ]),
+      15000
+    ).then(([a, u]) => {
       setAnalytics(a);
       setUsers(u.slice(0, 8));
     }).catch(e => setErr(e.message)).finally(() => setLoading(false));
-  }, []);
+  };
 
-  if (loading) return <div className="text-slate-400 text-sm py-10 text-center">Loading analytics…</div>;
-  if (err) return <div className="text-red-400 text-sm py-10 text-center">{err}</div>;
+  useEffect(() => { load(); }, []);
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-slate-400 text-sm">Loading analytics…</p>
+    </div>
+  );
+  if (err) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <p className="text-red-400 text-sm text-center max-w-xs">{err}</p>
+      <button onClick={load} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        Retry
+      </button>
+    </div>
+  );
   if (!analytics) return null;
 
   const stats = [
