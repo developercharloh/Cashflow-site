@@ -73,7 +73,7 @@ export default function Dashboard() {
   const totalEarned = balance + (stats?.totalWithdrawn ?? 0);
   const levelProgress = stats?.levelProgress ?? 0;
   const nextLevel = (stats?.level ?? 1) + 1;
-  const levelName = stats?.levelName ?? "Explorer";
+  const levelName = stats?.levelName ?? "🚀 Starter";
   const referralLink = referralInfo?.referralLink ?? "";
 
   const handleCheckIn = () => {
