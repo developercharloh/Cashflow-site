@@ -11,4 +11,4 @@ git --no-optional-locks push "$REPO_WITH_TOKEN" HEAD:main
 
 echo ""
 echo "✅  Done! Vercel will auto-deploy in ~30 seconds."
-echo "🌐  Live at: https://taskearnpro.vercel.app"
+echo "🌐  Live at: https://taskearn-pro.vercel.app"
