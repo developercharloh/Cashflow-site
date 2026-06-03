@@ -26,7 +26,7 @@ export default function AdminUsers() {
     });
   };
 
-  const LEVEL_NAMES: Record<number, string> = { 1: "Explorer", 2: "Builder", 3: "Professional", 4: "Elite" };
+  const LEVEL_NAMES: Record<number, string> = { 1: "🚀 Starter", 2: "🥉 Bronze", 3: "🥈 Silver", 4: "🥇 Gold", 5: "🔷 Platinum", 6: "💎 Diamond", 7: "👑 Elite" };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
