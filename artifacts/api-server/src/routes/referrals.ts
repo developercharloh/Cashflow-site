@@ -8,9 +8,7 @@ const router = Router();
 router.get("/referrals", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    const host = req.headers.host ?? "taskearnpro.com";
-    const protocol = req.headers["x-forwarded-proto"] ?? "https";
-    const referralLink = `${protocol}://${host}/auth/register?ref=${user.referralCode}`;
+    const referralLink = `https://taskearn-pro.vercel.app/auth/register?ref=${user.referralCode}`;
 
     const referred = await db.select().from(usersTable).where(eq(usersTable.referredBy, req.userId!));
     const activeReferrals = referred.filter(u => u.tasksCompleted > 0).length;
