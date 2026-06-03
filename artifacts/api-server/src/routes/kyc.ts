@@ -5,7 +5,7 @@ import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
 
-const CLIENT_ID = process.env.DIDIT_CLIENT_ID!;
+const CLIENT_ID = process.env.DIDIT_CLIENT_ID ?? "d32f2c6e-b8c7-4d1b-9212-e7d552ab0863";
 const CLIENT_SECRET = process.env.DIDIT_CLIENT_SECRET!;
 const DIDIT_TOKEN_URL = "https://apx.didit.me/auth/v2/token/";
 const DIDIT_SESSIONS_URL = "https://apx.didit.me/v2/sessions/";
