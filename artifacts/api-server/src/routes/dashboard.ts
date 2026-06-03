@@ -7,9 +7,9 @@ import { getLevelName } from "./auth";
 const router = Router();
 
 function getLevelProgress(user: typeof usersTable.$inferSelect): number {
-  const thresholds = [0, 50, 200, 500, Infinity];
+  const thresholds = [0, 50, 200, 500, 1000, 2000, 5000, Infinity];
   const lo = thresholds[user.level - 1] ?? 0;
-  const hi = thresholds[user.level] ?? 500;
+  const hi = thresholds[user.level] ?? 5000;
   if (hi === Infinity) return 100;
   return Math.min(100, Math.round(((user.totalEarned - lo) / (hi - lo)) * 100));
 }
