@@ -8,21 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Star, CheckCircle, Lock, ChevronRight, Zap, Crown, ShieldCheck, Rocket, CreditCard } from "lucide-react";
+import { Loader2, Star, CheckCircle, Lock, ChevronRight, Zap, Crown, ShieldCheck, Rocket, CreditCard, Award, Gem } from "lucide-react";
 import { motion } from "framer-motion";
 
 const LEVEL_COLORS: Record<number, { border: string; bg: string; badge: string; text: string; gradient: string }> = {
-  1: { border: "border-slate-400/50",  bg: "bg-slate-400/5",  badge: "bg-slate-400/10 text-slate-400 border-slate-400/30",  text: "text-slate-400",  gradient: "from-slate-600/20 to-transparent" },
-  2: { border: "border-blue-400/50",   bg: "bg-blue-400/5",   badge: "bg-blue-400/10 text-blue-400 border-blue-400/30",     text: "text-blue-400",   gradient: "from-blue-600/20 to-transparent" },
-  3: { border: "border-purple-500/50", bg: "bg-purple-500/5", badge: "bg-purple-500/10 text-purple-500 border-purple-500/30",text: "text-purple-500", gradient: "from-purple-600/20 to-transparent" },
-  4: { border: "border-yellow-500/50", bg: "bg-yellow-500/5", badge: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",text: "text-yellow-500", gradient: "from-yellow-600/20 to-transparent" },
+  1: { border: "border-slate-400/50",  bg: "bg-slate-400/5",  badge: "bg-slate-400/10 text-slate-400 border-slate-400/30",   text: "text-slate-400",  gradient: "from-slate-600/20 to-transparent" },
+  2: { border: "border-orange-500/50", bg: "bg-orange-500/5", badge: "bg-orange-500/10 text-orange-500 border-orange-500/30", text: "text-orange-500", gradient: "from-orange-600/20 to-transparent" },
+  3: { border: "border-slate-300/60",  bg: "bg-slate-300/5",  badge: "bg-slate-300/10 text-slate-300 border-slate-300/30",   text: "text-slate-300",  gradient: "from-slate-400/20 to-transparent" },
+  4: { border: "border-yellow-500/50", bg: "bg-yellow-500/5", badge: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30", text: "text-yellow-500", gradient: "from-yellow-600/20 to-transparent" },
+  5: { border: "border-cyan-400/50",   bg: "bg-cyan-400/5",   badge: "bg-cyan-400/10 text-cyan-400 border-cyan-400/30",       text: "text-cyan-400",   gradient: "from-cyan-600/20 to-transparent" },
+  6: { border: "border-sky-400/50",    bg: "bg-sky-400/5",    badge: "bg-sky-400/10 text-sky-400 border-sky-400/30",          text: "text-sky-400",    gradient: "from-sky-600/20 to-transparent" },
+  7: { border: "border-purple-500/50", bg: "bg-purple-500/5", badge: "bg-purple-500/10 text-purple-500 border-purple-500/30", text: "text-purple-500", gradient: "from-purple-600/20 to-transparent" },
 };
 
 const LEVEL_ICONS: Record<number, React.ReactNode> = {
-  1: <Star className="w-5 h-5" />,
-  2: <Rocket className="w-5 h-5" />,
+  1: <Rocket className="w-5 h-5" />,
+  2: <Star className="w-5 h-5" />,
   3: <ShieldCheck className="w-5 h-5" />,
-  4: <Crown className="w-5 h-5" />,
+  4: <Award className="w-5 h-5" />,
+  5: <Zap className="w-5 h-5" />,
+  6: <Gem className="w-5 h-5" />,
+  7: <Crown className="w-5 h-5" />,
 };
 
 // Upgrade pricing — level → price in USD
@@ -30,6 +36,9 @@ const UPGRADE_PRICES: Record<number, number> = {
   2: 20,
   3: 50,
   4: 100,
+  5: 200,
+  6: 500,
+  7: 1000,
 };
 
 function UpgradeModal({ targetLevel, levelName, price, onClose }: {
@@ -146,7 +155,7 @@ export default function Membership() {
     }
     const price = UPGRADE_PRICES[level];
     if (!price) {
-      toast({ title: "Free Tier", description: "Explorer is the free starting tier." });
+      toast({ title: "Free Tier", description: "Starter is the free starting tier." });
       return;
     }
     setUpgradeTarget({ level, name, price });
@@ -192,10 +201,10 @@ export default function Membership() {
                 </div>
               </div>
             )}
-            {currentLevel === 4 && (
-              <div className="flex items-center gap-2 text-yellow-500 text-sm">
+            {currentLevel === 7 && (
+              <div className="flex items-center gap-2 text-purple-500 text-sm">
                 <Crown className="w-4 h-4" />
-                <span className="font-medium">You're at the highest tier — Elite!</span>
+                <span className="font-medium">You're at the highest tier — 👑 Elite!</span>
               </div>
             )}
           </CardContent>
@@ -204,7 +213,7 @@ export default function Membership() {
 
       {/* Upgrade path banner */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        {[2, 3, 4].map(lvl => {
+        {[2, 4, 7].map(lvl => {
           const levelData = levels.find(l => l.level === lvl);
           const colors = LEVEL_COLORS[lvl];
           const unlocked = currentLevel >= lvl;
