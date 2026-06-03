@@ -203,7 +203,7 @@ export default function WalletPage() {
 
   const handleBankWithdraw = () => {
     const amt = parseFloat(withdrawAmount);
-    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
+    if (!amt || amt < 50) { toast({ title: "Minimum withdrawal is $50", variant: "destructive" }); return; }
     if (!bankCode || !accountNumber || !accountName) {
       toast({ title: "Please fill all bank details", variant: "destructive" }); return;
     }
@@ -219,7 +219,7 @@ export default function WalletPage() {
 
   const handleManualWithdraw = (methodId: string) => {
     const amt = parseFloat(manualAmount);
-    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
+    if (!amt || amt < 50) { toast({ title: "Minimum withdrawal is $50", variant: "destructive" }); return; }
     if (!manualAccount) { toast({ title: "Please enter your account details", variant: "destructive" }); return; }
     manualWithdrawMutation.mutate({ data: { amount: amt, method: methodId, accountDetails: manualAccount } }, {
       onSuccess: () => {
@@ -528,7 +528,7 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <DialogTitle>Withdraw via {stage.method.label}</DialogTitle>
-                  <DialogDescription>Minimum $5.00 · Balance: ${wallet.balance.toFixed(2)}</DialogDescription>
+                  <DialogDescription>Minimum $50.00 · Balance: ${wallet.balance.toFixed(2)}</DialogDescription>
                 </div>
               </div>
             </DialogHeader>
@@ -538,7 +538,7 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="5" placeholder="e.g. 20" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+                  <Input type="number" min="50" placeholder="e.g. 50" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
                 </div>
                 <div>
                   <Label>Select Bank</Label>
@@ -574,8 +574,8 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $5.00</p>
+                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $50.00</p>
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
@@ -615,8 +615,8 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $5.00</p>
+                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $50.00</p>
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
@@ -656,7 +656,7 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="5" placeholder="e.g. 10" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
                 </div>
                 <div>
                   <Label>PayPal Email Address</Label>

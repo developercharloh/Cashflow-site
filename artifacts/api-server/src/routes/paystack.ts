@@ -204,8 +204,8 @@ router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => 
   try {
     const { amount, bankCode, accountNumber, accountName } = req.body;
 
-    if (!amount || amount < 5) {
-      res.status(400).json({ error: "Minimum withdrawal is $5" });
+    if (!amount || amount < 50) {
+      res.status(400).json({ error: "Minimum withdrawal is $50" });
       return;
     }
     if (!bankCode || !accountNumber || !accountName) {
