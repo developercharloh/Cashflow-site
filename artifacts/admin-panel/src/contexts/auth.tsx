@@ -32,12 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const decoded = decodeJwt(token);
-      setUser(decoded);
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const decoded = decodeJwt(token);
+        setUser(decoded);
+      }
+    } catch {
+      // localStorage blocked (private browsing, browser restriction, etc.)
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
