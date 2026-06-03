@@ -47,7 +47,7 @@ export default function Login() {
             <input
               type="email" required value={email} onChange={e => setEmail(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
-              placeholder="admin@taskearnpro.com"
+              placeholder="ckyalo011@gmail.com"
             />
           </div>
           <div className="space-y-1.5">
