@@ -14,7 +14,6 @@ import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import WalletPage from "@/pages/wallet";
 import Referrals from "@/pages/referrals";
-import Leaderboard from "@/pages/leaderboard";
 import Membership from "@/pages/membership";
 import Notifications from "@/pages/notifications";
 import AdminDashboard from "@/pages/admin/index";
@@ -22,7 +21,6 @@ import AdminUsers from "@/pages/admin/users";
 import AdminTasks from "@/pages/admin/tasks";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
-import BinaryTradingPage from "@/pages/binary-trading";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,8 +47,6 @@ function Router() {
         <Route path="/tasks" component={Tasks} />
         <Route path="/wallet" component={WalletPage} />
         <Route path="/referrals" component={Referrals} />
-        <Route path="/leaderboard" component={Leaderboard} />
-        <Route path="/binary" component={BinaryTradingPage} />
         <Route path="/membership" component={Membership} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/admin" component={AdminDashboard} />
