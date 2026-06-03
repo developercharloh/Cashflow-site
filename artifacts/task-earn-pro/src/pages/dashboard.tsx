@@ -5,7 +5,6 @@ import {
   useDailyCheckIn,
   useGetTasks,
   useGetReferralInfo,
-  useGetLeaderboard,
   useGetNotifications,
 } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -15,8 +14,9 @@ import {
   Wallet, Users, ArrowUpRight, TrendingUp,
   CheckCircle2, Gift, Star, ChevronRight,
   Crown, CalendarCheck, Bell, CircleDollarSign,
-  Clock, Award,
+  Clock, Award, Zap, Copy,
 } from "lucide-react";
+import { useToast as useToastFn } from "@/hooks/use-toast";
 
 function formatMoney(n: number) {
   return `$${n.toFixed(2)}`;
@@ -32,11 +32,11 @@ function timeAgo(dateStr: string) {
 
 function categoryIcon(cat: string) {
   const c = cat?.toLowerCase() ?? "";
-  if (c === "video") return <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center"><Play className="w-4 h-4 text-purple-600" /></div>;
-  if (c === "reading") return <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"><FileText className="w-4 h-4 text-orange-500" /></div>;
-  if (c === "survey") return <div className="w-9 h-9 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"><ClipboardList className="w-4 h-4 text-yellow-600" /></div>;
-  if (c === "ai training") return <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><Cpu className="w-4 h-4 text-green-600" /></div>;
-  return <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><Star className="w-4 h-4 text-blue-600" /></div>;
+  if (c === "video") return <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0"><Play className="w-4 h-4 text-purple-600" /></div>;
+  if (c === "reading") return <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-orange-500" /></div>;
+  if (c === "survey") return <div className="w-9 h-9 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center shrink-0"><ClipboardList className="w-4 h-4 text-yellow-600" /></div>;
+  if (c === "ai training") return <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0"><Cpu className="w-4 h-4 text-green-600" /></div>;
+  return <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0"><Star className="w-4 h-4 text-blue-600" /></div>;
 }
 
 function difficultyBadge(diff: string) {
@@ -49,29 +49,11 @@ function difficultyBadge(diff: string) {
 }
 
 function activityIcon(type: string) {
-  if (type === "task_completed") return <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-green-600" /></div>;
-  if (type === "referral") return <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><Gift className="w-4 h-4 text-blue-600" /></div>;
-  if (type === "level_up") return <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-purple-600" /></div>;
-  if (type === "check_in") return <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"><CalendarCheck className="w-4 h-4 text-yellow-600" /></div>;
-  return <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"><CircleDollarSign className="w-4 h-4 text-muted-foreground" /></div>;
-}
-
-function SparkLine() {
-  const pts = [50,45,60,40,70,55,80,65,90,75,85,95,70];
-  const max = Math.max(...pts), min = Math.min(...pts);
-  const w = 200, h = 50;
-  const coords = pts.map((v, i) => {
-    const x = (i / (pts.length - 1)) * w;
-    const y = h - ((v - min) / (max - min)) * h;
-    return `${x},${y}`;
-  }).join(" ");
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-12" preserveAspectRatio="none">
-      <polyline points={coords} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinejoin="round" />
-      <text x="160" y="14" fontSize="11" fill="#6b7280">1.08945</text>
-      <line x1="155" y1="18" x2="200" y2="18" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3" />
-    </svg>
-  );
+  if (type === "task_completed") return <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0"><CheckCircle2 className="w-4 h-4 text-green-600" /></div>;
+  if (type === "referral") return <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0"><Gift className="w-4 h-4 text-blue-600" /></div>;
+  if (type === "level_up") return <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 text-purple-600" /></div>;
+  if (type === "check_in") return <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center shrink-0"><CalendarCheck className="w-4 h-4 text-yellow-600" /></div>;
+  return <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0"><CircleDollarSign className="w-4 h-4 text-muted-foreground" /></div>;
 }
 
 export default function Dashboard() {
@@ -82,7 +64,6 @@ export default function Dashboard() {
   const { data: activity } = useGetRecentActivity();
   const { data: tasks } = useGetTasks();
   const { data: referralInfo } = useGetReferralInfo();
-  const { data: leaderboard } = useGetLeaderboard({ period: "weekly" });
   const { data: notifications } = useGetNotifications();
   const checkInMutation = useDailyCheckIn();
 
@@ -93,6 +74,7 @@ export default function Dashboard() {
   const levelProgress = stats?.levelProgress ?? 0;
   const nextLevel = (stats?.level ?? 1) + 1;
   const levelName = stats?.levelName ?? "Explorer";
+  const referralLink = referralInfo?.referralLink ?? "";
 
   const handleCheckIn = () => {
     checkInMutation.mutate(undefined, {
@@ -104,6 +86,14 @@ export default function Dashboard() {
     });
   };
 
+  const handleCopyReferral = () => {
+    if (referralLink) {
+      navigator.clipboard.writeText(referralLink).then(() => {
+        toast({ title: "Copied!", description: "Referral link copied to clipboard." });
+      });
+    }
+  };
+
   return (
     <div className="pb-4">
       {/* Welcome */}
@@ -112,176 +102,203 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-0.5">Complete tasks, earn points and withdraw real money.</p>
       </div>
 
-      {/* Premium Banner */}
-      <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" }}>
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center">
-              <Crown className="w-5 h-5 text-yellow-300" />
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm">Upgrade to Premium</p>
-              <p className="text-white/70 text-xs">Unlock high paying tasks and more benefits.</p>
+      {/* Hero Balance Card */}
+      <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)" }}>
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-white/60 text-xs font-medium">Available Balance</p>
+            <div className="flex items-center gap-1 bg-green-500/20 px-2 py-0.5 rounded-full">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-[10px] text-green-400 font-semibold">Withdrawable</span>
             </div>
           </div>
-          <Link href="/membership">
-            <button className="bg-white text-violet-700 font-bold text-xs px-3 py-2 rounded-xl shrink-0">
-              Upgrade Now
-            </button>
-          </Link>
-        </div>
-      </div>
+          <p className="text-4xl font-extrabold text-white mb-4">{formatMoney(balance)}</p>
 
-      {/* 3 Stat Cards */}
-      <div className="grid grid-cols-3 gap-2 px-4 mb-4">
-        {/* Balance */}
-        <div className="bg-card border border-border rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-muted-foreground font-medium leading-tight">Available Balance</p>
-            <div className="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <Wallet className="w-3.5 h-3.5 text-green-600" />
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-[10px] text-white/50 mb-1">Pending Earnings</p>
+              <p className="text-base font-bold text-blue-300">{formatMoney(pending)}</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-[10px] text-white/50 mb-1">Total Earned</p>
+              <p className="text-base font-bold text-purple-300">{formatMoney(totalEarned)}</p>
             </div>
           </div>
-          <p className="text-lg font-bold text-green-600">{formatMoney(balance)}</p>
-          <p className="text-[9px] text-green-500 mt-1 flex items-center gap-0.5">
-            <CheckCircle2 className="w-2.5 h-2.5" /> Withdrawable
-          </p>
-        </div>
 
-        {/* Pending */}
-        <div className="bg-card border border-border rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-muted-foreground font-medium leading-tight">Pending Earnings</p>
-            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5 text-blue-600" />
-            </div>
+          <div className="flex gap-2">
+            <Link href="/wallet" className="flex-1">
+              <button className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5" />
+                Withdraw
+              </button>
+            </Link>
+            <Link href="/tasks" className="flex-1">
+              <button className="w-full py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+                <Zap className="w-3.5 h-3.5" />
+                Earn More
+              </button>
+            </Link>
           </div>
-          <p className="text-lg font-bold text-blue-600">{formatMoney(pending)}</p>
-          <p className="text-[9px] text-blue-400 mt-1">Processing</p>
-        </div>
-
-        {/* Total Earned */}
-        <div className="bg-card border border-border rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-muted-foreground font-medium leading-tight">Total Earned</p>
-            <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-lg font-bold text-purple-600">{formatMoney(totalEarned)}</p>
-          <p className="text-[9px] text-muted-foreground mt-1">All time</p>
         </div>
       </div>
 
       {/* Progress Card */}
-      <div className="mx-4 mb-4 rounded-2xl p-4 text-white" style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)" }}>
+      <div className="mx-4 mb-4 rounded-2xl p-4" style={{ background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" }}>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold opacity-80">Your Progress</p>
-          <div className="flex items-center gap-1">
-            <p className="text-xs opacity-60">Progress to Level {nextLevel}</p>
-            <p className="text-xs font-bold text-green-400">{levelProgress}%</p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-yellow-400/20 border border-yellow-400/30 flex items-center justify-center">
+              <Award className="w-4 h-4 text-yellow-300" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">Level {stats?.level ?? 1}: {levelName}</p>
+              <p className="text-white/60 text-[10px]">Progress to Level {nextLevel}</p>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-12 h-12 rounded-2xl bg-yellow-400/20 border border-yellow-400/30 flex items-center justify-center shrink-0">
-            <Award className="w-6 h-6 text-yellow-400" />
-          </div>
-          <div className="flex-1">
-            <p className="font-bold text-base">Level {stats?.level ?? 1}: {levelName}</p>
-            <p className="text-xs opacity-60 mt-0.5">Complete more tasks to unlock high paying opportunities.</p>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-2.5 bg-white/10 rounded-full mb-3 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${levelProgress}%`, background: "linear-gradient(90deg, #22c55e, #16a34a)" }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
           <Link href="/membership">
-            <button className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">
-              View All Levels
+            <button className="bg-white/20 hover:bg-white/30 border border-white/20 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors">
+              View Levels
             </button>
           </Link>
-          <div className="flex gap-4 text-xs">
-            <div className="text-center">
-              <p className="font-bold text-white">{stats?.tasksCompleted ?? 0}<span className="text-white/40">/{(stats?.tasksCompleted ?? 0) + (stats?.tasksAvailable ?? 0)}</span></p>
-              <p className="text-white/50 text-[9px] mt-0.5">Tasks Done</p>
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-white">{stats?.streakDays ?? 0}<span className="text-white/40"> days</span></p>
-              <p className="text-white/50 text-[9px] mt-0.5">Active Days</p>
-            </div>
+        </div>
+
+        <div className="w-full h-2 bg-white/20 rounded-full mb-2 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${levelProgress}%`, background: "linear-gradient(90deg, #fbbf24, #f59e0b)" }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-white/60">
+          <span>{levelProgress}% complete</span>
+          <div className="flex gap-3">
+            <span><span className="text-white font-bold">{stats?.tasksCompleted ?? 0}</span> tasks done</span>
+            <span><span className="text-white font-bold">{stats?.streakDays ?? 0}</span> day streak</span>
           </div>
         </div>
       </div>
 
-      {/* Tasks + Binary Trading */}
-      <div className="grid grid-cols-2 gap-3 px-4 mb-4">
-        {/* Available Tasks */}
-        <div className="bg-card border border-border rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold">Available Tasks</p>
-            <Link href="/tasks"><span className="text-[10px] text-primary font-semibold">View all</span></Link>
+      {/* Quick Actions Row */}
+      <div className="grid grid-cols-4 gap-2 px-4 mb-4">
+        <Link href="/tasks" className="flex flex-col items-center gap-1.5">
+          <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
           </div>
-          <div className="space-y-2.5">
-            {(tasks ?? []).slice(0, 4).map((task) => (
-              <div key={task.id} className="flex items-center gap-2">
-                <div className="shrink-0">{categoryIcon(task.category)}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold truncate">{task.title}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {difficultyBadge(task.difficulty)}
-                    <span className="text-[9px] text-muted-foreground truncate">{task.category}</span>
-                  </div>
+          <span className="text-[10px] font-semibold text-center text-foreground leading-tight">Tasks</span>
+        </Link>
+        <Link href="/wallet" className="flex flex-col items-center gap-1.5">
+          <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-blue-600" />
+          </div>
+          <span className="text-[10px] font-semibold text-center text-foreground leading-tight">Wallet</span>
+        </Link>
+        <Link href="/referrals" className="flex flex-col items-center gap-1.5">
+          <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+            <Users className="w-5 h-5 text-purple-600" />
+          </div>
+          <span className="text-[10px] font-semibold text-center text-foreground leading-tight">Referrals</span>
+        </Link>
+        <Link href="/membership" className="flex flex-col items-center gap-1.5">
+          <div className="w-12 h-12 rounded-2xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+            <Crown className="w-5 h-5 text-yellow-600" />
+          </div>
+          <span className="text-[10px] font-semibold text-center text-foreground leading-tight">Premium</span>
+        </Link>
+      </div>
+
+      {/* Daily Check-in */}
+      <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(90deg, #065f46 0%, #047857 100%)" }}>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <CalendarCheck className="w-5 h-5 text-emerald-300" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-bold">Daily Check-in</p>
+              <p className="text-white/60 text-[10px]">Come back every day to earn bonuses!</p>
+            </div>
+          </div>
+          <button
+            onClick={handleCheckIn}
+            disabled={checkInMutation.isPending}
+            className="bg-white text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-opacity disabled:opacity-60 shrink-0"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Check In
+          </button>
+        </div>
+      </div>
+
+      {/* Available Tasks (full width) */}
+      <div className="mx-4 mb-4 bg-card border border-border rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-bold">Available Tasks</p>
+            <p className="text-[10px] text-muted-foreground">{stats?.tasksAvailable ?? 0} tasks ready for you</p>
+          </div>
+          <Link href="/tasks"><span className="text-xs text-primary font-semibold">View all</span></Link>
+        </div>
+        <div className="space-y-3">
+          {(tasks ?? []).slice(0, 5).map((task) => (
+            <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+              {categoryIcon(task.category)}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate">{task.title}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {difficultyBadge(task.difficulty)}
+                  <span className="text-[10px] text-muted-foreground truncate">{task.category}</span>
                 </div>
               </div>
-            ))}
-            {(tasks ?? []).length === 0 && (
-              <p className="text-[10px] text-muted-foreground text-center py-2">No tasks available</p>
-            )}
-          </div>
-          <Link href="/tasks">
-            <button className="w-full mt-3 py-2 rounded-xl bg-primary text-primary-foreground text-[10px] font-bold">
-              Start Task
-            </button>
-          </Link>
+              <div className="text-right shrink-0">
+                <p className="text-xs font-bold text-green-600">+{formatMoney(task.reward)}</p>
+                <p className="text-[9px] text-muted-foreground">{task.estimatedMinutes}m</p>
+              </div>
+            </div>
+          ))}
+          {(tasks ?? []).length === 0 && (
+            <div className="text-center py-6">
+              <Star className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">No tasks available right now</p>
+            </div>
+          )}
         </div>
+        <Link href="/tasks">
+          <button className="w-full mt-3 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2">
+            <Zap className="w-4 h-4" />
+            Start Earning Now
+          </button>
+        </Link>
+      </div>
 
-        {/* Binary Trading */}
-        <div className="rounded-2xl p-3 text-white" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)" }}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold">Binary Trading</p>
-            <span className="text-[9px] bg-violet-500 px-1.5 py-0.5 rounded-md font-bold">New</span>
+      {/* Refer & Earn Banner */}
+      <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)" }}>
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Gift className="w-4 h-4 text-blue-200" />
+                <p className="text-white font-bold text-sm">Refer & Earn $1.00</p>
+              </div>
+              <p className="text-white/70 text-xs">Share your link. Earn $1 for every friend who joins.</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-extrabold text-white">{referralInfo?.totalReferrals ?? 0}</p>
+              <p className="text-[10px] text-white/60">Referrals</p>
+            </div>
           </div>
-          <div className="mb-2">
-            <p className="text-[9px] opacity-60">Practice Account</p>
-            <p className="text-sm font-bold">$1,000.00</p>
-          </div>
-          <div className="mb-2">
-            <p className="text-[9px] opacity-60">Today's P&L</p>
-            <p className="text-sm font-bold text-green-400">+$45.60</p>
-          </div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-bold bg-white/10 px-1.5 py-0.5 rounded-md">EUR/USD</span>
-            <span className="text-[9px] opacity-60">1 min</span>
-          </div>
-          <SparkLine />
-          <div className="grid grid-cols-2 gap-1 mt-2">
-            <button className="py-1.5 rounded-lg text-white text-[9px] font-bold" style={{ background: "#16a34a" }}>
-              UP 80%
-            </button>
-            <button className="py-1.5 rounded-lg text-white text-[9px] font-bold" style={{ background: "#dc2626" }}>
-              DOWN 80%
-            </button>
-          </div>
-          <Link href="/leaderboard">
-            <p className="text-[9px] text-violet-300 mt-2 text-center">Go to Binary Trading →</p>
-          </Link>
+          {referralLink ? (
+            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
+              <p className="flex-1 text-[10px] text-white/80 truncate font-mono">{referralLink}</p>
+              <button onClick={handleCopyReferral} className="shrink-0 bg-white text-blue-700 text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+                <Copy className="w-3 h-3" /> Copy
+              </button>
+            </div>
+          ) : (
+            <Link href="/referrals">
+              <button className="w-full py-2.5 bg-white/10 border border-white/20 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5">
+                <Users className="w-4 h-4" />
+                Get My Referral Link
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -290,7 +307,7 @@ export default function Dashboard() {
         {/* Referral Overview */}
         <div className="bg-card border border-border rounded-2xl p-3">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold">Referral Overview</p>
+            <p className="text-xs font-bold">Referrals</p>
             <Link href="/referrals"><span className="text-[10px] text-primary font-semibold">View all</span></Link>
           </div>
           <div className="flex items-center gap-2 mb-3">
@@ -304,11 +321,11 @@ export default function Dashboard() {
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-muted-foreground">Active Referrals</p>
+              <p className="text-[10px] text-muted-foreground">Active</p>
               <p className="text-[10px] font-bold">{referralInfo?.activeReferrals ?? 0}</p>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-muted-foreground">Referral Earnings</p>
+              <p className="text-[10px] text-muted-foreground">Earned</p>
               <p className="text-[10px] font-bold text-green-600">{formatMoney(referralInfo?.totalEarned ?? 0)}</p>
             </div>
           </div>
@@ -323,7 +340,7 @@ export default function Dashboard() {
           <div className="space-y-2">
             {(activity ?? []).slice(0, 3).map((item) => (
               <div key={item.id} className="flex items-center gap-2">
-                <div className="shrink-0">{activityIcon(item.type)}</div>
+                {activityIcon(item.type)}
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-semibold truncate leading-tight">{item.description}</p>
                   <p className="text-[9px] text-muted-foreground">{timeAgo(item.createdAt)}</p>
@@ -336,47 +353,11 @@ export default function Dashboard() {
             {(activity ?? []).length === 0 && (
               <div className="text-center py-4">
                 <p className="text-[10px] text-muted-foreground">No activity yet</p>
-                <p className="text-[9px] text-muted-foreground">Complete tasks to get started!</p>
+                <p className="text-[9px] text-muted-foreground">Complete tasks to start!</p>
               </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Leaderboard */}
-      <div className="mx-4 mb-4 bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-bold">Leaderboard <span className="text-muted-foreground font-normal text-xs">(This Week)</span></p>
-          <Link href="/leaderboard"><span className="text-xs text-primary font-semibold">View all</span></Link>
-        </div>
-        {(leaderboard ?? []).length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {[leaderboard![0], leaderboard![1], leaderboard![2]].filter(Boolean).map((entry, idx) => {
-              const isFirst = idx === 1;
-              return (
-                <div key={entry.userId} className={`flex flex-col items-center gap-1.5 ${isFirst ? "order-2" : idx === 0 ? "order-1" : "order-3"}`}>
-                  <div className="relative">
-                    <div className={`rounded-full flex items-center justify-center font-bold text-white ${isFirst ? "w-14 h-14 text-lg" : "w-11 h-11 text-sm"}`}
-                      style={{ background: isFirst ? "linear-gradient(135deg,#f59e0b,#d97706)" : "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
-                      {entry.name.charAt(0).toUpperCase()}
-                    </div>
-                    {isFirst && (
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                        <Crown className="w-4 h-4 text-yellow-400" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-[10px] font-semibold text-center truncate w-full">{entry.name.split(" ")[0]}</p>
-                  <p className="text-[10px] font-bold text-primary">{Math.round(entry.value).toLocaleString()} pts</p>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-4 text-muted-foreground">
-            <p className="text-xs">No leaderboard data yet</p>
-          </div>
-        )}
       </div>
 
       {/* Notifications */}
@@ -408,26 +389,23 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Daily Check-in Sticky Bar */}
-      <div className="mx-4 mb-2 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(90deg, #1e3a5f 0%, #0f172a 100%)" }}>
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* Upgrade to Premium */}
+      <div className="mx-4 mb-2 rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)" }}>
+        <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <CalendarCheck className="w-5 h-5 text-blue-400" />
+            <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center">
+              <Crown className="w-5 h-5 text-yellow-300" />
             </div>
             <div>
-              <p className="text-white text-xs font-bold">Daily Check-in</p>
-              <p className="text-white/50 text-[10px]">daily and earn bonuses!</p>
+              <p className="text-white font-bold text-sm">Upgrade to Premium</p>
+              <p className="text-white/70 text-xs">Unlock high paying tasks & perks.</p>
             </div>
           </div>
-          <button
-            onClick={handleCheckIn}
-            disabled={checkInMutation.isPending}
-            className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition-colors disabled:opacity-60"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Check In
-          </button>
+          <Link href="/membership">
+            <button className="bg-white text-violet-700 font-bold text-xs px-3 py-2 rounded-xl shrink-0">
+              Upgrade
+            </button>
+          </Link>
         </div>
       </div>
     </div>
