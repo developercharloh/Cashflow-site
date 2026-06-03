@@ -333,6 +333,13 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
     const bankCode = provider === "airtel" ? "AIRTEL" : "MPESA";
     const providerLabel = provider === "airtel" ? "Airtel Money" : "M-Pesa";
 
+    // Helper: true when a Paystack error is an account/business restriction
+    // (not a user error like wrong phone) — we fall back to manual in this case.
+    const isBusinessRestriction = (msg: string) =>
+      /starter business|third.?party payout|transfer.?not.?enabled|not.?activated|not.?verified/i.test(msg ?? "");
+
+    let transferCode: string | null = null;
+
     // Step 1: Create mobile money transfer recipient
     const recipientRes = await fetch("https://api.paystack.co/transferrecipient", {
       method: "POST",
@@ -346,8 +353,38 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
       }),
     });
     const recipientData = await recipientRes.json() as any;
-    if (!recipientData.status) {
-      // Refund if recipient creation fails
+
+    if (recipientData.status) {
+      // Step 2: Initiate transfer
+      const recipientCode = recipientData.data.recipient_code;
+      const transferRes = await fetch("https://api.paystack.co/transfer", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "balance",
+          amount: amountKobo,
+          currency: "KES",
+          recipient: recipientCode,
+          reason: `TaskEarn Pro ${providerLabel} withdrawal for user ${req.userId}`,
+        }),
+      });
+      const transferData = await transferRes.json() as any;
+
+      if (transferData.status) {
+        // Transfer queued — store the transfer code for webhook reconciliation
+        transferCode = transferData.data.transfer_code;
+      } else if (!isBusinessRestriction(transferData.message)) {
+        // Hard user-facing error (wrong phone, insufficient Paystack balance, etc.) — refund
+        await db.update(usersTable).set({
+          balance: sql`${usersTable.balance} + ${amount}`,
+          pendingEarnings: sql`${usersTable.pendingEarnings} - ${amount}`,
+          totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${amount}`,
+        }).where(eq(usersTable.id, req.userId!));
+        res.status(400).json({ error: transferData.message ?? "Transfer failed" }); return;
+      }
+      // else: business restriction → fall through to manual pending record
+    } else if (!isBusinessRestriction(recipientData.message)) {
+      // Hard error at recipient stage — refund
       await db.update(usersTable).set({
         balance: sql`${usersTable.balance} + ${amount}`,
         pendingEarnings: sql`${usersTable.pendingEarnings} - ${amount}`,
@@ -355,32 +392,7 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
       }).where(eq(usersTable.id, req.userId!));
       res.status(400).json({ error: recipientData.message ?? "Failed to create recipient" }); return;
     }
-    const recipientCode = recipientData.data.recipient_code;
-
-    // Step 2: Initiate transfer
-    const transferRes = await fetch("https://api.paystack.co/transfer", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source: "balance",
-        amount: amountKobo,
-        currency: "KES",
-        recipient: recipientCode,
-        reason: `TaskEarn Pro ${providerLabel} withdrawal for user ${req.userId}`,
-      }),
-    });
-    const transferData = await transferRes.json() as any;
-    if (!transferData.status) {
-      // Refund if transfer initiation fails
-      await db.update(usersTable).set({
-        balance: sql`${usersTable.balance} + ${amount}`,
-        pendingEarnings: sql`${usersTable.pendingEarnings} - ${amount}`,
-        totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${amount}`,
-      }).where(eq(usersTable.id, req.userId!));
-      res.status(400).json({ error: transferData.message ?? "Transfer failed" }); return;
-    }
-
-    const transferCode = transferData.data.transfer_code;
+    // else: business restriction at recipient stage → fall through to manual pending record
 
     const [txn] = await db.insert(transactionsTable).values({
       userId: req.userId!,
@@ -389,14 +401,19 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
       status: "pending",
       description: `${providerLabel} withdrawal of $${amount.toFixed(2)} (KES ${amountKes}) to ${normalizedPhone}`,
       method: provider === "airtel" ? "airtel" : "mpesa",
-      accountDetails: JSON.stringify({ phone: normalizedPhone, provider, transferCode }),
+      // If we got a transferCode, store it for webhook; otherwise store phone for admin
+      accountDetails: transferCode
+        ? JSON.stringify({ phone: normalizedPhone, provider, transferCode })
+        : JSON.stringify({ phone: normalizedPhone, provider }),
     }).returning();
 
     await db.insert(notificationsTable).values({
       userId: req.userId!,
       type: "withdrawal",
-      title: "Withdrawal Initiated",
-      message: `$${amount.toFixed(2)} is being sent to ${normalizedPhone} via ${providerLabel}. You'll receive it shortly.`,
+      title: "Withdrawal Requested",
+      message: transferCode
+        ? `$${amount.toFixed(2)} is being sent to ${normalizedPhone} via ${providerLabel}. You'll receive it shortly.`
+        : `Your $${amount.toFixed(2)} withdrawal to ${normalizedPhone} via ${providerLabel} is being processed.`,
     });
 
     res.json({
@@ -404,7 +421,7 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
       status: txn.status,
       amount: txn.amount,
       description: txn.description,
-      transferCode,
+      ...(transferCode ? { transferCode } : {}),
     });
   } catch (err) {
     req.log.error(err);
