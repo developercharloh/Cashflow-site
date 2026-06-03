@@ -85,15 +85,16 @@ export default function Dashboard() {
   );
   if (!analytics) return null;
 
+  const n = (v: unknown) => (Number(v) || 0);
   const stats = [
-    { icon: <Users className="w-4 h-4 text-blue-400" />, label: "Total Users", value: analytics.totalUsers.toLocaleString(), sub: `+${analytics.newUsersThisMonth} this month`, color: "bg-blue-900/40" },
-    { icon: <CheckSquare className="w-4 h-4 text-green-400" />, label: "Total Tasks", value: analytics.totalTasks.toLocaleString(), color: "bg-green-900/40" },
-    { icon: <TrendingUp className="w-4 h-4 text-yellow-400" />, label: "Total Paid Out", value: `$${analytics.totalEarningsPaid.toFixed(2)}`, color: "bg-yellow-900/40" },
-    { icon: <Clock className="w-4 h-4 text-orange-400" />, label: "Pending Withdrawals", value: analytics.pendingWithdrawals, color: "bg-orange-900/40" },
-    { icon: <DollarSign className="w-4 h-4 text-purple-400" />, label: "Revenue This Month", value: `$${analytics.revenueThisMonth.toFixed(2)}`, color: "bg-purple-900/40" },
-    { icon: <Wallet2 className="w-4 h-4 text-red-400" />, label: "Total Withdrawals", value: analytics.totalWithdrawals, color: "bg-red-900/40" },
-    { icon: <BarChart3 className="w-4 h-4 text-cyan-400" />, label: "Active Users", value: analytics.activeUsers, color: "bg-cyan-900/40" },
-    { icon: <Star className="w-4 h-4 text-pink-400" />, label: "New Users (Month)", value: analytics.newUsersThisMonth, color: "bg-pink-900/40" },
+    { icon: <Users className="w-4 h-4 text-blue-400" />, label: "Total Users", value: n(analytics.totalUsers).toLocaleString(), sub: `+${n(analytics.newUsersThisMonth)} this month`, color: "bg-blue-900/40" },
+    { icon: <CheckSquare className="w-4 h-4 text-green-400" />, label: "Total Tasks", value: n(analytics.totalTasks).toLocaleString(), color: "bg-green-900/40" },
+    { icon: <TrendingUp className="w-4 h-4 text-yellow-400" />, label: "Total Paid Out", value: `$${n(analytics.totalEarningsPaid).toFixed(2)}`, color: "bg-yellow-900/40" },
+    { icon: <Clock className="w-4 h-4 text-orange-400" />, label: "Pending Withdrawals", value: n(analytics.pendingWithdrawals), color: "bg-orange-900/40" },
+    { icon: <DollarSign className="w-4 h-4 text-purple-400" />, label: "Revenue This Month", value: `$${n(analytics.revenueThisMonth).toFixed(2)}`, color: "bg-purple-900/40" },
+    { icon: <Wallet2 className="w-4 h-4 text-red-400" />, label: "Total Withdrawals", value: n(analytics.totalWithdrawals), color: "bg-red-900/40" },
+    { icon: <BarChart3 className="w-4 h-4 text-cyan-400" />, label: "Active Users", value: n(analytics.activeUsers), color: "bg-cyan-900/40" },
+    { icon: <Star className="w-4 h-4 text-pink-400" />, label: "New Users (Month)", value: n(analytics.newUsersThisMonth), color: "bg-pink-900/40" },
   ];
 
   const levelLabel = (l: number) => ["", "Explorer", "Builder", "Professional", "Elite"][l] ?? "Explorer";
@@ -131,18 +132,18 @@ export default function Dashboard() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {u.name.charAt(0)}
+                        {(u.name ?? "?").charAt(0)}
                       </div>
                       <div>
-                        <p className="text-white font-medium text-xs">{u.name}</p>
+                        <p className="text-white font-medium text-xs">{u.name ?? "—"}</p>
                         <p className="text-slate-500 text-[10px]">{u.email}</p>
                       </div>
                       {u.isBanned && <span className="text-[10px] bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded-full border border-red-800/50">Banned</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3"><span className={`text-xs font-semibold ${levelColor(u.level)}`}>{levelLabel(u.level)}</span></td>
-                  <td className="px-4 py-3 text-right text-xs text-white">${u.balance.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-xs text-green-400">${u.totalEarned.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-xs text-white">${n(u.balance).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-xs text-green-400">${n(u.totalEarned).toFixed(2)}</td>
                   <td className="px-4 py-3 text-xs text-slate-400">{new Date(u.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
