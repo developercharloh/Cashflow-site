@@ -66,6 +66,17 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task || !task.isActive) { res.status(404).json({ error: "Task not found" }); return; }
 
+    // Starter (level 1) cap: $5 total earned maximum
+    {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+      if (user.level === 1 && user.totalEarned >= 5) {
+        res.status(403).json({
+          error: "You've reached the $5 Starter limit. Upgrade your membership to keep earning unlimited rewards.",
+          starterLimitReached: true,
+        }); return;
+      }
+    }
+
     // Check transcription minutes
     if (task.taskType === "transcription" && task.minutesCost) {
       const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
@@ -105,6 +116,14 @@ router.post("/tasks/:id/complete", requireAuth, async (req: AuthRequest, res) =>
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (task.minLevel > user.level) {
       res.status(400).json({ error: "Insufficient membership level" }); return;
+    }
+
+    // Starter (level 1) cap: $5 total earned maximum
+    if (user.level === 1 && user.totalEarned >= 5) {
+      res.status(403).json({
+        error: "You've reached the $5 Starter limit. Upgrade your membership to keep earning unlimited rewards.",
+        starterLimitReached: true,
+      }); return;
     }
 
     // Level 1 (Starter) daily limit: 2 tasks per day

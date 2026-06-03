@@ -441,6 +441,10 @@ function TaskCard({ task, taskIndex, userMinutes, onComplete, onBuyMinutes }: {
       },
       onError: (err: any) => {
         if (err.requiresMinutes) { onBuyMinutes(); return; }
+        if (err.starterLimitReached) {
+          toast({ title: "🔒 Starter Limit Reached", description: "You've earned your free $5. Upgrade to keep earning!", variant: "destructive" });
+          return;
+        }
         toast({ title: "Error", description: err.message, variant: "destructive" });
       },
     });
@@ -460,11 +464,14 @@ function TaskCard({ task, taskIndex, userMinutes, onComplete, onBuyMinutes }: {
         onComplete();
       },
       onError: (err: any) => {
-        if (err.limitReached) {
+        if (err.starterLimitReached) {
+          setModalOpen(false);
+          toast({ title: "🔒 Starter Limit Reached", description: "You've earned your free $5. Upgrade to keep earning!", variant: "destructive" });
+        } else if (err.limitReached) {
           setModalOpen(false);
           toast({
             title: "Daily limit reached 🔒",
-            description: "You've completed your 1 free task today. Come back tomorrow or upgrade for unlimited tasks.",
+            description: "You've completed your free tasks today. Come back tomorrow or upgrade for unlimited tasks.",
             variant: "destructive",
           });
         } else {
@@ -613,9 +620,32 @@ export default function Tasks() {
   const userMinutes = (user as any)?.transcriptionMinutes ?? 0;
   const allCategories = ["all", ...(categories?.map(c => c.name) ?? [])];
   const userLevel = (user as any)?.level ?? 1;
+  const totalEarned = (user as any)?.totalEarned ?? 0;
+  const starterLocked = userLevel === 1 && totalEarned >= 5;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+
+      {/* Starter limit banner */}
+      {starterLocked && (
+        <div className="rounded-xl border border-orange-500/40 bg-orange-500/10 p-4 flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-orange-300">You've reached your $5 Starter limit 🔒</p>
+              <p className="text-sm text-orange-200/80 mt-0.5">
+                Upgrade your membership to unlock unlimited tasks and keep earning.
+              </p>
+            </div>
+          </div>
+          <a href="/membership">
+            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold">
+              Upgrade Now — View Plans
+            </Button>
+          </a>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Task Marketplace</h1>
