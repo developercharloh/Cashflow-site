@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-full">
       <div className="px-4 py-5 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">T</div>
+          <img src="/logo.png" alt="TaskEarn Pro" className="w-8 h-8 rounded-lg object-cover shrink-0" />
           <div>
             <p className="text-sm font-bold text-white">TaskEarn Pro</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">Admin Panel</p>

@@ -74,27 +74,8 @@ export default function Login() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          {/* T logo with chart bars */}
           <div style={{ display: "inline-flex", marginBottom: "12px" }}>
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-              <defs>
-                <linearGradient id="lg1" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#a78bfa" />
-                  <stop offset="50%" stopColor="#818cf8" />
-                  <stop offset="100%" stopColor="#60a5fa" />
-                </linearGradient>
-              </defs>
-              {/* T crossbar */}
-              <rect x="8" y="10" width="48" height="9" rx="4" fill="url(#lg1)" />
-              {/* T stem */}
-              <rect x="27" y="10" width="10" height="26" rx="3" fill="url(#lg1)" />
-              {/* Chart bars rising right */}
-              <rect x="24" y="46" width="6" height="10" rx="2" fill="url(#lg1)" opacity="0.7" />
-              <rect x="33" y="40" width="6" height="16" rx="2" fill="url(#lg1)" opacity="0.85" />
-              <rect x="42" y="33" width="6" height="23" rx="2" fill="url(#lg1)" />
-              {/* Up arrow tip */}
-              <path d="M45 26 L48 30 L42 30 Z" fill="#a78bfa" />
-            </svg>
+            <img src="/logo.png" alt="TaskEarn Pro" style={{ width: "84px", height: "84px", borderRadius: "20px", objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }} />
           </div>
           <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", marginBottom: "2px" }}>
             Task Earn <span style={{ background: "linear-gradient(90deg,#a78bfa,#60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span>

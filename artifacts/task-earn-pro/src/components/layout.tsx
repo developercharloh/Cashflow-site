@@ -43,6 +43,9 @@ function TopHeader() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-14 flex items-center px-3 gap-2">
+      <Link href="/dashboard" className="shrink-0 flex items-center gap-1.5 mr-1">
+        <img src="/logo.png" alt="TaskEarn Pro" className="w-8 h-8 rounded-lg object-cover" />
+      </Link>
       <div className="flex-1 bg-muted rounded-full flex items-center px-3 py-1.5 gap-2">
         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
         <span className="text-xs text-muted-foreground truncate">Search tasks, users, categories...</span>
