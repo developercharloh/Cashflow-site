@@ -355,22 +355,31 @@ export default function WalletPage() {
             {transactions.map(txn => {
               const status = STATUS_STYLE[txn.status] ?? STATUS_STYLE.completed;
               return (
-                <div key={txn.id} className="flex items-center gap-3 p-4">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    {TYPE_ICON[txn.type] ?? <DollarSign className="w-4 h-4" />}
+                <div key={txn.id} className="p-4 space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      {TYPE_ICON[txn.type] ?? <DollarSign className="w-4 h-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{txn.description}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(txn.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`text-sm font-bold ${txn.type === "withdrawal" ? "text-red-500" : "text-green-600"}`}>
+                        {txn.type === "withdrawal" ? "-" : "+"}${txn.amount.toFixed(2)}
+                      </p>
+                      <Badge variant="outline" className={`text-[9px] ${status.class}`}>
+                        <span className="flex items-center gap-0.5">{status.icon}{txn.status}</span>
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{txn.description}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(txn.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-sm font-bold ${txn.type === "withdrawal" ? "text-red-500" : "text-green-600"}`}>
-                      {txn.type === "withdrawal" ? "-" : "+"}${txn.amount.toFixed(2)}
-                    </p>
-                    <Badge variant="outline" className={`text-[9px] ${status.class}`}>
-                      <span className="flex items-center gap-0.5">{status.icon}{txn.status}</span>
-                    </Badge>
-                  </div>
+                  {txn.status === "rejected" && (txn as any).rejectionReason && (
+                    <div className="ml-12 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                      <p className="text-[11px] text-red-600 dark:text-red-400">
+                        <span className="font-semibold">Reason: </span>{(txn as any).rejectionReason}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

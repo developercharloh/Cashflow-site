@@ -1434,6 +1434,8 @@ components:
           type: string
         method:
           type: ["string", "null"]
+        rejectionReason:
+          type: ["string", "null"]
         createdAt:
           type: string
 

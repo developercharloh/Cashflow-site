@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -44,6 +44,7 @@ router.get("/wallet/transactions", requireAuth, async (req: AuthRequest, res) =>
       status: t.status,
       description: t.description,
       method: t.method,
+      rejectionReason: t.rejectionReason ?? null,
       createdAt: t.createdAt.toISOString(),
     })));
   } catch (err) {
@@ -73,11 +74,18 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    await db.update(usersTable).set({
-      balance: user.balance - amount,
-      pendingEarnings: user.pendingEarnings + amount,
-      totalWithdrawn: user.totalWithdrawn + amount,
-    }).where(eq(usersTable.id, req.userId!));
+    // Atomic conditional deduct: only succeeds if balance is still sufficient at commit time,
+    // preventing concurrent requests from double-spending the same funds.
+    const updated = await db.update(usersTable).set({
+      balance: sql`${usersTable.balance} - ${amount}`,
+      pendingEarnings: sql`${usersTable.pendingEarnings} + ${amount}`,
+      totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amount}`,
+    }).where(sql`${usersTable.id} = ${req.userId!} AND ${usersTable.balance} >= ${amount}`).returning({ id: usersTable.id });
+
+    if (updated.length === 0) {
+      res.status(400).json({ error: "Insufficient balance" });
+      return;
+    }
 
     const [txn] = await db.insert(transactionsTable).values({
       userId: req.userId!,

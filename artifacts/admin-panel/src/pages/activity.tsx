@@ -33,6 +33,7 @@ function timeAgo(date: string) {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
+const n = (v: unknown) => Number(v) || 0;
 const levelLabel = (l: number) => ["", "Explorer", "Builder", "Professional", "Elite"][l] ?? "Explorer";
 const LEVEL_COLOR: Record<number, string> = { 1: "text-slate-300", 2: "text-blue-300", 3: "text-purple-300", 4: "text-yellow-300" };
 
@@ -76,7 +77,7 @@ export default function Activity() {
           {[
             { icon: <Users className="w-4 h-4 text-blue-400" />, label: "Total Users", value: analytics.totalUsers, color: "bg-blue-900/40" },
             { icon: <CheckSquare className="w-4 h-4 text-green-400" />, label: "Active Users", value: analytics.activeUsers, color: "bg-green-900/40" },
-            { icon: <TrendingUp className="w-4 h-4 text-yellow-400" />, label: "Paid Out", value: `$${analytics.totalEarningsPaid.toFixed(2)}`, color: "bg-yellow-900/40" },
+            { icon: <TrendingUp className="w-4 h-4 text-yellow-400" />, label: "Paid Out", value: `$${n(analytics.totalEarningsPaid).toFixed(2)}`, color: "bg-yellow-900/40" },
             { icon: <Wallet2 className="w-4 h-4 text-orange-400" />, label: "Pending W/D", value: analytics.pendingWithdrawals, color: "bg-orange-900/40" },
           ].map(({ icon, label, value, color }) => (
             <div key={label} className="rounded-2xl border border-slate-800 p-4" style={{ background: "#111827" }}>
@@ -136,7 +137,7 @@ export default function Activity() {
                   <p className="text-[10px] text-slate-500 truncate">{u.email}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-green-400">${u.totalEarned.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-green-400">${n(u.totalEarned).toFixed(2)}</p>
                   <p className={`text-[10px] font-semibold ${LEVEL_COLOR[u.level] ?? "text-slate-300"}`}>{levelLabel(u.level)}</p>
                 </div>
               </div>
