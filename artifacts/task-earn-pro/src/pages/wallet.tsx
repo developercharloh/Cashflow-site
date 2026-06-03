@@ -197,7 +197,7 @@ export default function WalletPage() {
 
   const handleCardWithdraw = () => {
     const amt = parseFloat(cardAmount);
-    if (!amt || amt < 5) { toast({ title: "Minimum withdrawal is $5", variant: "destructive" }); return; }
+    if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
     const rawCard = cardNumber.replace(/\s/g, "");
     if (rawCard.length < 13) { toast({ title: "Enter a valid card number", variant: "destructive" }); return; }
     if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) { toast({ title: "Enter expiry as MM/YY", variant: "destructive" }); return; }
@@ -246,7 +246,7 @@ export default function WalletPage() {
 
   const handleBankWithdraw = () => {
     const amt = parseFloat(withdrawAmount);
-    if (!amt || amt < 50) { toast({ title: "Minimum withdrawal is $50", variant: "destructive" }); return; }
+    if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
     if (!bankCode || !accountNumber || !accountName) {
       toast({ title: "Please fill all bank details", variant: "destructive" }); return;
     }
@@ -262,7 +262,7 @@ export default function WalletPage() {
 
   const handleManualWithdraw = (methodId: string) => {
     const amt = parseFloat(manualAmount);
-    if (!amt || amt < 50) { toast({ title: "Minimum withdrawal is $50", variant: "destructive" }); return; }
+    if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
     if (!manualAccount) { toast({ title: "Please enter your account details", variant: "destructive" }); return; }
     manualWithdrawMutation.mutate({ data: { amount: amt, method: methodId, accountDetails: manualAccount } }, {
       onSuccess: () => {
@@ -588,7 +588,7 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <DialogTitle>Withdraw via {stage.method.label}</DialogTitle>
-                  <DialogDescription>Minimum $50.00 · Balance: ${wallet.balance.toFixed(2)}</DialogDescription>
+                  <DialogDescription>Minimum $0.50 · Balance: ${wallet.balance.toFixed(2)}</DialogDescription>
                 </div>
               </div>
             </DialogHeader>
@@ -598,7 +598,7 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="50" placeholder="e.g. 50" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
                 </div>
                 <div>
                   <Label>Select Bank</Label>
@@ -639,8 +639,8 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="5" step="0.01" placeholder="e.g. 20" value={cardAmount} onChange={e => setCardAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $5.00</p>
+                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={cardAmount} onChange={e => setCardAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $0.50</p>
                 </div>
                 <div>
                   <Label>Card Number</Label>
@@ -671,7 +671,7 @@ export default function WalletPage() {
                 <Button className="w-full" onClick={handleCardWithdraw} disabled={manualWithdrawMutation.isPending}>
                   {manualWithdrawMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                    : cardAmount && parseFloat(cardAmount) >= 5
+                    : cardAmount && parseFloat(cardAmount) >= 0.5
                       ? `Withdraw $${parseFloat(cardAmount).toFixed(2)} to Card`
                       : "Withdraw to Card"}
                 </Button>
@@ -683,8 +683,8 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $50.00</p>
+                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $0.50</p>
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
@@ -694,7 +694,7 @@ export default function WalletPage() {
                   <Input
                     readOnly
                     value={
-                      manualAmount && parseFloat(manualAmount) >= 5
+                      manualAmount && parseFloat(manualAmount) >= 0.5
                         ? `KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()}`
                         : ""
                     }
@@ -712,7 +712,7 @@ export default function WalletPage() {
                 <Button className="w-full" onClick={() => handleManualWithdraw("mpesa")} disabled={manualWithdrawMutation.isPending}>
                   {manualWithdrawMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                    : manualAmount && parseFloat(manualAmount) >= 5
+                    : manualAmount && parseFloat(manualAmount) >= 0.5
                       ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via M-Pesa`
                       : "Withdraw via M-Pesa"}
                 </Button>
@@ -724,8 +724,8 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $50.00</p>
+                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $0.50</p>
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
@@ -735,7 +735,7 @@ export default function WalletPage() {
                   <Input
                     readOnly
                     value={
-                      manualAmount && parseFloat(manualAmount) >= 5
+                      manualAmount && parseFloat(manualAmount) >= 0.5
                         ? `KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()}`
                         : ""
                     }
@@ -753,7 +753,7 @@ export default function WalletPage() {
                 <Button className="w-full" onClick={() => handleManualWithdraw("airtel")} disabled={manualWithdrawMutation.isPending}>
                   {manualWithdrawMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                    : manualAmount && parseFloat(manualAmount) >= 5
+                    : manualAmount && parseFloat(manualAmount) >= 0.5
                       ? `Withdraw KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via Airtel`
                       : "Withdraw via Airtel Money"}
                 </Button>
@@ -765,7 +765,8 @@ export default function WalletPage() {
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
-                  <Input type="number" min="50" placeholder="e.g. 50" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum $0.50</p>
                 </div>
                 <div>
                   <Label>PayPal Email Address</Label>
