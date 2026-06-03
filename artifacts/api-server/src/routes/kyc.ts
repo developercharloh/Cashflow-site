@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createHmac, timingSafeEqual } from "crypto";
 import { db, usersTable, kycSubmissionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requireAuth";
@@ -6,7 +7,7 @@ import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requ
 const router = Router();
 
 // ── Didit v3 config ──────────────────────────────────────────────────────────
-const DIDIT_API_KEY    = process.env.DIDIT_API_KEY ?? "XPncOgSxZabQyclDBr21gfPohDPhs77Yef1pGoCYeKY";
+const DIDIT_API_KEY    = process.env.DIDIT_API_KEY;
 const DIDIT_WORKFLOW_ID = process.env.DIDIT_WORKFLOW_ID ?? "6958dd4e-b834-4e4d-80a7-c64f1e30a6c8";
 const DIDIT_BASE_URL   = "https://verification.didit.me";
 const CALLBACK_URL     = "https://taskearn-pro.vercel.app/profile?kyc=done";
@@ -18,6 +19,7 @@ interface DiditSession {
 }
 
 async function createDiditSession(vendorData: string): Promise<DiditSession> {
+  if (!DIDIT_API_KEY) throw new Error("DIDIT_API_KEY environment variable is not set");
   const res = await fetch(`${DIDIT_BASE_URL}/v3/session/`, {
     method: "POST",
     headers: {
@@ -219,35 +221,147 @@ router.post("/kyc/session", requireAuth, async (req: AuthRequest, res) => {
 // ─── POST /kyc/webhook — Didit calls this on verification completion ──────────
 router.post("/kyc/webhook", async (req, res) => {
   try {
+    // ── 1. Verify HMAC-SHA256 signature ─────────────────────────────────────
+    // Didit sends the signature in the Authorization header as "Bearer <hmac>",
+    // where <hmac> is the hex-encoded HMAC-SHA256 of the raw request body using
+    // DIDIT_WEBHOOK_SECRET as the key.
+    const webhookSecret = process.env.DIDIT_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      req.log.error("DIDIT_WEBHOOK_SECRET is not configured — rejecting webhook");
+      res.status(500).json({ error: "Webhook secret not configured" });
+      return;
+    }
+
+    const authHeader = req.headers["authorization"] ?? "";
+    const providedSig = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : "";
+
+    if (!providedSig) {
+      res.status(401).json({ error: "Missing webhook signature" });
+      return;
+    }
+
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      res.status(400).json({ error: "Empty request body" });
+      return;
+    }
+
+    const expectedSig = createHmac("sha256", webhookSecret)
+      .update(rawBody)
+      .digest("hex");
+
+    let sigValid: boolean;
+    try {
+      sigValid = timingSafeEqual(
+        Buffer.from(providedSig, "hex"),
+        Buffer.from(expectedSig, "hex"),
+      );
+    } catch {
+      sigValid = false;
+    }
+
+    if (!sigValid) {
+      req.log.warn("KYC webhook signature mismatch");
+      res.status(401).json({ error: "Invalid webhook signature" });
+      return;
+    }
+
+    // ── 2. Parse payload ─────────────────────────────────────────────────────
     const payload = req.body as any;
-    // Didit v3 sends: status (Approved/Declined/In Review), vendor_data, session_id
     const rawStatus: string = (payload.status ?? "").toLowerCase();
     const vendorData: string = payload.vendor_data ?? payload.vendorData ?? "";
     const sessionId: string = payload.session_id ?? payload.sessionId ?? "";
     const faceMatchScore: number | undefined = payload.face_match_score ?? payload.faceMatchScore;
 
-    const userId = parseInt(vendorData, 10);
-    if (!userId || isNaN(userId)) { res.status(400).json({ error: "Invalid vendor_data" }); return; }
+    if (!sessionId) {
+      res.status(400).json({ error: "Missing session_id" });
+      return;
+    }
 
+    const userId = parseInt(vendorData, 10);
+    if (!userId || isNaN(userId)) {
+      res.status(400).json({ error: "Invalid vendor_data" });
+      return;
+    }
+
+    // ── 3. Cross-validate session against our own DB ─────────────────────────
+    // Two session-creation flows exist:
+    //   a) /kyc/submit  → inserts a kycSubmissionsTable row with diditSessionId
+    //   b) /kyc/session → only updates usersTable.kycSessionId (no submission row)
+    // We accept the session if it appears in either place, then bind userId.
+
+    let resolvedUserId: number | null = null;
+
+    // Check submissions table first (flow a)
+    const [existingSub] = await db
+      .select({ userId: kycSubmissionsTable.userId })
+      .from(kycSubmissionsTable)
+      .where(eq(kycSubmissionsTable.diditSessionId, sessionId))
+      .limit(1);
+
+    if (existingSub) {
+      resolvedUserId = existingSub.userId;
+    } else {
+      // Fall back to checking the user record directly (flow b)
+      const [userBySession] = await db
+        .select({ id: usersTable.id, kycStatus: usersTable.kycStatus })
+        .from(usersTable)
+        .where(eq(usersTable.kycSessionId, sessionId))
+        .limit(1);
+
+      if (userBySession) {
+        resolvedUserId = userBySession.id;
+      }
+    }
+
+    if (resolvedUserId === null) {
+      req.log.warn({ sessionId }, "KYC webhook: unknown session_id");
+      res.status(400).json({ error: "Unknown session" });
+      return;
+    }
+
+    if (resolvedUserId !== userId) {
+      req.log.warn({ sessionId, claimedUserId: userId, actualUserId: resolvedUserId },
+        "KYC webhook: vendor_data userId mismatch");
+      res.status(400).json({ error: "Session / user mismatch" });
+      return;
+    }
+
+    // ── 4. Compute target status ──────────────────────────────────────────────
     const kycStatus =
       rawStatus === "approved" || rawStatus === "completed" ? "approved" :
       rawStatus === "declined" || rawStatus === "rejected" ? "rejected" : "pending";
 
+    // ── 5. Idempotency guard ──────────────────────────────────────────────────
+    // If the user's kycStatus already matches the incoming status, there is
+    // nothing to do (handles duplicate deliveries gracefully).
+    const [currentUser] = await db
+      .select({ kycStatus: usersTable.kycStatus })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    if (currentUser && currentUser.kycStatus === kycStatus) {
+      res.json({ ok: true });
+      return;
+    }
+
+    // ── 6. Apply KYC status update ───────────────────────────────────────────
     await db.update(usersTable)
-      .set({ kycStatus, kycSessionId: sessionId || undefined })
+      .set({ kycStatus, kycSessionId: sessionId })
       .where(eq(usersTable.id, userId));
 
-    if (sessionId) {
-      await db.update(kycSubmissionsTable).set({
-        kycStatus,
-        faceMatchScore: faceMatchScore ?? null,
-        reviewedAt: new Date(),
-      }).where(eq(kycSubmissionsTable.diditSessionId, sessionId));
-    }
+    await db.update(kycSubmissionsTable).set({
+      kycStatus,
+      faceMatchScore: faceMatchScore ?? null,
+      reviewedAt: new Date(),
+    }).where(eq(kycSubmissionsTable.diditSessionId, sessionId));
 
     res.json({ ok: true });
   } catch (err) {
-    console.error("KYC webhook error", err);
+    req.log.error(err, "KYC webhook error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
