@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { db, usersTable, kycSubmissionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requireAuth";
@@ -276,80 +275,49 @@ router.post("/kyc/session", requireAuth, async (req: AuthRequest, res) => {
 // ─── POST /kyc/webhook — Didit calls this on verification completion ──────────
 router.post("/kyc/webhook", async (req, res) => {
   try {
-    // ── 1. Verify HMAC-SHA256 signature ─────────────────────────────────────
-    // Didit sends the signature in the Authorization header as "Bearer <hmac>",
-    // where <hmac> is the hex-encoded HMAC-SHA256 of the raw request body using
-    // DIDIT_WEBHOOK_SECRET as the key.
-    const webhookSecret = process.env.DIDIT_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      req.log.error("DIDIT_WEBHOOK_SECRET is not configured — rejecting webhook");
-      res.status(500).json({ error: "Webhook secret not configured" });
-      return;
-    }
-
-    const authHeader = req.headers["authorization"] ?? "";
-    const providedSig = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7).trim()
-      : "";
-
-    if (!providedSig) {
-      res.status(401).json({ error: "Missing webhook signature" });
-      return;
-    }
-
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      res.status(400).json({ error: "Empty request body" });
-      return;
-    }
-
-    const expectedSig = createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
-
-    let sigValid: boolean;
-    try {
-      sigValid = timingSafeEqual(
-        Buffer.from(providedSig, "hex"),
-        Buffer.from(expectedSig, "hex"),
-      );
-    } catch {
-      sigValid = false;
-    }
-
-    if (!sigValid) {
-      req.log.warn("KYC webhook signature mismatch");
-      res.status(401).json({ error: "Invalid webhook signature" });
-      return;
-    }
-
-    // ── 2. Parse payload ─────────────────────────────────────────────────────
+    // ── 1. Extract session_id from payload ───────────────────────────────────
     const payload = req.body as any;
-    const rawStatus: string = (payload.status ?? "").toLowerCase();
-    const vendorData: string = payload.vendor_data ?? payload.vendorData ?? "";
     const sessionId: string = payload.session_id ?? payload.sessionId ?? "";
-    const faceMatchScore: number | undefined = payload.face_match_score ?? payload.faceMatchScore;
 
     if (!sessionId) {
       res.status(400).json({ error: "Missing session_id" });
       return;
     }
 
+    // ── 2. Verify by calling Didit API — never trust payload status blindly ──
+    // We fetch the session directly from Didit using our API key.
+    // If the session doesn't exist on Didit's side, we reject.
+    if (!DIDIT_API_KEY) {
+      req.log.error("DIDIT_API_KEY not configured");
+      res.status(500).json({ error: "Server configuration error" });
+      return;
+    }
+
+    const diditRes = await fetch(`${DIDIT_BASE_URL}/v3/session/${sessionId}/decision/`, {
+      headers: { "x-api-key": DIDIT_API_KEY },
+    });
+
+    if (!diditRes.ok) {
+      req.log.warn({ sessionId, status: diditRes.status }, "Didit session lookup failed");
+      res.status(400).json({ error: "Could not verify session with Didit" });
+      return;
+    }
+
+    const diditData = await diditRes.json() as any;
+    const rawStatus: string = (diditData.status ?? diditData.kyc?.status ?? "").toLowerCase();
+    const faceMatchScore: number | undefined = diditData.face_match_score ?? diditData.kyc?.face_match_score;
+    const vendorData: string = diditData.vendor_data ?? payload.vendor_data ?? payload.vendorData ?? "";
+
     const userId = parseInt(vendorData, 10);
     if (!userId || isNaN(userId)) {
+      req.log.warn({ sessionId, vendorData }, "KYC webhook: invalid vendor_data");
       res.status(400).json({ error: "Invalid vendor_data" });
       return;
     }
 
-    // ── 3. Cross-validate session against our own DB ─────────────────────────
-    // Two session-creation flows exist:
-    //   a) /kyc/submit  → inserts a kycSubmissionsTable row with diditSessionId
-    //   b) /kyc/session → only updates usersTable.kycSessionId (no submission row)
-    // We accept the session if it appears in either place, then bind userId.
-
+    // ── 3. Cross-validate session against our DB ─────────────────────────────
     let resolvedUserId: number | null = null;
 
-    // Check submissions table first (flow a)
     const [existingSub] = await db
       .select({ userId: kycSubmissionsTable.userId })
       .from(kycSubmissionsTable)
@@ -359,16 +327,12 @@ router.post("/kyc/webhook", async (req, res) => {
     if (existingSub) {
       resolvedUserId = existingSub.userId;
     } else {
-      // Fall back to checking the user record directly (flow b)
       const [userBySession] = await db
-        .select({ id: usersTable.id, kycStatus: usersTable.kycStatus })
+        .select({ id: usersTable.id })
         .from(usersTable)
         .where(eq(usersTable.kycSessionId, sessionId))
         .limit(1);
-
-      if (userBySession) {
-        resolvedUserId = userBySession.id;
-      }
+      if (userBySession) resolvedUserId = userBySession.id;
     }
 
     if (resolvedUserId === null) {
@@ -384,14 +348,12 @@ router.post("/kyc/webhook", async (req, res) => {
       return;
     }
 
-    // ── 4. Compute target status ──────────────────────────────────────────────
+    // ── 4. Map Didit status → our status ─────────────────────────────────────
     const kycStatus =
       rawStatus === "approved" || rawStatus === "completed" ? "approved" :
       rawStatus === "declined" || rawStatus === "rejected" ? "rejected" : "pending";
 
     // ── 5. Idempotency guard ──────────────────────────────────────────────────
-    // If the user's kycStatus already matches the incoming status, there is
-    // nothing to do (handles duplicate deliveries gracefully).
     const [currentUser] = await db
       .select({ kycStatus: usersTable.kycStatus })
       .from(usersTable)
@@ -403,7 +365,7 @@ router.post("/kyc/webhook", async (req, res) => {
       return;
     }
 
-    // ── 6. Apply KYC status update ───────────────────────────────────────────
+    // ── 6. Apply update ───────────────────────────────────────────────────────
     await db.update(usersTable)
       .set({ kycStatus, kycSessionId: sessionId })
       .where(eq(usersTable.id, userId));
