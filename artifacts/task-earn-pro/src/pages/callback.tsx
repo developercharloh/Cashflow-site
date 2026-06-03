@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { useVerifyPendingDeposits } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useVerifyPendingDeposits,
+  getGetMeQueryKey,
+  getGetWalletQueryKey,
+} from "@workspace/api-client-react";
 import { CheckCircle2, Loader2, Clock } from "lucide-react";
 
 export default function CallbackPage() {
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"verifying" | "success" | "processing">("verifying");
   const [amount, setAmount] = useState(0);
+  const queryClient = useQueryClient();
   const verifyMutation = useVerifyPendingDeposits();
 
   useEffect(() => {
     verifyMutation.mutate(undefined, {
       onSuccess: (data) => {
+        // Bust the cache so wallet + dashboard show the updated balance immediately
+        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetWalletQueryKey() });
+
         if (data.count > 0) {
           const total = (data.credited ?? []).reduce((s: number, c: any) => s + c.amount, 0);
           setAmount(total);
