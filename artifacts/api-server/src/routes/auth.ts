@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, transactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { hashPassword, comparePassword, signToken, generateReferralCode, generateOTP } from "../lib/auth";
+import { hashPassword, comparePassword, signToken, generateReferralCode, generateResetToken } from "../lib/auth";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -20,7 +20,6 @@ router.post("/auth/register", async (req, res) => {
     }
     const hashed = await hashPassword(password);
     const code = generateReferralCode();
-    const otp = generateOTP();
 
     let referredById: number | undefined;
     if (referralCode) {
@@ -101,12 +100,30 @@ router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+const resetAttempts = new Map<string, { count: number; resetAt: number }>();
+const RESET_MAX_ATTEMPTS = 5;
+const RESET_WINDOW_MS = 15 * 60 * 1000;
+
+function checkResetRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = resetAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    resetAttempts.set(ip, { count: 1, resetAt: now + RESET_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RESET_MAX_ATTEMPTS) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
+}
+
 router.post("/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email?.toLowerCase()));
     if (user) {
-      const token = generateOTP();
+      const token = generateResetToken();
       const expires = new Date(Date.now() + 3600000);
       await db.update(usersTable).set({ resetPasswordToken: token, resetPasswordExpires: expires }).where(eq(usersTable.id, user.id));
     }
@@ -119,9 +136,24 @@ router.post("/auth/forgot-password", async (req, res) => {
 
 router.post("/auth/reset-password", async (req, res) => {
   try {
-    const { token, password } = req.body;
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.resetPasswordToken, token));
-    if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+    const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? "unknown";
+    if (!checkResetRateLimit(ip)) {
+      res.status(429).json({ error: "Too many reset attempts. Please try again later." });
+      return;
+    }
+    const { token, email, password } = req.body;
+    if (!token || !email || !password) {
+      res.status(400).json({ error: "Token, email, and new password are required" });
+      return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, (email as string).toLowerCase()));
+    if (
+      !user ||
+      !user.resetPasswordToken ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires < new Date() ||
+      user.resetPasswordToken !== token
+    ) {
       res.status(400).json({ error: "Invalid or expired reset token" });
       return;
     }
@@ -199,6 +231,7 @@ function sanitizeUser(user: typeof usersTable.$inferSelect) {
     level: user.level,
     levelName: getLevelName(user.level),
     balance: user.balance,
+    totalEarned: user.totalEarned,
     pendingEarnings: user.pendingEarnings,
     totalWithdrawn: user.totalWithdrawn,
     referralCode: user.referralCode,
