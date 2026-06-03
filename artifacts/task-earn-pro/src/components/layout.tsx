@@ -79,7 +79,7 @@ function TopHeader() {
           <div className="absolute right-0 top-full mt-1 w-44 bg-background border border-border rounded-xl shadow-xl py-1 z-50">
             <div className="px-3 py-2 border-b border-border">
               <p className="text-sm font-semibold truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.levelName ?? "Explorer"}</p>
+              <p className="text-xs text-muted-foreground">{user?.levelName ?? "🚀 Starter"}</p>
             </div>
             {user?.isAdmin && (
               <button
