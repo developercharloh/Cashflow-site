@@ -13,15 +13,15 @@ const CALLBACK_URL = "https://taskearn-pro.vercel.app/profile?kyc=done";
 
 async function getAccessToken(): Promise<string> {
   if (!CLIENT_SECRET) throw new Error("DIDIT_CLIENT_SECRET environment variable is not set");
-  const body = new URLSearchParams({
-    grant_type: "client_credentials",
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-  });
+  // Didit requires Basic auth header — credentials in body always returns 403
+  const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
   const res = await fetch(DIDIT_TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Basic ${credentials}`,
+    },
+    body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
   });
   const data = await res.json() as any;
   if (!data.access_token) {
