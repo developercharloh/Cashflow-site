@@ -69,8 +69,8 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Insufficient balance" });
       return;
     }
-    if (amount < 5) {
-      res.status(400).json({ error: "Minimum withdrawal is $5" });
+    if (amount < 0.5) {
+      res.status(400).json({ error: "Minimum withdrawal is $0.50" });
       return;
     }
 
