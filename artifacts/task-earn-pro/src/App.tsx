@@ -23,6 +23,7 @@ import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
 import BinaryTradingPage from "@/pages/binary-trading";
 import CallbackPage from "@/pages/callback";
+import ProfilePage from "@/pages/profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,7 @@ function Router() {
         <Route path="/admin/tasks" component={AdminTasks} />
         <Route path="/admin/withdrawals" component={AdminWithdrawals} />
         <Route path="/callback" component={CallbackPage} />
+        <Route path="/profile" component={ProfilePage} />
         <Route path="/binary" component={BinaryTradingPage} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route component={NotFound} />

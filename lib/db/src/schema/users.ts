@@ -34,6 +34,8 @@ export const usersTable = pgTable("users", {
   welcomeGiftClaimed: boolean("welcome_gift_claimed").notNull().default(false),
   transcriptionMinutes: real("transcription_minutes").notNull().default(0),
   membershipPurchased: boolean("membership_purchased").notNull().default(false),
+  kycStatus: text("kyc_status").notNull().default("none"),
+  kycSessionId: text("kyc_session_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/components/theme-provider";
 import {
   Bell, Moon, Sun, Home, CheckSquare, BarChart2,
-  Wallet, Users, ChevronDown, Search, Settings
+  Wallet, Users, ChevronDown, Search, Settings, UserCircle
 } from "lucide-react";
 import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
 import { useState } from "react";
@@ -81,6 +81,13 @@ function TopHeader() {
               <p className="text-sm font-semibold truncate">{user?.name}</p>
               <p className="text-xs text-muted-foreground">{user?.levelName ?? "🚀 Starter"}</p>
             </div>
+            <button
+              className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+              onClick={() => { setMenuOpen(false); setLocation("/profile"); }}
+            >
+              <UserCircle className="w-4 h-4" />
+              Profile & Verification
+            </button>
             {user?.isAdmin && (
               <button
                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"

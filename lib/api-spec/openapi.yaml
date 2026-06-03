@@ -608,6 +608,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/DepositInitResponse"
 
+  /kyc/status:
+    get:
+      operationId: getKycStatus
+      tags: [kyc]
+      summary: Get the current user's KYC verification status
+      responses:
+        "200":
+          description: KYC status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatusResponse"
+
+  /kyc/session:
+    post:
+      operationId: createKycSession
+      tags: [kyc]
+      summary: Create a Didit identity verification session
+      responses:
+        "200":
+          description: Verification session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycSessionResponse"
+
+  /kyc/webhook:
+    post:
+      operationId: kycWebhook
+      tags: [kyc]
+      summary: Didit webhook — called when verification completes
+      responses:
+        "200":
+          description: OK
+
   /paystack/webhook:
     post:
       operationId: paystackWebhook
@@ -1644,6 +1679,24 @@ components:
           type: number
         newUsersThisMonth:
           type: integer
+
+    KycStatusResponse:
+      type: object
+      required: [kycStatus]
+      properties:
+        kycStatus:
+          type: string
+        kycSessionId:
+          type: string
+
+    KycSessionResponse:
+      type: object
+      required: [url, sessionId]
+      properties:
+        url:
+          type: string
+        sessionId:
+          type: string
 
     AnnouncementInput:
       type: object

@@ -11,6 +11,7 @@ import leaderboardRouter from "./leaderboard";
 import adminRouter from "./admin";
 import paystackRouter from "./paystack";
 import binaryRouter from "./binary";
+import kycRouter from "./kyc";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(leaderboardRouter);
 router.use(adminRouter);
 router.use(paystackRouter);
 router.use(binaryRouter);
+router.use(kycRouter);
 
 export default router;

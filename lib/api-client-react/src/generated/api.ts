@@ -43,6 +43,8 @@ import type {
   GetTasksParams,
   GetTransactionsParams,
   HealthStatus,
+  KycSessionResponse,
+  KycStatusResponse,
   LeaderboardEntry,
   LoginInput,
   MembershipLevel,
@@ -2450,6 +2452,223 @@ export const useBuyTranscriptionMinutes = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBuyTranscriptionMinutesMutationOptions(options));
+    }
+
+export const getGetKycStatusUrl = () => {
+
+
+
+
+  return `/api/kyc/status`
+}
+
+/**
+ * @summary Get the current user's KYC verification status
+ */
+export const getKycStatus = async ( options?: RequestInit): Promise<KycStatusResponse> => {
+
+  return customFetch<KycStatusResponse>(getGetKycStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKycStatusQueryKey = () => {
+    return [
+    `/api/kyc/status`
+    ] as const;
+    }
+
+
+export const getGetKycStatusQueryOptions = <TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKycStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKycStatus>>> = ({ signal }) => getKycStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKycStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getKycStatus>>>
+export type GetKycStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current user's KYC verification status
+ */
+
+export function useGetKycStatus<TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKycStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateKycSessionUrl = () => {
+
+
+
+
+  return `/api/kyc/session`
+}
+
+/**
+ * @summary Create a Didit identity verification session
+ */
+export const createKycSession = async ( options?: RequestInit): Promise<KycSessionResponse> => {
+
+  return customFetch<KycSessionResponse>(getCreateKycSessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCreateKycSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKycSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createKycSession>>, TError,void, TContext> => {
+
+const mutationKey = ['createKycSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKycSession>>, void> = () => {
+
+
+          return  createKycSession(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateKycSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createKycSession>>>
+
+    export type CreateKycSessionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a Didit identity verification session
+ */
+export const useCreateKycSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKycSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createKycSession>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateKycSessionMutationOptions(options));
+    }
+
+export const getKycWebhookUrl = () => {
+
+
+
+
+  return `/api/kyc/webhook`
+}
+
+/**
+ * @summary Didit webhook — called when verification completes
+ */
+export const kycWebhook = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getKycWebhookUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getKycWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kycWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof kycWebhook>>, TError,void, TContext> => {
+
+const mutationKey = ['kycWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof kycWebhook>>, void> = () => {
+
+
+          return  kycWebhook(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KycWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof kycWebhook>>>
+
+    export type KycWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Didit webhook — called when verification completes
+ */
+export const useKycWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kycWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof kycWebhook>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getKycWebhookMutationOptions(options));
     }
 
 export const getPaystackWebhookUrl = () => {
