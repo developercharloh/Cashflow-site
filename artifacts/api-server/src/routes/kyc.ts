@@ -128,6 +128,57 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── POST /kyc/upload-documents — manual upload flow (no Didit) ─────────────
+router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdImage, backIdImage } = req.body;
+    if (!fullName || !dateOfBirth || !country || !phoneNumber || !nationalId || !documentType || !frontIdImage) {
+      res.status(400).json({ error: "All fields including front ID image are required" }); return;
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    if (user.kycStatus === "approved") {
+      res.status(400).json({ error: "Identity already verified" }); return;
+    }
+
+    // Size guard: each base64 image should be ≤ 3 MB (~4MB base64)
+    const MAX_B64 = 4 * 1024 * 1024;
+    if (frontIdImage.length > MAX_B64 || (backIdImage && backIdImage.length > MAX_B64)) {
+      res.status(413).json({ error: "Image too large. Please compress below 3 MB." }); return;
+    }
+
+    const existing = await db.select().from(kycSubmissionsTable)
+      .where(eq(kycSubmissionsTable.userId, req.userId!));
+    if (existing.length >= 3) {
+      res.status(429).json({ error: "Maximum KYC submissions reached. Contact support." }); return;
+    }
+
+    await db.insert(kycSubmissionsTable).values({
+      userId: req.userId!,
+      fullName,
+      dateOfBirth,
+      country,
+      phoneNumber,
+      nationalId,
+      documentType,
+      submissionMethod: "manual_upload",
+      frontIdUrl: frontIdImage,
+      backIdUrl: backIdImage ?? null,
+      kycStatus: "pending_review",
+    });
+
+    await db.update(usersTable)
+      .set({ kycStatus: "pending" })
+      .where(eq(usersTable.id, req.userId!));
+
+    res.json({ ok: true, message: "Documents submitted. Pending admin review." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── GET /kyc/admin/submissions — admin list all KYC submissions ──────────────
 router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
@@ -152,6 +203,10 @@ router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: Auth
       country: sub.country,
       phoneNumber: sub.phoneNumber,
       nationalId: sub.nationalId,
+      submissionMethod: sub.submissionMethod,
+      documentType: sub.documentType ?? null,
+      frontIdUrl: sub.frontIdUrl ?? null,
+      backIdUrl: sub.backIdUrl ?? null,
       faceMatchScore: sub.faceMatchScore ?? null,
       kycStatus: sub.kycStatus,
       rejectionReason: sub.rejectionReason ?? null,

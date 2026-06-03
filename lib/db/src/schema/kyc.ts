@@ -9,6 +9,8 @@ export const kycSubmissionsTable = pgTable("kyc_submissions", {
   country: text("country").notNull(),
   phoneNumber: text("phone_number").notNull(),
   nationalId: text("national_id").notNull(),
+  submissionMethod: text("submission_method").notNull().default("didit"),
+  documentType: text("document_type"),
   frontIdUrl: text("front_id_url"),
   backIdUrl: text("back_id_url"),
   selfieVideoUrl: text("selfie_video_url"),

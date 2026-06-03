@@ -48,6 +48,7 @@ import type {
   KycStatusResponse,
   KycSubmission,
   KycSubmitInput,
+  KycUploadInput,
   LeaderboardEntry,
   LoginInput,
   MembershipLevel,
@@ -2673,6 +2674,77 @@ export const useSubmitKyc = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSubmitKycMutationOptions(options));
+    }
+
+export const getUploadKycDocumentsUrl = () => {
+
+
+
+
+  return `/api/kyc/upload-documents`
+}
+
+/**
+ * @summary Upload ID document photos for manual KYC review
+ */
+export const uploadKycDocuments = async (kycUploadInput: KycUploadInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUploadKycDocumentsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      kycUploadInput,)
+  }
+);}
+
+
+
+
+export const getUploadKycDocumentsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext> => {
+
+const mutationKey = ['uploadKycDocuments'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadKycDocuments>>, {data: BodyType<KycUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadKycDocuments(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadKycDocumentsMutationResult = NonNullable<Awaited<ReturnType<typeof uploadKycDocuments>>>
+    export type UploadKycDocumentsMutationBody = BodyType<KycUploadInput>
+    export type UploadKycDocumentsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload ID document photos for manual KYC review
+ */
+export const useUploadKycDocuments = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadKycDocuments>>,
+        TError,
+        {data: BodyType<KycUploadInput>},
+        TContext
+      > => {
+      return useMutation(getUploadKycDocumentsMutationOptions(options));
     }
 
 export const getGetKycSubmissionsUrl = () => {

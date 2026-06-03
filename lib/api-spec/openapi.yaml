@@ -653,6 +653,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/KycSessionResponse"
 
+  /kyc/upload-documents:
+    post:
+      operationId: uploadKycDocuments
+      tags: [kyc]
+      summary: Upload ID document photos for manual KYC review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycUploadInput"
+      responses:
+        "200":
+          description: Documents uploaded, pending admin review
+
   /kyc/admin/submissions:
     get:
       operationId: getKycSubmissions
@@ -1752,6 +1767,27 @@ components:
         nationalId:
           type: string
 
+    KycUploadInput:
+      type: object
+      required: [fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdImage]
+      properties:
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        country:
+          type: string
+        phoneNumber:
+          type: string
+        nationalId:
+          type: string
+        documentType:
+          type: string
+        frontIdImage:
+          type: string
+        backIdImage:
+          type: ["string", "null"]
+
     KycSubmission:
       type: object
       required: [id, userId, fullName, dateOfBirth, country, phoneNumber, nationalId, kycStatus, submittedAt]
@@ -1774,20 +1810,28 @@ components:
           type: string
         nationalId:
           type: string
+        submissionMethod:
+          type: string
+        documentType:
+          type: ["string", "null"]
+        frontIdUrl:
+          type: ["string", "null"]
+        backIdUrl:
+          type: ["string", "null"]
         faceMatchScore:
-          type: number
+          type: ["number", "null"]
         kycStatus:
           type: string
         rejectionReason:
-          type: string
+          type: ["string", "null"]
         diditSessionId:
-          type: string
+          type: ["string", "null"]
         submittedAt:
           type: string
         reviewedAt:
-          type: string
+          type: ["string", "null"]
         reviewedBy:
-          type: integer
+          type: ["integer", "null"]
 
     KycReviewInput:
       type: object
