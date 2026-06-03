@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronsUpDown, Check, CircleDollarSign } from "lucide-react";
+import { Loader2, ChevronsUpDown, Check, CircleDollarSign, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const COUNTRIES = [
@@ -115,6 +115,7 @@ const formSchema = z.object({
 export default function Register() {
   const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const registerMutation = useRegister();
 
@@ -269,7 +270,14 @@ export default function Register() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="At least 6 characters" {...field} />
+                    <div className="relative">
+                      <Input type={showPassword ? "text" : "password"} placeholder="At least 6 characters" className="pr-10" {...field} />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
