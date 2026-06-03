@@ -78,9 +78,13 @@ router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest
       },
     };
 
-    // Pre-fill phone for M-Pesa STK push
+    // Pre-fill phone for M-Pesa / Airtel on Paystack hosted page (local 07XXXXXXXXX format)
     if (isMobileMoney && phone) {
-      paystackBody["mobile_money"] = { phone };
+      let p = phone.replace(/\s+/g, "").replace(/^\+/, "");
+      if (p.startsWith("254")) p = "0" + p.slice(3);
+      if (!p.startsWith("0")) p = "0" + p;
+      const provider = method === "airtel" ? "airtel" : "mpesa";
+      paystackBody["mobile_money"] = { phone: p, provider };
     }
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {

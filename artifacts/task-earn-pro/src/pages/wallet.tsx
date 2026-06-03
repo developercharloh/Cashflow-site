@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   useGetWallet, useGetTransactions, useRequestWithdrawal,
-  useInitializeDeposit, useChargeDeposit, usePaystackWithdraw, useGetBanks,
+  useInitializeDeposit, usePaystackWithdraw, useGetBanks,
   useVerifyPendingDeposits,
   getGetWalletQueryKey, getGetTransactionsQueryKey,
 } from "@workspace/api-client-react";
@@ -111,7 +111,6 @@ type Stage =
   | { view: "deposit_pick" }
   | { view: "withdraw_pick" }
   | { view: "deposit_form"; method: typeof DEPOSIT_METHODS[0] }
-  | { view: "deposit_stk_sent"; methodLabel: string; amount: string; phone: string; message: string }
   | { view: "withdraw_form"; method: typeof WITHDRAW_METHODS[0] };
 
 export default function WalletPage() {
@@ -153,7 +152,6 @@ export default function WalletPage() {
   });
 
   const depositMutation = useInitializeDeposit();
-  const chargeMutation = useChargeDeposit();
   const paystackWithdrawMutation = usePaystackWithdraw();
   const manualWithdrawMutation = useRequestWithdrawal();
   const verifyPendingMutation = useVerifyPendingDeposits();
@@ -192,36 +190,14 @@ export default function WalletPage() {
     const amt = parseFloat(depositAmount);
     if (!amt || amt < 0.1) { toast({ title: "Minimum deposit is $0.10", variant: "destructive" }); return; }
 
-    if (isMobileMoney(method.id)) {
-      // Direct STK push — no external redirect
-      if (!depositPhone.trim()) {
-        toast({ title: "Phone number required", description: `Enter your ${method.label} phone number.`, variant: "destructive" }); return;
+    // All methods redirect to Paystack hosted page (phone is optional pre-fill for mobile money)
+    depositMutation.mutate(
+      { data: { amount: amt, method: method.id, phone: isMobileMoney(method.id) ? depositPhone.trim() || undefined : undefined } } as any,
+      {
+        onSuccess: (data: any) => { window.location.href = data.authorizationUrl; },
+        onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
       }
-      chargeMutation.mutate(
-        { data: { amount: amt, phone: depositPhone.trim(), provider: method.id } },
-        {
-          onSuccess: (data) => {
-            setStage({
-              view: "deposit_stk_sent",
-              methodLabel: method.label,
-              amount: amt.toFixed(2),
-              phone: depositPhone.trim(),
-              message: data.message ?? `STK push sent to ${depositPhone.trim()}. Enter your PIN to complete.`,
-            });
-          },
-          onError: (err: any) => toast({ title: "Charge failed", description: err.data?.error ?? err.message, variant: "destructive" }),
-        }
-      );
-    } else {
-      // Card / Bank — redirect to Paystack hosted page
-      depositMutation.mutate(
-        { data: { amount: amt, method: method.id } } as any,
-        {
-          onSuccess: (data: any) => { window.location.href = data.authorizationUrl; },
-          onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
-        }
-      );
-    }
+    );
   };
 
   const handleBankWithdraw = () => {
@@ -489,24 +465,20 @@ export default function WalletPage() {
                     value={depositPhone}
                     onChange={e => setDepositPhone(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">You will receive an STK push on this number</p>
+                  <p className="text-xs text-muted-foreground mt-1">Optional — pre-fills your number on Paystack's page</p>
                 </div>
               )}
 
               <Button
                 className="w-full"
                 onClick={() => handleDeposit(stage.method)}
-                disabled={depositMutation.isPending || chargeMutation.isPending}
+                disabled={depositMutation.isPending}
               >
-                {(depositMutation.isPending || chargeMutation.isPending)
+                {depositMutation.isPending
                   ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
-                  : isMobileMoney(stage.method.id)
-                    ? depositAmount && parseFloat(depositAmount) >= 0.1
-                      ? `Send STK Push — KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} →`
-                      : `Send STK Push →`
-                    : depositAmount && parseFloat(depositAmount) >= 0.1
-                      ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} →`
-                      : `Proceed to Checkout →`}
+                  : depositAmount && parseFloat(depositAmount) >= 0.1
+                    ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} via Paystack →`
+                    : `Proceed to Checkout →`}
               </Button>
               <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
                 ← Choose a different method
@@ -516,60 +488,6 @@ export default function WalletPage() {
         </Dialog>
       )}
 
-      {/* ── DEPOSIT: STK push sent ────────────────── */}
-      <Dialog open={stage.view === "deposit_stk_sent"} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Check Your Phone</DialogTitle>
-            <DialogDescription>
-              {stage.view === "deposit_stk_sent" ? `${stage.methodLabel} STK push sent` : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {stage.view === "deposit_stk_sent" && (
-            <div className="space-y-4 pt-1">
-              <div className="flex flex-col items-center gap-3 py-2">
-                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Smartphone className="w-8 h-8 text-green-600" />
-                </div>
-                <p className="text-sm text-center text-muted-foreground">{stage.message}</p>
-              </div>
-
-              <div className="rounded-xl bg-muted p-3 space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-semibold">${stage.amount} (KES {Math.round(parseFloat(stage.amount) * DEPOSIT_RATE).toLocaleString()})</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Phone</span>
-                  <span className="font-semibold">{stage.phone}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Method</span>
-                  <span className="font-semibold">{stage.methodLabel}</span>
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={() => {
-                  handleCheckPending();
-                }}
-                disabled={verifyPendingMutation.isPending}
-              >
-                {verifyPendingMutation.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Checking…</>
-                  : <><RefreshCw className="w-4 h-4 mr-2" />I've paid — confirm deposit</>}
-              </Button>
-              <button
-                className="w-full text-xs text-muted-foreground text-center underline"
-                onClick={close}
-              >
-                Close (check later in wallet)
-              </button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* ── WITHDRAW: method picker ────────────────── */}
       <Dialog open={stage.view === "withdraw_pick"} onOpenChange={(o) => !o && close()}>
