@@ -53,9 +53,11 @@ export default function Users() {
     setBanning(null);
   };
 
+  const n = (v: unknown) => Number(v) || 0;
+
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
-    const matchesSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    const matchesSearch = (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
     const matchesFilter = filter === "all" || (filter === "banned" && u.isBanned) || (filter === "admin" && u.isAdmin);
     return matchesSearch && matchesFilter;
   });
@@ -113,7 +115,7 @@ export default function Users() {
                     <td className="px-4 py-3" onClick={() => setExpanded(expanded === u.id ? null : u.id)}>
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {u.name.charAt(0).toUpperCase()}
+                          {(u.name ?? "?").charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="text-white text-xs font-semibold flex items-center gap-1.5">
@@ -133,8 +135,8 @@ export default function Users() {
                         {u.kycStatus ?? "none"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-white font-semibold">${u.balance.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-xs text-green-400 hidden md:table-cell">${u.totalEarned.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-xs text-white font-semibold">${n(u.balance).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-xs text-green-400 hidden md:table-cell">${n(u.totalEarned).toFixed(2)}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -158,8 +160,8 @@ export default function Users() {
                           {[
                             { label: "User ID", val: `#${u.id}` },
                             { label: "Member Since", val: new Date(u.createdAt).toLocaleDateString() },
-                            { label: "Balance", val: `$${u.balance.toFixed(4)}` },
-                            { label: "Total Earned", val: `$${u.totalEarned.toFixed(4)}` },
+                            { label: "Balance", val: `$${n(u.balance).toFixed(4)}` },
+                            { label: "Total Earned", val: `$${n(u.totalEarned).toFixed(4)}` },
                             { label: "Level", val: `${u.levelName ?? "Explorer"} (${u.level})` },
                             { label: "KYC Status", val: u.kycStatus ?? "none" },
                             { label: "Admin", val: u.isAdmin ? "Yes" : "No" },

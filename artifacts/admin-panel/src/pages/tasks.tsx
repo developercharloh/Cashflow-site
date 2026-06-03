@@ -48,6 +48,8 @@ export default function Tasks() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
 
+  const n = (v: unknown) => Number(v) || 0;
+
   const load = () => {
     setLoading(true);
     Promise.all([
@@ -128,7 +130,7 @@ export default function Tasks() {
                       <p className="text-slate-500 text-[10px]">~{t.estimatedMinutes}min</p>
                     </td>
                     <td className="px-4 py-3"><span className="text-xs text-slate-300 bg-slate-700/60 px-2 py-0.5 rounded">{t.category}</span></td>
-                    <td className="px-4 py-3 text-xs text-green-400 font-bold">${t.reward.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-xs text-green-400 font-bold">${n(t.reward).toFixed(2)}</td>
                     <td className="px-4 py-3"><span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${DIFF_COLOR[t.difficulty] ?? ""}`}>{t.difficulty}</span></td>
                     <td className="px-4 py-3 text-xs text-slate-400">L{t.minLevel}+</td>
                     <td className="px-4 py-3 text-xs text-slate-300">{t.completionCount}</td>

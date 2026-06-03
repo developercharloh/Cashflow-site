@@ -61,6 +61,7 @@ export default function Withdrawals() {
     setActing(null);
   };
 
+  const n = (v: unknown) => Number(v) || 0;
   const visible = items.filter(w => filter === "all" || w.status === filter);
   const pending = items.filter(w => w.status === "pending").length;
 
@@ -101,7 +102,7 @@ export default function Withdrawals() {
                   <p className="text-[11px] text-slate-400">{w.userEmail} · {w.method}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-base font-bold text-white">${w.amount.toFixed(2)}</p>
+                  <p className="text-base font-bold text-white">${n(w.amount).toFixed(2)}</p>
                   <p className="text-[10px] text-slate-500">{new Date(w.createdAt).toLocaleDateString()}</p>
                 </div>
                 {w.status === "pending" && (
@@ -146,7 +147,7 @@ export default function Withdrawals() {
                       { l: "Bank Code", v: w.bankCode ?? "—" },
                       { l: "Account", v: w.accountNumber ?? "—" },
                       { l: "Account Name", v: w.accountName ?? "—" },
-                      { l: "Amount", v: `$${w.amount.toFixed(4)}` },
+                      { l: "Amount", v: `$${n(w.amount).toFixed(4)}` },
                       { l: "Status", v: w.status },
                       { l: "Processed", v: w.processedAt ? new Date(w.processedAt).toLocaleString() : "—" },
                       ...(w.notes ? [{ l: "Notes", v: w.notes }] : []),
