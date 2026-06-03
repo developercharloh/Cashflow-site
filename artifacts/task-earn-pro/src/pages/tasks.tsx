@@ -646,16 +646,9 @@ export default function Tasks() {
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Task Marketplace</h1>
-          <p className="text-muted-foreground mt-1">Complete tasks to earn real money</p>
-        </div>
-        <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-2 flex-shrink-0">
-          <Mic className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-purple-300">{userMinutes.toFixed(1)} min</span>
-          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-purple-400 hover:text-purple-300" onClick={() => setBuyMinutesOpen(true)}>Buy</Button>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Task Marketplace</h1>
+        <p className="text-muted-foreground mt-1">Complete tasks to earn real money</p>
       </div>
 
       {/* Starter daily limit banner */}
