@@ -53,6 +53,7 @@ import type {
   LoginInput,
   MembershipLevel,
   MessageResponse,
+  MobileWithdrawInput,
   Notification,
   PaystackTransferResult,
   PaystackWithdrawInput,
@@ -2090,6 +2091,77 @@ export function useVerifyDeposit<TData = Awaited<ReturnType<typeof verifyDeposit
 
 
 
+
+export const getPaystackWithdrawMobileUrl = () => {
+
+
+
+
+  return `/api/paystack/withdraw/mobile`
+}
+
+/**
+ * @summary Instant M-Pesa or Airtel Money withdrawal via Paystack Transfer
+ */
+export const paystackWithdrawMobile = async (mobileWithdrawInput: MobileWithdrawInput, options?: RequestInit): Promise<PaystackTransferResult> => {
+
+  return customFetch<PaystackTransferResult>(getPaystackWithdrawMobileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      mobileWithdrawInput,)
+  }
+);}
+
+
+
+
+export const getPaystackWithdrawMobileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWithdrawMobile>>, TError,{data: BodyType<MobileWithdrawInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paystackWithdrawMobile>>, TError,{data: BodyType<MobileWithdrawInput>}, TContext> => {
+
+const mutationKey = ['paystackWithdrawMobile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paystackWithdrawMobile>>, {data: BodyType<MobileWithdrawInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  paystackWithdrawMobile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaystackWithdrawMobileMutationResult = NonNullable<Awaited<ReturnType<typeof paystackWithdrawMobile>>>
+    export type PaystackWithdrawMobileMutationBody = BodyType<MobileWithdrawInput>
+    export type PaystackWithdrawMobileMutationError = ErrorType<void>
+
+    /**
+ * @summary Instant M-Pesa or Airtel Money withdrawal via Paystack Transfer
+ */
+export const usePaystackWithdrawMobile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWithdrawMobile>>, TError,{data: BodyType<MobileWithdrawInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof paystackWithdrawMobile>>,
+        TError,
+        {data: BodyType<MobileWithdrawInput>},
+        TContext
+      > => {
+      return useMutation(getPaystackWithdrawMobileMutationOptions(options));
+    }
 
 export const getPaystackWithdrawUrl = () => {
 
