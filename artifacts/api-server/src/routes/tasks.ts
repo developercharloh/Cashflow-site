@@ -422,14 +422,22 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     const allTasks = await db.select().from(tasksTable).where(eq(tasksTable.isActive, true));
 
-    // Check cooldowns: get last passed attempt per task
-    const recentAttempts = await db.select().from(taskAttemptsTable)
-      .where(and(eq(taskAttemptsTable.userId, req.userId!), eq(taskAttemptsTable.status, "passed")));
+    // Fetch all user attempts for this user (passed = cooldown, failed = permanent lock)
+    const userAttempts = await db.select().from(taskAttemptsTable)
+      .where(eq(taskAttemptsTable.userId, req.userId!));
+
     const lastPassedAt: Record<number, Date> = {};
-    for (const a of recentAttempts) {
-      const prev = lastPassedAt[a.taskId];
-      const ts = a.completedAt ? new Date(a.completedAt) : new Date(a.startedAt);
-      if (!prev || ts > prev) lastPassedAt[a.taskId] = ts;
+    const failedTaskIds = new Set<number>();
+
+    for (const a of userAttempts) {
+      if (a.status === "failed") {
+        failedTaskIds.add(a.taskId);
+      }
+      if (a.status === "passed") {
+        const prev = lastPassedAt[a.taskId];
+        const ts = a.completedAt ? new Date(a.completedAt) : new Date(a.startedAt);
+        if (!prev || ts > prev) lastPassedAt[a.taskId] = ts;
+      }
     }
 
     let tasks = allTasks.filter(t => t.minLevel <= user.level);
@@ -441,6 +449,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
       const cooldownMs = (t.cooldownHours ?? 24) * 3600_000;
       const onCooldown = lastPassed ? (now - lastPassed.getTime()) < cooldownMs : false;
       const cooldownEndsAt = lastPassed && onCooldown ? new Date(lastPassed.getTime() + cooldownMs).toISOString() : null;
+      const isFailed = failedTaskIds.has(t.id);
       return {
         id: t.id,
         title: t.title,
@@ -458,6 +467,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
         isActive: t.isActive,
         onCooldown,
         cooldownEndsAt,
+        isFailed,
       };
     }));
   } catch (err) {
@@ -539,6 +549,14 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
 
     if (task.minLevel > user.level) {
       res.status(403).json({ error: `This task requires ${getLevelName(task.minLevel)} level or above.` }); return;
+    }
+
+    // No-retry check: once failed, task is permanently locked
+    const failedAttempt = await db.select().from(taskAttemptsTable)
+      .where(and(eq(taskAttemptsTable.userId, req.userId!), eq(taskAttemptsTable.taskId, id), eq(taskAttemptsTable.status, "failed")))
+      .limit(1);
+    if (failedAttempt.length > 0) {
+      res.status(403).json({ error: "You have already failed this task. No retries are allowed.", noRetry: true }); return;
     }
 
     // Cooldown check
