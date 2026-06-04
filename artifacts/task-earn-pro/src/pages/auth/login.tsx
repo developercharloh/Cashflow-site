@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CircleDollarSign, TrendingUp, Shield, Zap, Eye, EyeOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PERKS = [
   { icon: <TrendingUp className="w-4 h-4 text-emerald-400" />, text: "Earn up to $500/month from tasks" },
@@ -26,6 +27,9 @@ const TESTIMONIALS = [
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  agreedToTerms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the Terms and Conditions to continue",
+  }),
 });
 
 export default function Login() {
@@ -37,7 +41,7 @@ export default function Login() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", agreedToTerms: false },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -167,6 +171,28 @@ export default function Login() {
                       </button>
                     </div>
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-3">
+                    <FormControl>
+                      <Checkbox
+                        id="terms-login"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <label htmlFor="terms-login" className="text-sm text-muted-foreground leading-snug cursor-pointer select-none">
+                      I agree to the{" "}
+                      <Link href="/terms" className="text-emerald-600 hover:underline font-medium">
+                        Terms and Conditions
+                      </Link>
+                    </label>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} />
