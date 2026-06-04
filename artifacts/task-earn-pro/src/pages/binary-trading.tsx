@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, TrendingDown, Square, RefreshCw, Wallet } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import ProAviatorGame from "@/components/pro-aviator-game";
+import { GraduationCap, BookOpen, Video, FileText, Users2, Lock } from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -29,14 +29,13 @@ const TRADE_TYPES = [
   { id: "even-odd",        label: "Even/Odd"        },
   { id: "matches-differs", label: "Matches/Differs" },
   { id: "over-under",      label: "Over/Under"      },
-  { id: "pro-aviator",     label: "Pro Aviator 🛩"  },
 ] as const;
 
 type TradeTypeId = typeof TRADE_TYPES[number]["id"];
 type Direction = "rise" | "fall" | "even" | "odd" | "matches" | "differs" | "over" | "under";
 
 const DEFAULT_TICKS: Record<TradeTypeId, number> = {
-  "rise-fall": 5, "even-odd": 1, "matches-differs": 1, "over-under": 1, "pro-aviator": 1,
+  "rise-fall": 5, "even-odd": 1, "matches-differs": 1, "over-under": 1,
 };
 
 const PAYOUTS: Record<Direction, number> = {
@@ -298,7 +297,6 @@ export default function BinaryTradingPage() {
   const priceMax = Math.max(...priceHistory.map(p => p.price)) * 1.0005;
   const activeContract = activeContracts[0];
   const stakeNum = parseFloat(stake) || 0;
-  const isPro = tradeType === "pro-aviator";
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -318,66 +316,61 @@ export default function BinaryTradingPage() {
             Real
           </button>
         </div>
-        {!isPro && (
-          <select
-            value={marketId}
-            onChange={e => setMarketId(e.target.value)}
-            className="flex-1 min-w-0 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-            {MARKETS.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-        )}
-        {isPro && <div className="flex-1" />}
+        <select
+          value={marketId}
+          onChange={e => setMarketId(e.target.value)}
+          className="flex-1 min-w-0 bg-muted border border-border rounded-lg px-2 py-1.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+          {MARKETS.map(m => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
         <div className="text-right shrink-0">
           <p className="text-[9px] text-muted-foreground leading-none">{accountMode === "demo" ? "Virtual" : "Real"}</p>
           <p className="text-sm font-bold text-green-400 leading-tight">${balance.toFixed(2)}</p>
         </div>
       </div>
 
-      {/* ── Price chart (hidden for Pro Aviator) ── */}
-      {!isPro && (
-        <div className="relative bg-[#050510] border-b border-border shrink-0" style={{ height: 130 }}>
-          <div className="absolute top-2 left-3 z-10 pointer-events-none">
-            <p className="text-white/40 text-[9px] leading-none">{market.name}</p>
-            <p className={cn("text-lg font-bold font-mono leading-tight mt-0.5",
-              priceTrend ? "text-green-400" : "text-red-400")}>
-              {currentPrice.toFixed(2)}
-            </p>
-            <div className="flex items-center gap-1">
-              <span className="text-white/30 text-[9px]">Digit:</span>
-              <span className="text-amber-300 font-extrabold text-base leading-none">{lastDigit}</span>
-            </div>
+      {/* ── Price chart ── */}
+      <div className="relative bg-[#050510] border-b border-border shrink-0" style={{ height: 130 }}>
+        <div className="absolute top-2 left-3 z-10 pointer-events-none">
+          <p className="text-white/40 text-[9px] leading-none">{market.name}</p>
+          <p className={cn("text-lg font-bold font-mono leading-tight mt-0.5",
+            priceTrend ? "text-green-400" : "text-red-400")}>
+            {currentPrice.toFixed(2)}
+          </p>
+          <div className="flex items-center gap-1">
+            <span className="text-white/30 text-[9px]">Digit:</span>
+            <span className="text-amber-300 font-extrabold text-base leading-none">{lastDigit}</span>
           </div>
-
-          {activeContract && (
-            <div className="absolute top-2 right-3 z-10 text-right pointer-events-none">
-              <p className="text-white/30 text-[9px]">Entry {activeContract.entryPrice.toFixed(2)}</p>
-              <div className="flex items-center gap-0.5 justify-end mt-0.5">
-                {Array.from({ length: activeContract.ticksTotal }).map((_, i) => (
-                  <div key={i} className={cn("w-2 h-2 rounded-full",
-                    i < activeContract.ticksTotal - activeContract.ticksRemaining ? "bg-amber-400" : "bg-white/20")} />
-                ))}
-              </div>
-              <p className="text-amber-300 text-[9px] mt-0.5">{activeContract.ticksRemaining} tick{activeContract.ticksRemaining !== 1 ? "s" : ""} left</p>
-            </div>
-          )}
-
-          <ResponsiveContainer width="100%" height={130}>
-            <AreaChart data={priceHistory} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={priceTrend ? "#22c55e" : "#ef4444"} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={priceTrend ? "#22c55e" : "#ef4444"} stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <YAxis domain={[priceMin, priceMax]} hide />
-              <Area type="linear" dataKey="price" stroke={priceTrend ? "#22c55e" : "#ef4444"}
-                strokeWidth={1.5} fill="url(#pg)" dot={false} isAnimationActive={false} />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
-      )}
+
+        {activeContract && (
+          <div className="absolute top-2 right-3 z-10 text-right pointer-events-none">
+            <p className="text-white/30 text-[9px]">Entry {activeContract.entryPrice.toFixed(2)}</p>
+            <div className="flex items-center gap-0.5 justify-end mt-0.5">
+              {Array.from({ length: activeContract.ticksTotal }).map((_, i) => (
+                <div key={i} className={cn("w-2 h-2 rounded-full",
+                  i < activeContract.ticksTotal - activeContract.ticksRemaining ? "bg-amber-400" : "bg-white/20")} />
+              ))}
+            </div>
+            <p className="text-amber-300 text-[9px] mt-0.5">{activeContract.ticksRemaining} tick{activeContract.ticksRemaining !== 1 ? "s" : ""} left</p>
+          </div>
+        )}
+
+        <ResponsiveContainer width="100%" height={130}>
+          <AreaChart data={priceHistory} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={priceTrend ? "#22c55e" : "#ef4444"} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={priceTrend ? "#22c55e" : "#ef4444"} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <YAxis domain={[priceMin, priceMax]} hide />
+            <Area type="linear" dataKey="price" stroke={priceTrend ? "#22c55e" : "#ef4444"}
+              strokeWidth={1.5} fill="url(#pg)" dot={false} isAnimationActive={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* ── Trade panel ── */}
       <div className="flex-1 overflow-y-auto">
@@ -400,19 +393,47 @@ export default function BinaryTradingPage() {
           </div>
 
           {/* ══════════════════════════════════════════════════════════ */}
-          {/* PRO AVIATOR */}
+          {/* TRADING ACADEMY BANNER */}
           {/* ══════════════════════════════════════════════════════════ */}
-          {isPro ? (
-            <ProAviatorGame
-              demoBalance={demoBalance}
-              setDemoBalance={setDemoBalance}
-              accountMode={accountMode}
-              realBalance={realBalance}
-            />
-          ) : (
-          /* ══════════════════════════════════════════════════════════ */
-          /* BINARY TRADING */
-          /* ══════════════════════════════════════════════════════════ */
+          <div className="rounded-2xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-950/60 to-slate-900">
+            <div className="px-4 pt-4 pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <GraduationCap className="w-4 h-4 text-amber-400" />
+                    <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Task Earn Trading Academy</p>
+                  </div>
+                  <h3 className="text-base font-extrabold text-white leading-tight">Master Forex &amp; Binary Options</h3>
+                  <p className="text-[11px] text-white/60 mt-0.5 leading-snug">Professional mentorship, trading documents &amp; live classes.</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[9px] text-amber-400/70 font-medium">One-time</p>
+                  <p className="text-xl font-black text-amber-400">$100</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                {[
+                  { icon: Video, text: "Live Free Classes" },
+                  { icon: Users2, text: "1-on-1 Mentorship" },
+                  { icon: FileText, text: "Trading Documents" },
+                  { icon: BookOpen, text: "Forex & Binary Ops" },
+                ].map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-1.5 text-white/70 text-[11px]">
+                    <Icon className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-900 font-bold text-sm">
+              <Lock className="w-3.5 h-3.5" />
+              Unlock Academy — $100 One-Time
+            </button>
+          </div>
+
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* BINARY TRADING */}
+          {/* ══════════════════════════════════════════════════════════ */}
             <div className="space-y-3">
 
               {/* Session P&L */}
@@ -709,7 +730,6 @@ export default function BinaryTradingPage() {
                 </button>
               )}
             </div>
-          )}
 
         </div>
       </div>
