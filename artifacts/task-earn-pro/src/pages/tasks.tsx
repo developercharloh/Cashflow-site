@@ -15,8 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   Brain, Database, FileText, BarChart2, AlignLeft, Star, Tag, ClipboardList,
   Video, ChevronRight, ChevronLeft, Clock, DollarSign, Zap, CheckCircle,
-  XCircle, Loader2, Timer, AlertCircle, Lock, Trophy, Target, TrendingUp,
-  Users, RefreshCw, Calendar,
+  XCircle, Loader2, Timer, AlertCircle, Lock, Trophy, Target, RefreshCw, Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -367,7 +366,11 @@ export default function TasksPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold">{selectedCategory}</h1>
-            <p className="text-xs text-muted-foreground">{tasks.length} tasks available</p>
+            <p className="text-xs text-muted-foreground">{tasks.length} tasks today</p>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 border border-border/40 rounded-full px-2.5 py-1">
+            <Calendar className="w-3 h-3 text-primary" />
+            Refreshes daily at midnight
           </div>
         </div>
 
@@ -384,18 +387,14 @@ export default function TasksPage() {
               const diff = DIFFICULTY_STYLES[task.difficulty ?? "easy"];
               const locked = task.minLevel > userLevel;
               const onCooldown = task.onCooldown;
-              const isFailed = task.isFailed;
-              const isBlocked = locked || onCooldown || isFailed;
+              const isBlocked = locked || onCooldown;
               return (
                 <motion.div key={task.id} whileHover={!isBlocked ? { y: -1 } : {}}>
-                  <Card className={`border transition-all ${isFailed ? "border-red-500/30 bg-red-500/5 opacity-70" : isBlocked ? "border-border/60 opacity-60" : "border-border/60 hover:border-primary/30 hover:shadow-md hover:shadow-black/10 cursor-pointer"}`}>
+                  <Card className={`border transition-all ${isBlocked ? "border-border/60 opacity-60" : "border-border/60 hover:border-primary/30 hover:shadow-md hover:shadow-black/10 cursor-pointer"}`}>
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold text-sm leading-snug">{task.title}</h3>
-                        <div className="flex gap-1.5 shrink-0">
-                          {isFailed && <Badge variant="outline" className="text-[10px] bg-red-500/15 text-red-400 border-red-500/30">Failed</Badge>}
-                          <Badge variant="outline" className={`text-[10px] ${diff.badge}`}>{diff.label}</Badge>
-                        </div>
+                        <Badge variant="outline" className={`text-[10px] shrink-0 ${diff.badge}`}>{diff.label}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -403,11 +402,7 @@ export default function TasksPage() {
                         <span className="flex items-center gap-1"><ClipboardList className="w-3 h-3" />{task.questionCount ?? 5} questions</span>
                         <span className="flex items-center gap-1 text-green-400 font-semibold"><DollarSign className="w-3 h-3" />${(task.reward ?? 0).toFixed(2)}</span>
                       </div>
-                      {isFailed ? (
-                        <div className="flex items-center gap-2 text-xs text-red-400 pt-1 font-medium">
-                          <XCircle className="w-3.5 h-3.5" /> Failed — No retries allowed
-                        </div>
-                      ) : locked ? (
+                      {locked ? (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                           <Lock className="w-3.5 h-3.5" /> Requires higher membership level
                         </div>
@@ -474,19 +469,9 @@ export default function TasksPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">{selectedTask.instructions ?? selectedTask.description}</p>
             </div>
 
-            {(selectedTask as any).isFailed ? (
-              <div className="w-full rounded-lg border border-red-500/30 bg-red-500/10 p-4 flex items-center gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-red-400">Task Permanently Locked</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">You failed this task. No retries are allowed on any task.</p>
-                </div>
-              </div>
-            ) : (
-              <Button className="w-full gap-2 py-5 text-base font-semibold" onClick={handleStartTask} disabled={startTaskMutation.isPending}>
-                {startTaskMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting...</> : <><Zap className="w-4 h-4" /> Begin Task</>}
-              </Button>
-            )}
+            <Button className="w-full gap-2 py-5 text-base font-semibold" onClick={handleStartTask} disabled={startTaskMutation.isPending}>
+              {startTaskMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting...</> : <><Zap className="w-4 h-4" /> Begin Task</>}
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -652,24 +637,14 @@ export default function TasksPage() {
                     <p className="text-xs font-semibold text-foreground">Why no reward?</p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {timedOut ? "The task timer expired before you submitted." : "One or more answers were incorrect. All questions must be answered correctly for a reward."}
-                      {" "}Correct answers are not revealed to maintain task integrity.
+                      {" "}This task has been removed from your list. New tasks refresh daily at midnight.
                     </p>
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1 gap-1.5" onClick={handleBack}>
-                    <ChevronLeft className="w-4 h-4" /> More Tasks
-                  </Button>
-                  {!passed && (
-                    <Button className="flex-1 gap-1.5" onClick={() => {
-                      setSubmitResult(null); setStartedTask(null);
-                      setView("instructions");
-                    }}>
-                      <RefreshCw className="w-4 h-4" /> Try Again
-                    </Button>
-                  )}
-                </div>
+                <Button variant="outline" className="w-full gap-1.5" onClick={handleBack}>
+                  <ChevronLeft className="w-4 h-4" /> Back to Tasks
+                </Button>
               </CardContent>
             </Card>
           </motion.div>
