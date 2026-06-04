@@ -1366,6 +1366,14 @@ components:
           type: integer
         isActive:
           type: boolean
+        questionCount:
+          type: integer
+        cooldownHours:
+          type: ["integer", "null"]
+        onCooldown:
+          type: boolean
+        cooldownEndsAt:
+          type: ["string", "null"]
         completedByUser:
           type: boolean
         instructions:
