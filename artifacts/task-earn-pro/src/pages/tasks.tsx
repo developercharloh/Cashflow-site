@@ -384,13 +384,18 @@ export default function TasksPage() {
               const diff = DIFFICULTY_STYLES[task.difficulty ?? "easy"];
               const locked = task.minLevel > userLevel;
               const onCooldown = task.onCooldown;
+              const isFailed = task.isFailed;
+              const isBlocked = locked || onCooldown || isFailed;
               return (
-                <motion.div key={task.id} whileHover={!locked && !onCooldown ? { y: -1 } : {}}>
-                  <Card className={`border border-border/60 transition-all ${locked || onCooldown ? "opacity-60" : "hover:border-primary/30 hover:shadow-md hover:shadow-black/10 cursor-pointer"}`}>
+                <motion.div key={task.id} whileHover={!isBlocked ? { y: -1 } : {}}>
+                  <Card className={`border transition-all ${isFailed ? "border-red-500/30 bg-red-500/5 opacity-70" : isBlocked ? "border-border/60 opacity-60" : "border-border/60 hover:border-primary/30 hover:shadow-md hover:shadow-black/10 cursor-pointer"}`}>
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold text-sm leading-snug">{task.title}</h3>
-                        <Badge variant="outline" className={`text-[10px] shrink-0 ${diff.badge}`}>{diff.label}</Badge>
+                        <div className="flex gap-1.5 shrink-0">
+                          {isFailed && <Badge variant="outline" className="text-[10px] bg-red-500/15 text-red-400 border-red-500/30">Failed</Badge>}
+                          <Badge variant="outline" className={`text-[10px] ${diff.badge}`}>{diff.label}</Badge>
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -398,7 +403,11 @@ export default function TasksPage() {
                         <span className="flex items-center gap-1"><ClipboardList className="w-3 h-3" />{task.questionCount ?? 5} questions</span>
                         <span className="flex items-center gap-1 text-green-400 font-semibold"><DollarSign className="w-3 h-3" />${(task.reward ?? 0).toFixed(2)}</span>
                       </div>
-                      {locked ? (
+                      {isFailed ? (
+                        <div className="flex items-center gap-2 text-xs text-red-400 pt-1 font-medium">
+                          <XCircle className="w-3.5 h-3.5" /> Failed — No retries allowed
+                        </div>
+                      ) : locked ? (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                           <Lock className="w-3.5 h-3.5" /> Requires higher membership level
                         </div>
@@ -465,9 +474,19 @@ export default function TasksPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">{selectedTask.instructions ?? selectedTask.description}</p>
             </div>
 
-            <Button className="w-full gap-2 py-5 text-base font-semibold" onClick={handleStartTask} disabled={startTaskMutation.isPending}>
-              {startTaskMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting...</> : <><Zap className="w-4 h-4" /> Begin Task</>}
-            </Button>
+            {(selectedTask as any).isFailed ? (
+              <div className="w-full rounded-lg border border-red-500/30 bg-red-500/10 p-4 flex items-center gap-3">
+                <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-400">Task Permanently Locked</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">You failed this task. No retries are allowed on any task.</p>
+                </div>
+              </div>
+            ) : (
+              <Button className="w-full gap-2 py-5 text-base font-semibold" onClick={handleStartTask} disabled={startTaskMutation.isPending}>
+                {startTaskMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting...</> : <><Zap className="w-4 h-4" /> Begin Task</>}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
