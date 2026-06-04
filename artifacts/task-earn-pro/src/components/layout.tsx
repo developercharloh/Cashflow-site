@@ -42,16 +42,16 @@ function TopHeader() {
       : theme;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-14 flex items-center px-3 gap-2">
-      <Link href="/dashboard" className="shrink-0 flex items-center gap-1.5 mr-1">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-14 flex items-center px-2 sm:px-3 gap-1.5 sm:gap-2">
+      <Link href="/dashboard" className="shrink-0 flex items-center gap-1.5">
         <img src="/logo.png" alt="TaskEarn Pro" className="w-8 h-8 rounded-lg object-cover" />
       </Link>
-      <div className="flex-1 bg-muted rounded-full flex items-center px-3 py-1.5 gap-2">
+      <div className="flex-1 min-w-0 bg-muted rounded-full flex items-center px-2.5 py-1.5 gap-1.5 overflow-hidden">
         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground truncate">Search tasks, users, categories...</span>
+        <span className="text-xs text-muted-foreground truncate min-w-0">Search tasks...</span>
       </div>
 
-      <Link href="/notifications" className="relative p-1.5 shrink-0">
+      <Link href="/notifications" className="relative p-1 shrink-0">
         <Bell className="w-5 h-5 text-muted-foreground" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
@@ -61,13 +61,13 @@ function TopHeader() {
       </Link>
 
       <button
-        className="p-1.5 shrink-0 text-muted-foreground"
+        className="p-1 shrink-0 text-muted-foreground"
         onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
       >
         {effectiveTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 mr-1">
         <button className="flex items-center gap-1.5" onClick={() => setMenuOpen((o) => !o)}>
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">
             {user?.name?.charAt(0).toUpperCase() ?? "U"}
