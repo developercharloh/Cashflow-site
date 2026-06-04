@@ -16,9 +16,9 @@ type TaskSeed = {
 };
 
 const TIERS = [
-  { suffix: "Fundamentals", difficulty: "easy",   reward: 0.12, qCount: 4, timeLimit: 240, minLevel: 1, cooldown: 24 },
-  { suffix: "Applied",      difficulty: "medium",  reward: 0.28, qCount: 6, timeLimit: 360, minLevel: 1, cooldown: 24 },
-  { suffix: "Expert",       difficulty: "hard",    reward: 0.50, qCount: 8, timeLimit: 540, minLevel: 2, cooldown: 48 },
+  { suffix: "Fundamentals", difficulty: "easy",   reward: 0.12, qCount: 10, timeLimit: 600, minLevel: 1, cooldown: 24 },
+  { suffix: "Applied",      difficulty: "medium",  reward: 0.28, qCount: 10, timeLimit: 600, minLevel: 1, cooldown: 24 },
+  { suffix: "Expert",       difficulty: "hard",    reward: 0.50, qCount: 10, timeLimit: 660, minLevel: 2, cooldown: 48 },
 ];
 
 function mkTasks(category: string, topics: Array<[string, string]>): TaskSeed[] {
