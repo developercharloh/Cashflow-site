@@ -605,15 +605,27 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
 
     // Pick random questions from question bank
     const questionCount = task.questionCount ?? 5;
-    const questions = getRandomQuestions(task.category, questionCount);
-    if (questions.length === 0) {
+    const rawQuestions = getRandomQuestions(task.category, questionCount);
+    if (rawQuestions.length === 0) {
       res.status(500).json({ error: "No questions available for this task category." }); return;
     }
+
+    // Shuffle each question's options using a cryptographically-seeded random so
+    // the correct answer is never predictably at position A.
+    const questions = rawQuestions.map(q => {
+      const shuffled = [...q.options];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return { ...q, options: shuffled };
+    });
 
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? "";
     const ua = req.headers["user-agent"] ?? "";
 
     // Store attempt with full question data (including correct answers) server-side
+    // questionsSnapshot holds shuffled options + correctAnswer string for grading
     const [attempt] = await db.insert(taskAttemptsTable).values({
       userId: req.userId!,
       taskId: id,
@@ -628,7 +640,7 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
     const clientQuestions = questions.map(q => ({
       id: q.id,
       question: q.question,
-      options: q.options,
+      options: q.options,   // already shuffled — correct answer is at a random position
       difficulty: q.difficulty,
     }));
 
