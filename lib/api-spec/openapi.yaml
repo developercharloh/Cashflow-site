@@ -305,7 +305,7 @@ paths:
     post:
       operationId: startTask
       tags: [tasks]
-      summary: Start a task
+      summary: Start a task and receive questions
       parameters:
         - name: id
           in: path
@@ -314,17 +314,42 @@ paths:
             type: integer
       responses:
         "200":
-          description: Task started
+          description: Task started with questions
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserTask"
+                $ref: "#/components/schemas/TaskStartResult"
+
+  /tasks/{id}/submit:
+    post:
+      operationId: submitTask
+      tags: [tasks]
+      summary: Submit task answers and earn reward if 100% correct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskSubmitInput"
+      responses:
+        "200":
+          description: Task submission result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskSubmitResult"
 
   /tasks/{id}/complete:
     post:
       operationId: completeTask
       tags: [tasks]
-      summary: Complete a task and earn reward
+      summary: Legacy complete endpoint (deprecated)
       parameters:
         - name: id
           in: path
@@ -339,11 +364,26 @@ paths:
               $ref: "#/components/schemas/TaskCompletionInput"
       responses:
         "200":
-          description: Task completed, reward credited
+          description: Task completed
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaskCompletionResult"
+
+  /tasks/history:
+    get:
+      operationId: getTaskHistory
+      tags: [tasks]
+      summary: Get user task attempt history
+      responses:
+        "200":
+          description: Task attempt history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskAttemptSummary"
 
   /tasks/categories:
     get:
@@ -1356,6 +1396,103 @@ components:
           type: integer
         status:
           type: string
+        startedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+
+    TaskStartResult:
+      type: object
+      required: [attemptId, questions, totalQuestions]
+      properties:
+        attemptId:
+          type: integer
+        timeLimitSeconds:
+          type: ["integer", "null"]
+        totalQuestions:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskQuestion"
+
+    TaskQuestion:
+      type: object
+      required: [id, question, options, difficulty]
+      properties:
+        id:
+          type: string
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        difficulty:
+          type: string
+
+    TaskSubmitInput:
+      type: object
+      required: [attemptId, answers]
+      properties:
+        attemptId:
+          type: integer
+        timeSpent:
+          type: ["integer", "null"]
+        answers:
+          type: array
+          items:
+            type: object
+            required: [questionId, answer]
+            properties:
+              questionId:
+                type: string
+              answer:
+                type: string
+
+    TaskSubmitResult:
+      type: object
+      required: [passed, score, correctAnswers, totalQuestions, message, rewardEarned]
+      properties:
+        passed:
+          type: boolean
+        score:
+          type: integer
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        message:
+          type: string
+        rewardEarned:
+          type: number
+        newBalance:
+          type: ["number", "null"]
+
+    TaskAttemptSummary:
+      type: object
+      required: [id, taskId, taskTitle, taskCategory, status, score, totalQuestions, correctAnswers, rewardEarned, startedAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        taskTitle:
+          type: string
+        taskCategory:
+          type: string
+        status:
+          type: string
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        correctAnswers:
+          type: integer
+        rewardEarned:
+          type: number
+        timeSpent:
+          type: ["integer", "null"]
         startedAt:
           type: string
         completedAt:
