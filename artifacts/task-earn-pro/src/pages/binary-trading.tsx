@@ -225,7 +225,7 @@ export default function BinaryTradingPage() {
     const stakeNum = (martingaleRef.current && autoRef.current) ? martingaleStakeRef.current : baseStake;
     const bal = accountMode === "demo" ? demoBalance : realBalance;
     if (stakeNum <= 0 || bal < stakeNum) {
-      toast({ title: "Insufficient balance", description: accountMode === "real" ? "Deposit funds to trade real money." : "Reset your demo balance.", variant: "destructive" });
+      toast({ title: "Insufficient balance", description: accountMode === "real" ? "Deposit funds to trade live." : "Reset your demo balance.", variant: "destructive" });
       autoRef.current = false; autoDirRef.current = null; setIsAutoTrading(false); setAutoDirection(null);
       return;
     }
