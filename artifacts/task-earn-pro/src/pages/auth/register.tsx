@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ChevronsUpDown, Check, CircleDollarSign, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -110,6 +111,9 @@ const formSchema = z.object({
   country: z.string().min(1, "Please select your country"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   referralCode: z.string().optional(),
+  agreedToTerms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the Terms and Conditions to continue",
+  }),
 });
 
 export default function Register() {
@@ -123,7 +127,7 @@ export default function Register() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", email: "", country: "", password: "", referralCode: refCode },
+    defaultValues: { name: "", email: "", country: "", password: "", referralCode: refCode, agreedToTerms: false },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -291,6 +295,28 @@ export default function Register() {
                   <FormControl>
                     <Input placeholder="e.g. JOIN2025" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-3">
+                    <FormControl>
+                      <Checkbox
+                        id="terms-register"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <label htmlFor="terms-register" className="text-sm text-muted-foreground leading-snug cursor-pointer select-none">
+                      I agree to the{" "}
+                      <Link href="/terms" className="text-emerald-600 hover:underline font-medium">
+                        Terms and Conditions
+                      </Link>
+                    </label>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} />
