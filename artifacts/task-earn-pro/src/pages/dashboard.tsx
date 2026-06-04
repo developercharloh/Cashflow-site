@@ -166,7 +166,7 @@ export default function Dashboard() {
       {/* Welcome */}
       <div className="px-4 pt-4 pb-3">
         <h1 className="text-2xl font-bold text-foreground">Hi, {firstName}! 👋</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Complete tasks, earn points and withdraw real money.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Complete tasks, earn points, and cash out your balance.</p>
       </div>
 
       {/* Hero Balance Card */}
