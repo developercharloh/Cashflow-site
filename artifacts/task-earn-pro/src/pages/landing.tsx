@@ -36,7 +36,7 @@ export default function Landing() {
               Turn Your Skills Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-success">Daily Earnings</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              The premium platform for completing high-value tasks, earning real money, and building your digital income portfolio.
+              The premium platform for completing high-value tasks, growing your balance, and building your digital income portfolio.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Button size="lg" className="w-full sm:w-auto gap-2 text-base h-14 px-8" asChild>
