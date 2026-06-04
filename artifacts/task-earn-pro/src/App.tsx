@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
+import Terms from "@/pages/terms";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import WalletPage from "@/pages/wallet";
@@ -49,6 +50,7 @@ function Router() {
         <Route path="/auth/login" component={Login} />
         <Route path="/auth/register" component={Register} />
         <Route path="/auth/forgot-password" component={ForgotPassword} />
+        <Route path="/terms" component={Terms} />
         <Route path="/tasks" component={Tasks} />
         <Route path="/wallet" component={WalletPage} />
         <Route path="/referrals" component={Referrals} />
