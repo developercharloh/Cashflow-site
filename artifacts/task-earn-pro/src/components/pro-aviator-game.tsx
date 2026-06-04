@@ -4,10 +4,15 @@ import { RefreshCw, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Crash math ────────────────────────────────────────────────────────────────
+// House-edge distribution: 60% crash at 1.00x, 25% at 1.01-1.20x, 10% at 1.20-1.60x,
+// 4% at 1.60-2.50x, 1% above 2.50x — reaction time never enough at the low end.
 function generateCrash(): number {
   const r = Math.random();
-  if (r < 0.01) return 1.00;
-  return Math.max(1.01, Math.min(0.99 / (1 - r), 500));
+  if (r < 0.60) return 1.00;                                                      // instant crash
+  if (r < 0.85) return 1.00 + ((r - 0.60) / 0.25) * 0.20;                       // 1.00-1.20
+  if (r < 0.95) return 1.20 + ((r - 0.85) / 0.10) * 0.40;                       // 1.20-1.60
+  if (r < 0.99) return 1.60 + ((r - 0.95) / 0.04) * 0.90;                       // 1.60-2.50
+  return Math.max(2.50, Math.min(0.99 / (1 - r), 80));                           // 2.50+ (rare)
 }
 function calcMultiplier(elapsed: number): number {
   return Math.round(Math.exp(0.13 * elapsed) * 100) / 100;
