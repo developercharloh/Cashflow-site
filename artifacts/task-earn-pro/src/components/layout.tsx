@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/components/theme-provider";
 import {
   Bell, Moon, Sun, Home, CheckSquare, BarChart2,
-  Wallet, Users, ChevronDown, Search, Settings, UserCircle
+  Wallet, Users, ChevronDown, Search, Settings, UserCircle, Gamepad2
 } from "lucide-react";
 import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
 import { useState } from "react";
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/binary", label: "Trade", icon: BarChart2 },
+  { href: "/games", label: "Games", icon: Gamepad2 },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/referrals", label: "Referrals", icon: Users },
 ];
@@ -131,8 +132,8 @@ function BottomNav() {
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[9px] font-medium leading-none">{label}</span>
+              <Icon className="w-[18px] h-[18px]" />
+              <span className="text-[8px] font-medium leading-none">{label}</span>
             </Link>
           );
         })}
