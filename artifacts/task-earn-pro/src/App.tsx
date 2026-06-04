@@ -11,6 +11,7 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
 import Terms from "@/pages/terms";
+import GamesPage from "@/pages/games";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import WalletPage from "@/pages/wallet";
@@ -65,6 +66,7 @@ function Router() {
         <Route path="/kyc" component={KycPage} />
         <Route path="/admin/kyc" component={AdminKycPage} />
         <Route path="/binary" component={BinaryTradingPage} />
+        <Route path="/games" component={GamesPage} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route component={NotFound} />
       </Switch>
