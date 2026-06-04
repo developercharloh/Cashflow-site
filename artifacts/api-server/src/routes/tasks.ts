@@ -414,6 +414,24 @@ router.get("/tasks/categories", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── Daily seeded shuffle ─────────────────────────────────────────────────────
+
+// Deterministic Fisher-Yates shuffle seeded from a string (today's UTC date).
+// Same seed = same order every time, different date = different order.
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  let s = 0;
+  for (let i = 0; i < seed.length; i++) s += seed.charCodeAt(i) * (i + 1);
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    s = ((s * 1664525 + 1013904223) | 0) >>> 0;
+    const j = s % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+const DAILY_PER_CATEGORY = 12; // tasks shown per category per day
+
 // ─── GET /tasks ───────────────────────────────────────────────────────────────
 
 router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
@@ -422,7 +440,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     const allTasks = await db.select().from(tasksTable).where(eq(tasksTable.isActive, true));
 
-    // Fetch all user attempts for this user (passed = cooldown, failed = permanent lock)
+    // Fetch all user attempts: passed = cooldown, failed = task disappears permanently
     const userAttempts = await db.select().from(taskAttemptsTable)
       .where(eq(taskAttemptsTable.userId, req.userId!));
 
@@ -430,9 +448,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
     const failedTaskIds = new Set<number>();
 
     for (const a of userAttempts) {
-      if (a.status === "failed") {
-        failedTaskIds.add(a.taskId);
-      }
+      if (a.status === "failed") failedTaskIds.add(a.taskId);
       if (a.status === "passed") {
         const prev = lastPassedAt[a.taskId];
         const ts = a.completedAt ? new Date(a.completedAt) : new Date(a.startedAt);
@@ -440,16 +456,27 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    let tasks = allTasks.filter(t => t.minLevel <= user.level);
-    if (category) tasks = tasks.filter(t => t.category === category);
+    // Filter: correct level + never failed
+    let eligible = allTasks.filter(t => t.minLevel <= user.level && !failedTaskIds.has(t.id));
+    if (category) eligible = eligible.filter(t => t.category === category);
+
+    // Daily rotation: deterministic shuffle per category, pick DAILY_PER_CATEGORY per day
+    const todaySeed = new Date().toISOString().slice(0, 10); // "2026-06-04"
+    const byCategory: Record<string, typeof eligible> = {};
+    for (const t of eligible) (byCategory[t.category] ??= []).push(t);
+
+    const dailyPool: typeof eligible = [];
+    for (const catTasks of Object.values(byCategory)) {
+      const shuffled = seededShuffle(catTasks, todaySeed + catTasks[0]?.category);
+      dailyPool.push(...shuffled.slice(0, DAILY_PER_CATEGORY));
+    }
 
     const now = Date.now();
-    res.json(tasks.map(t => {
+    res.json(dailyPool.map(t => {
       const lastPassed = lastPassedAt[t.id];
       const cooldownMs = (t.cooldownHours ?? 24) * 3600_000;
       const onCooldown = lastPassed ? (now - lastPassed.getTime()) < cooldownMs : false;
       const cooldownEndsAt = lastPassed && onCooldown ? new Date(lastPassed.getTime() + cooldownMs).toISOString() : null;
-      const isFailed = failedTaskIds.has(t.id);
       return {
         id: t.id,
         title: t.title,
@@ -467,7 +494,6 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
         isActive: t.isActive,
         onCooldown,
         cooldownEndsAt,
-        isFailed,
       };
     }));
   } catch (err) {
