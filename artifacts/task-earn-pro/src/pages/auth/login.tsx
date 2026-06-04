@@ -78,7 +78,7 @@ export default function Login() {
               Your phone.<br />Your income. 💸
             </p>
             <p className="text-white/60 text-sm leading-relaxed">
-              Log in and start completing tasks that pay real money — surveys, videos, AI training, and more.
+              Log in and start completing tasks — surveys, videos, AI training, and more.
             </p>
           </div>
 
