@@ -160,8 +160,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const isAuthPage = location.startsWith("/auth");
+  const isPublicPage = isAuthPage || location === "/terms";
 
-  if (isAuthPage) {
+  if (isPublicPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
