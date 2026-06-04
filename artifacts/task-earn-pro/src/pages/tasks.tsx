@@ -225,7 +225,7 @@ export default function TasksPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Task Marketplace</h1>
-            <p className="text-muted-foreground mt-1">Complete AI & data tasks to earn real money</p>
+            <p className="text-muted-foreground mt-1">Complete AI & data tasks and grow your balance</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowHistory(true)} className="shrink-0 gap-1.5">
             <Trophy className="w-4 h-4" /> History
