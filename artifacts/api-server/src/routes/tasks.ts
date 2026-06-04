@@ -604,7 +604,7 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
       .where(and(eq(taskAttemptsTable.userId, req.userId!), eq(taskAttemptsTable.taskId, id), eq(taskAttemptsTable.status, "in_progress")));
 
     // Pick random questions from question bank
-    const questionCount = task.questionCount ?? 5;
+    const questionCount = Math.min(30, Math.max(10, task.questionCount ?? 10));
     const rawQuestions = getRandomQuestions(task.category, questionCount);
     if (rawQuestions.length === 0) {
       res.status(500).json({ error: "No questions available for this task category." }); return;
