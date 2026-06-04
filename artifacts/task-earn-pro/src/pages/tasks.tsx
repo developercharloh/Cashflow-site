@@ -237,7 +237,7 @@ export default function TasksPage() {
           {[
             { icon: <Brain className="w-4 h-4" />, label: "Task Categories", value: "9", color: "text-blue-400" },
             { icon: <DollarSign className="w-4 h-4" />, label: "Max Reward", value: "$0.60", color: "text-green-400" },
-            { icon: <Target className="w-4 h-4" />, label: "Available Tasks", value: "40+", color: "text-primary" },
+            { icon: <Target className="w-4 h-4" />, label: "Available Tasks", value: "900+", color: "text-primary" },
           ].map(s => (
             <Card key={s.label} className="border-border/60 bg-card/60">
               <CardContent className="p-3 flex flex-col gap-1 items-center text-center">
