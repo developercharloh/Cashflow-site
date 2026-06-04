@@ -66,15 +66,18 @@ import type {
   RejectInput,
   ResetPasswordInput,
   Task,
+  TaskAttemptSummary,
   TaskCategory,
   TaskCompletionInput,
   TaskCompletionResult,
   TaskInput,
+  TaskStartResult,
+  TaskSubmitInput,
+  TaskSubmitResult,
   TaskUpdate,
   Transaction,
   UpgradeInitInput,
   User,
-  UserTask,
   VerifyEmailInput,
   VerifyPendingResult,
   Wallet,
@@ -1291,11 +1294,11 @@ export const getStartTaskUrl = (id: number,) => {
 }
 
 /**
- * @summary Start a task
+ * @summary Start a task and receive questions
  */
-export const startTask = async (id: number, options?: RequestInit): Promise<UserTask> => {
+export const startTask = async (id: number, options?: RequestInit): Promise<TaskStartResult> => {
 
-  return customFetch<UserTask>(getStartTaskUrl(id),
+  return customFetch<TaskStartResult>(getStartTaskUrl(id),
   {
     ...options,
     method: 'POST'
@@ -1339,7 +1342,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type StartTaskMutationError = ErrorType<unknown>
 
     /**
- * @summary Start a task
+ * @summary Start a task and receive questions
  */
 export const useStartTask = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1352,6 +1355,78 @@ export const useStartTask = <TError = ErrorType<unknown>,
       return useMutation(getStartTaskMutationOptions(options));
     }
 
+export const getSubmitTaskUrl = (id: number,) => {
+
+
+
+
+  return `/api/tasks/${id}/submit`
+}
+
+/**
+ * @summary Submit task answers and earn reward if 100% correct
+ */
+export const submitTask = async (id: number,
+    taskSubmitInput: TaskSubmitInput, options?: RequestInit): Promise<TaskSubmitResult> => {
+
+  return customFetch<TaskSubmitResult>(getSubmitTaskUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskSubmitInput,)
+  }
+);}
+
+
+
+
+export const getSubmitTaskMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext> => {
+
+const mutationKey = ['submitTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitTask>>, {id: number;data: BodyType<TaskSubmitInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitTask(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitTaskMutationResult = NonNullable<Awaited<ReturnType<typeof submitTask>>>
+    export type SubmitTaskMutationBody = BodyType<TaskSubmitInput>
+    export type SubmitTaskMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit task answers and earn reward if 100% correct
+ */
+export const useSubmitTask = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitTask>>,
+        TError,
+        {id: number;data: BodyType<TaskSubmitInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitTaskMutationOptions(options));
+    }
+
 export const getCompleteTaskUrl = (id: number,) => {
 
 
@@ -1361,7 +1436,7 @@ export const getCompleteTaskUrl = (id: number,) => {
 }
 
 /**
- * @summary Complete a task and earn reward
+ * @summary Legacy complete endpoint (deprecated)
  */
 export const completeTask = async (id: number,
     taskCompletionInput: TaskCompletionInput, options?: RequestInit): Promise<TaskCompletionResult> => {
@@ -1411,7 +1486,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CompleteTaskMutationError = ErrorType<unknown>
 
     /**
- * @summary Complete a task and earn reward
+ * @summary Legacy complete endpoint (deprecated)
  */
 export const useCompleteTask = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number;data: BodyType<TaskCompletionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1423,6 +1498,83 @@ export const useCompleteTask = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCompleteTaskMutationOptions(options));
     }
+
+export const getGetTaskHistoryUrl = () => {
+
+
+
+
+  return `/api/tasks/history`
+}
+
+/**
+ * @summary Get user task attempt history
+ */
+export const getTaskHistory = async ( options?: RequestInit): Promise<TaskAttemptSummary[]> => {
+
+  return customFetch<TaskAttemptSummary[]>(getGetTaskHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaskHistoryQueryKey = () => {
+    return [
+    `/api/tasks/history`
+    ] as const;
+    }
+
+
+export const getGetTaskHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getTaskHistory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaskHistoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskHistory>>> = ({ signal }) => getTaskHistory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaskHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaskHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getTaskHistory>>>
+export type GetTaskHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get user task attempt history
+ */
+
+export function useGetTaskHistory<TData = Awaited<ReturnType<typeof getTaskHistory>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaskHistoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetTaskCategoriesUrl = () => {
 
