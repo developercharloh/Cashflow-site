@@ -225,7 +225,7 @@ export default function TasksPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Task Marketplace</h1>
-            <p className="text-muted-foreground mt-1">Complete AI & data tasks to earn real money — 100% accuracy required</p>
+            <p className="text-muted-foreground mt-1">Complete AI & data tasks to earn real money</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowHistory(true)} className="shrink-0 gap-1.5">
             <Trophy className="w-4 h-4" /> History
@@ -235,9 +235,9 @@ export default function TasksPage() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: <Target className="w-4 h-4" />, label: "Accuracy Required", value: "100%", color: "text-red-400" },
             { icon: <Brain className="w-4 h-4" />, label: "Task Categories", value: "9", color: "text-blue-400" },
             { icon: <DollarSign className="w-4 h-4" />, label: "Max Reward", value: "$0.60", color: "text-green-400" },
+            { icon: <Target className="w-4 h-4" />, label: "Available Tasks", value: "40+", color: "text-primary" },
           ].map(s => (
             <Card key={s.label} className="border-border/60 bg-card/60">
               <CardContent className="p-3 flex flex-col gap-1 items-center text-center">
@@ -301,8 +301,8 @@ export default function TasksPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-muted-foreground">
               {[
                 { n: "1", t: "Start Task", d: "Read the instructions, then begin with a countdown timer active." },
-                { n: "2", t: "Answer All Questions", d: "Every question requires a correct answer. 100% accuracy is required." },
-                { n: "3", t: "Earn Your Reward", d: "All correct? Reward credited instantly. One wrong answer = no reward." },
+                { n: "2", t: "Answer Questions", d: "Work through each question carefully within the allotted time." },
+                { n: "3", t: "Earn Your Reward", d: "Complete the task successfully and your reward is credited instantly." },
               ].map(s => (
                 <div key={s.n} className="flex gap-2.5">
                   <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{s.n}</span>
@@ -463,17 +463,6 @@ export default function TasksPage() {
             <div className="space-y-2">
               <h3 className="font-semibold text-sm">Task Description</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{selectedTask.instructions ?? selectedTask.description}</p>
-            </div>
-
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
-              <p className="text-sm font-semibold text-amber-300 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Important Rules</p>
-              <ul className="text-xs text-muted-foreground space-y-1.5">
-                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span>You must answer ALL questions correctly to earn the reward</li>
-                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span>Even one wrong answer = task failed, no reward</li>
-                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span>Complete within the time limit or the task will auto-fail</li>
-                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span>Correct answers are not shown after failure</li>
-                <li className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span>Questions are randomized — take your time and read carefully</li>
-              </ul>
             </div>
 
             <Button className="w-full gap-2 py-5 text-base font-semibold" onClick={handleStartTask} disabled={startTaskMutation.isPending}>
