@@ -1,0 +1,264 @@
+import { Router } from "express";
+import { db, usersTable, transactionsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { hashPassword, comparePassword, signToken, generateReferralCode, generateResetToken } from "../lib/auth";
+import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
+
+const router = Router();
+
+router.post("/auth/register", async (req, res) => {
+  try {
+    const { email, password, name, phone, country, referralCode } = req.body;
+    if (!email || !password || !name) {
+      res.status(400).json({ error: "Name, email, and password are required" });
+      return;
+    }
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
+    if (existing) {
+      res.status(400).json({ error: "Email already registered" });
+      return;
+    }
+    const hashed = await hashPassword(password);
+    const code = generateReferralCode();
+
+    let referredById: number | undefined;
+    if (referralCode) {
+      const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode.toUpperCase()));
+      if (referrer) {
+        referredById = referrer.id;
+        await db.update(usersTable).set({ referralCount: referrer.referralCount + 1 }).where(eq(usersTable.id, referrer.id));
+      }
+    }
+
+    const [user] = await db.insert(usersTable).values({
+      email: email.toLowerCase(),
+      password: hashed,
+      name,
+      phone: phone ?? null,
+      country: country ?? null,
+      referralCode: code,
+      referredBy: referredById ?? null,
+      isEmailVerified: true,
+      quizCompleted: true,
+    }).returning();
+
+    const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
+    res.status(201).json({
+      user: sanitizeUser(user),
+      token,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
+    if (!user) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+    if (user.isBanned) {
+      res.status(401).json({ error: "Account is banned" });
+      return;
+    }
+    const valid = await comparePassword(password, user.password);
+    if (!valid) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+    const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
+    res.json({ user: sanitizeUser(user), token });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/logout", (req, res) => {
+  res.json({ message: "Logged out successfully" });
+});
+
+router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+    res.json(sanitizeUser(user));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const resetAttempts = new Map<string, { count: number; resetAt: number }>();
+const RESET_MAX_ATTEMPTS = 5;
+const RESET_WINDOW_MS = 15 * 60 * 1000;
+
+function checkResetRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = resetAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    resetAttempts.set(ip, { count: 1, resetAt: now + RESET_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RESET_MAX_ATTEMPTS) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
+}
+
+router.post("/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email?.toLowerCase()));
+    if (user) {
+      const token = generateResetToken();
+      const expires = new Date(Date.now() + 3600000);
+      await db.update(usersTable).set({ resetPasswordToken: token, resetPasswordExpires: expires }).where(eq(usersTable.id, user.id));
+    }
+    res.json({ message: "If the email exists, a reset link has been sent" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  try {
+    const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? "unknown";
+    if (!checkResetRateLimit(ip)) {
+      res.status(429).json({ error: "Too many reset attempts. Please try again later." });
+      return;
+    }
+    const { token, email, password } = req.body;
+    if (!token || !email || !password) {
+      res.status(400).json({ error: "Token, email, and new password are required" });
+      return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, (email as string).toLowerCase()));
+    if (
+      !user ||
+      !user.resetPasswordToken ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires < new Date() ||
+      user.resetPasswordToken !== token
+    ) {
+      res.status(400).json({ error: "Invalid or expired reset token" });
+      return;
+    }
+    const hashed = await hashPassword(password);
+    await db.update(usersTable).set({ password: hashed, resetPasswordToken: null, resetPasswordExpires: null }).where(eq(usersTable.id, user.id));
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/verify-email", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { code } = req.body;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(400).json({ error: "User not found" });
+      return;
+    }
+    if (user.isEmailVerified) {
+      res.json({ message: "Email already verified" });
+      return;
+    }
+    if (user.emailVerifyCode !== code) {
+      res.status(400).json({ error: "Invalid verification code" });
+      return;
+    }
+    await db.update(usersTable).set({ isEmailVerified: true, emailVerifyCode: null }).where(eq(usersTable.id, user.id));
+    res.json({ message: "Email verified successfully" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/claim-welcome-gift", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+    if (user.welcomeGiftClaimed) {
+      res.status(400).json({ error: "Starter Gift Card already claimed" });
+      return;
+    }
+    await db.update(usersTable).set({
+      welcomeGiftClaimed: true,
+      balance: user.balance + 0.10,
+      totalEarned: user.totalEarned + 0.10,
+      totalBonusEarnings: user.totalBonusEarnings + 0.10,
+    }).where(eq(usersTable.id, user.id));
+    await db.insert(transactionsTable).values({
+      userId: user.id,
+      type: "bonus",
+      amount: 0.10,
+      status: "completed",
+      description: "Starter Gift Card",
+    });
+    res.json({ message: "Starter Gift Card claimed! $0.10 added to your balance." });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+function sanitizeUser(user: typeof usersTable.$inferSelect) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    phone: user.phone,
+    avatar: user.avatar,
+    level: user.level,
+    levelName: getLevelName(user.level),
+    balance: user.balance,
+    totalEarned: user.totalEarned,
+    pendingEarnings: user.pendingEarnings,
+    totalWithdrawn: user.totalWithdrawn,
+    referralCode: user.referralCode,
+    referralCount: user.referralCount,
+    tasksCompleted: user.tasksCompleted,
+    isEmailVerified: user.isEmailVerified,
+    isAdmin: user.isAdmin,
+    quizCompleted: user.quizCompleted,
+    welcomeGiftClaimed: user.welcomeGiftClaimed,
+    isBanned: user.isBanned,
+    transcriptionMinutes: user.transcriptionMinutes,
+    membershipPurchased: user.membershipPurchased,
+    createdAt: user.createdAt.toISOString(),
+  };
+}
+
+export function getLevelName(level: number): string {
+  const names: Record<number, string> = {
+    1: "🚀 Starter",
+    2: "🥉 Bronze",
+    3: "🥈 Silver",
+    4: "🥇 Gold",
+    5: "🔷 Platinum",
+    6: "💎 Diamond",
+    7: "👑 Elite",
+  };
+  return names[level] ?? "🚀 Starter";
+}
+
+export default router;
