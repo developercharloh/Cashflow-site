@@ -10,7 +10,7 @@ export default function Landing() {
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
             T
           </div>
-          <span className="text-xl font-bold tracking-tight">TaskEarn Pro</span>
+          <span className="text-xl font-bold tracking-tight">Elite Signals Pro</span>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it Works</a>
@@ -99,9 +99,9 @@ export default function Landing() {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
               T
             </div>
-            <span className="font-semibold">TaskEarn Pro</span>
+            <span className="font-semibold">Elite Signals Pro</span>
           </div>
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} TaskEarn Pro. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Elite Signals Pro. All rights reserved.</p>
         </div>
       </footer>
     </div>

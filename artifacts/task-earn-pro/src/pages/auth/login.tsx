@@ -72,7 +72,7 @@ export default function Login() {
           <div className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow-lg">
             <CircleDollarSign className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">TaskEarn Pro</span>
+          <span className="text-xl font-bold tracking-tight">Elite Signals Pro</span>
         </div>
 
         <div className="space-y-8 relative z-10">
@@ -113,7 +113,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-white/25 text-xs relative z-10">© 2025 TaskEarn Pro · Payments in 48 hrs or less</p>
+        <p className="text-white/25 text-xs relative z-10">© 2025 Elite Signals Pro · Payments in 48 hrs or less</p>
       </div>
 
       {/* ── Right panel – login form ── */}
@@ -125,7 +125,7 @@ export default function Login() {
             <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CircleDollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">TaskEarn Pro</span>
+            <span className="text-xl font-bold">Elite Signals Pro</span>
           </div>
 
           {/* Mobile stats strip */}

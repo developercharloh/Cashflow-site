@@ -365,7 +365,7 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
           amount: amountKobo,
           currency: "KES",
           recipient: recipientCode,
-          reason: `TaskEarn Pro ${providerLabel} withdrawal for user ${req.userId}`,
+          reason: `Elite Signals Pro ${providerLabel} withdrawal for user ${req.userId}`,
         }),
       });
       const transferData = await transferRes.json() as any;
@@ -489,7 +489,7 @@ router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => 
         source: "balance",
         amount: amountKobo,
         recipient: recipientCode,
-        reason: `TaskEarn Pro withdrawal for user ${req.userId}`,
+        reason: `Elite Signals Pro withdrawal for user ${req.userId}`,
       }),
     });
     const transferData = await transferRes.json() as any;

@@ -153,7 +153,7 @@ export default function Register() {
           <div className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow">
             <CircleDollarSign className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">TaskEarn Pro</span>
+          <span className="text-xl font-bold tracking-tight">Elite Signals Pro</span>
         </div>
 
         <div className="space-y-8">
@@ -185,7 +185,7 @@ export default function Register() {
           </div>
         </div>
 
-        <p className="text-white/30 text-xs">© 2025 TaskEarn Pro. All rights reserved.</p>
+        <p className="text-white/30 text-xs">© 2025 Elite Signals Pro. All rights reserved.</p>
       </div>
 
       {/* Right panel – form */}
@@ -196,7 +196,7 @@ export default function Register() {
             <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CircleDollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">TaskEarn Pro</span>
+            <span className="text-xl font-bold">Elite Signals Pro</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Create your account</h2>

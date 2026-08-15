@@ -5,7 +5,7 @@ const SECTIONS = [
   {
     title: "1. Introduction",
     items: [
-      'Welcome to Cryptonic ("the Platform"). By registering, accessing, or using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, you must discontinue use immediately.',
+      'Welcome to Elite Signals Pro ("the Platform"). By registering, accessing, or using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, you must discontinue use immediately.',
     ],
   },
   {
@@ -13,7 +13,7 @@ const SECTIONS = [
     items: [
       "You must be at least 18 years old.",
       "You must provide accurate and complete registration details.",
-      "Cryptonic reserves the right to verify user identity at any time (KYC).",
+      "Elite Signals Pro reserves the right to verify user identity at any time (KYC).",
     ],
   },
   {
@@ -27,7 +27,7 @@ const SECTIONS = [
   {
     title: "4. Services Provided",
     items: [
-      "Cryptonic offers a digital trading platform where users predict price movements (BUY/SELL) of financial assets.",
+      "Elite Signals Pro offers a digital trading platform where users predict price movements (BUY/SELL) of financial assets.",
       "The platform does not provide investment advice or guarantees of profit.",
     ],
   },
@@ -45,7 +45,7 @@ const SECTIONS = [
     items: [
       "Deposits can be made via approved payment methods (e.g., M-PESA or other supported channels).",
       "Funds must originate from accounts owned by you.",
-      "Cryptonic is not responsible for delays caused by payment providers.",
+      "Elite Signals Pro is not responsible for delays caused by payment providers.",
     ],
   },
   {
@@ -63,7 +63,7 @@ const SECTIONS = [
     items: [
       "Bonuses are subject to specific conditions and wagering requirements.",
       "Abuse of promotions (e.g., multiple accounts, hedging, arbitrage) is prohibited.",
-      "Cryptonic reserves the right to revoke bonuses or related profits.",
+      "Elite Signals Pro reserves the right to revoke bonuses or related profits.",
     ],
   },
   {
@@ -81,13 +81,13 @@ const SECTIONS = [
     title: "10. Market Data Disclaimer",
     items: [
       "Price feeds and charts are sourced from third-party providers.",
-      "Cryptonic does not guarantee accuracy or uninterrupted availability.",
+      "Elite Signals Pro does not guarantee accuracy or uninterrupted availability.",
       "Platform delays or technical errors may occur.",
     ],
   },
   {
     title: "11. Trade Execution",
-    intro: "All trades are final once confirmed. Cryptonic is not liable for losses due to:",
+    intro: "All trades are final once confirmed. Elite Signals Pro is not liable for losses due to:",
     items: [
       "Internet connectivity issues",
       "Device failure",
@@ -97,14 +97,14 @@ const SECTIONS = [
   {
     title: "12. Fees & Charges",
     items: [
-      "Cryptonic may apply transaction or service fees where applicable.",
+      "Elite Signals Pro may apply transaction or service fees where applicable.",
       "Fees will be disclosed within the platform.",
     ],
   },
   {
     title: "13. Limitation of Liability",
     items: [
-      "Cryptonic is not liable for any direct or indirect financial losses.",
+      "Elite Signals Pro is not liable for any direct or indirect financial losses.",
       "Users accept full responsibility for their use of the platform.",
     ],
   },
@@ -132,14 +132,14 @@ const SECTIONS = [
   {
     title: "17. Amendments",
     items: [
-      "Cryptonic reserves the right to modify these Terms at any time.",
+      "Elite Signals Pro reserves the right to modify these Terms at any time.",
       "Continued use indicates acceptance of updated Terms.",
     ],
   },
   {
     title: "18. Governing Law",
     items: [
-      "These Terms shall be governed by the laws of the applicable jurisdiction where Cryptonic operates.",
+      "These Terms shall be governed by the laws of the applicable jurisdiction where Elite Signals Pro operates.",
     ],
   },
 ];
@@ -155,7 +155,7 @@ export default function Terms() {
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Cryptonic
+            Back to Elite Signals Pro
           </Link>
         </div>
       </div>
@@ -166,14 +166,14 @@ export default function Terms() {
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold mb-1">Terms &amp; Conditions</h1>
           <p className="text-muted-foreground text-sm">
-            Cryptonic — please read carefully before using the platform.
+            Elite Signals Pro — please read carefully before using the platform.
           </p>
         </div>
 
         {/* Intro banner */}
         <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8">
           <p className="text-sm leading-relaxed text-foreground/80">
-            Welcome to Cryptonic ("the Platform"). By registering, accessing, or using our services,
+            Welcome to Elite Signals Pro ("the Platform"). By registering, accessing, or using our services,
             you agree to comply with and be bound by these Terms and Conditions. If you do not agree,
             you must discontinue use immediately.
           </p>
@@ -208,12 +208,12 @@ export default function Terms() {
 
         {/* Footer agreement */}
         <div className="mt-8 border border-border rounded-xl p-5 bg-muted/30 text-sm text-muted-foreground leading-relaxed">
-          By creating an account, accessing, or using Cryptonic, you acknowledge that you have read,
+          By creating an account, accessing, or using Elite Signals Pro, you acknowledge that you have read,
           understood, and agreed to these Terms and Conditions.
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          © 2026 Cryptonic · All rights reserved
+          © 2026 Elite Signals Pro · All rights reserved
         </p>
       </div>
     </div>

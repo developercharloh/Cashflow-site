@@ -1,4 +1,4 @@
-# TaskEarn Pro
+# Elite Signals Pro
 
 A full-stack premium fintech-style earning platform where users complete tasks (surveys, videos, articles, AI training, etc.), earn money, refer friends, level up through membership tiers, and withdraw earnings via M-Pesa, Bank Transfer, or PayPal. Includes a full admin panel.
 

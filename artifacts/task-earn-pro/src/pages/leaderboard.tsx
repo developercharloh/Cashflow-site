@@ -72,7 +72,7 @@ export default function Leaderboard() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-        <p className="text-muted-foreground mt-1">See who's earning the most on TaskEarn Pro</p>
+        <p className="text-muted-foreground mt-1">See who's earning the most on Elite Signals Pro</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">

@@ -1,5 +1,5 @@
 ---
-name: TaskEarn Pro Stack
+name: Elite Signals Pro Stack
 description: Architecture decisions, auth flow, level-up rules, and Elite Signals Pro trading dashboard layout
 ---
 

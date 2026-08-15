@@ -43,9 +43,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex flex-col h-full">
       <div className="px-4 py-5 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="TaskEarn Pro" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          <img src="/logo.png" alt="Elite Signals Pro" className="w-8 h-8 rounded-lg object-cover shrink-0" />
           <div>
-            <p className="text-sm font-bold text-white">TaskEarn Pro</p>
+            <p className="text-sm font-bold text-white">Elite Signals Pro</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">Admin Panel</p>
           </div>
         </div>

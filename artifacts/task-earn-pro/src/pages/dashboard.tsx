@@ -143,7 +143,7 @@ export default function Dashboard() {
             </div>
             <div className="bg-card px-6 py-5">
               <p className="text-sm text-muted-foreground mb-4">
-                Welcome to TaskEarn Pro! Claim your <strong className="text-foreground">free $0.10 Starter Gift Card</strong> — credited instantly to your balance.
+                Welcome to Elite Signals Pro! Claim your <strong className="text-foreground">free $0.10 Starter Gift Card</strong> — credited instantly to your balance.
               </p>
               <button
                 onClick={handleClaimGift}

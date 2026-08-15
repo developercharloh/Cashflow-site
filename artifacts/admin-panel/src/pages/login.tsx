@@ -75,7 +75,7 @@ export default function Login() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ display: "inline-flex", marginBottom: "12px" }}>
-            <img src="/logo.png" alt="TaskEarn Pro" style={{ width: "84px", height: "84px", borderRadius: "20px", objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }} />
+            <img src="/logo.png" alt="Elite Signals Pro" style={{ width: "84px", height: "84px", borderRadius: "20px", objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }} />
           </div>
           <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", marginBottom: "2px" }}>
             Task Earn <span style={{ background: "linear-gradient(90deg,#a78bfa,#60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span>
