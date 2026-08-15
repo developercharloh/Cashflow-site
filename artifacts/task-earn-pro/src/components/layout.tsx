@@ -1,139 +1,40 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useTheme } from "@/components/theme-provider";
-import {
-  Bell, Moon, Sun, Home, CheckSquare, BarChart2,
-  Wallet, Users, ChevronDown, Search, Settings, UserCircle, Gamepad2
-} from "lucide-react";
-import { useLogout, useGetNotifications, getGetNotificationsQueryOptions } from "@workspace/api-client-react";
-import { useState } from "react";
+import { Home, BarChart2, Zap, Clock, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/binary", label: "Trade", icon: BarChart2 },
-  { href: "/games", label: "Games", icon: Gamepad2 },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
-  { href: "/referrals", label: "Referrals", icon: Users },
+  { href: "/dashboard", label: "Home",     icon: Home },
+  { href: "/markets",   label: "Markets",  icon: BarChart2 },
+  { href: "/signals",   label: "Signals",  icon: Zap },
+  { href: "/history",   label: "History",  icon: Clock },
+  { href: "/settings",  label: "Settings", icon: Settings },
 ];
-
-function TopHeader() {
-  const { user, logout } = useAuth();
-  const logoutMutation = useLogout();
-  const { theme, setTheme } = useTheme();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [, setLocation] = useLocation();
-
-  const { data: notifications } = useGetNotifications({
-    query: { ...getGetNotificationsQueryOptions(), enabled: !!user },
-  });
-  const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
-
-  const handleLogout = () => {
-    setMenuOpen(false);
-    logout();
-    setLocation("/auth/login");
-    logoutMutation.mutate(undefined);
-  };
-
-  const effectiveTheme =
-    theme === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      : theme;
-
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-14 flex items-center px-2 sm:px-3 gap-1.5 sm:gap-2">
-      <Link href="/dashboard" className="shrink-0 flex items-center gap-1.5">
-        <img src="/logo.png" alt="TaskEarn Pro" className="w-8 h-8 rounded-lg object-cover" />
-      </Link>
-      <div className="flex-1 min-w-0 bg-muted rounded-full flex items-center px-2.5 py-1.5 gap-1.5 overflow-hidden">
-        <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground truncate min-w-0">Search tasks...</span>
-      </div>
-
-      <Link href="/notifications" className="relative p-1 shrink-0">
-        <Bell className="w-5 h-5 text-muted-foreground" />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Link>
-
-      <button
-        className="p-1 shrink-0 text-muted-foreground"
-        onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
-      >
-        {effectiveTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-      </button>
-
-      <div className="relative shrink-0 mr-1">
-        <button className="flex items-center gap-1.5" onClick={() => setMenuOpen((o) => !o)}>
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">
-            {user?.name?.charAt(0).toUpperCase() ?? "U"}
-          </div>
-          <span className="text-sm font-semibold hidden sm:block max-w-[80px] truncate">
-            {user?.name ?? "User"}
-          </span>
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
-        </button>
-
-        {menuOpen && (
-          <div className="absolute right-0 top-full mt-1 w-44 bg-background border border-border rounded-xl shadow-xl py-1 z-50">
-            <div className="px-3 py-2 border-b border-border">
-              <p className="text-sm font-semibold truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.levelName ?? "🚀 Starter"}</p>
-            </div>
-            <button
-              className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-              onClick={() => { setMenuOpen(false); setLocation("/profile"); }}
-            >
-              <UserCircle className="w-4 h-4" />
-              Profile & Verification
-            </button>
-            {user?.isAdmin && (
-              <button
-                className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                onClick={() => { setMenuOpen(false); setLocation("/admin"); }}
-              >
-                <Settings className="w-4 h-4" />
-                Admin Panel
-              </button>
-            )}
-            <button
-              className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-muted"
-              onClick={handleLogout}
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
-      </div>
-    </header>
-  );
-}
 
 function BottomNav() {
   const [location] = useLocation();
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
-      <div className="flex items-center justify-around h-16">
+    <nav
+      data-testid="bottom-nav"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border"
+    >
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive =
+          const active =
             location === href ||
-            (href === "/dashboard" && (location === "/" || location === "/dashboard"));
+            (href === "/dashboard" && (location === "/" || location === "/dashboard")) ||
+            (href === "/markets" && location.startsWith("/markets"));
           return (
             <Link
               key={href}
               href={href}
+              data-testid={`nav-${label.toLowerCase()}`}
               className={`flex flex-col items-center gap-0.5 py-1 flex-1 transition-colors ${
-                isActive ? "text-primary" : "text-muted-foreground"
+                active ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Icon className="w-[18px] h-[18px]" />
-              <span className="text-[8px] font-medium leading-none">{label}</span>
+              <Icon className={`w-5 h-5 ${active ? "drop-shadow-[0_0_6px_rgba(34,197,94,0.6)]" : ""}`} />
+              <span className="text-[9px] font-semibold leading-none">{label}</span>
             </Link>
           );
         })}
@@ -155,28 +56,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const isAuthPage = location.startsWith("/auth");
+  const isAuthPage   = location.startsWith("/auth");
   const isPublicPage = isAuthPage || location === "/terms";
 
   if (isPublicPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  if (!user) {
-    return <RedirectToLogin />;
-  }
+  if (!user) return <RedirectToLogin />;
 
   return (
     <div className="min-h-screen bg-background">
-      <TopHeader />
-      <main className="pt-14 pb-20">
-        {children}
-      </main>
+      <main className="pb-16 max-w-lg mx-auto">{children}</main>
       <BottomNav />
     </div>
   );
