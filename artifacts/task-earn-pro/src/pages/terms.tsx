@@ -1,193 +1,145 @@
 import { Link } from "wouter";
-import { CircleDollarSign, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const SECTIONS = [
   {
-    title: "1. Eligibility",
+    title: "1. Introduction",
     items: [
-      "Users must be at least 18 years old or have parental or guardian consent where permitted by applicable law.",
-      "Users must provide accurate, complete, and truthful information during registration and verification.",
-      "Only one account per individual is permitted unless explicitly authorized by Task Earn Pro.",
+      'Welcome to Cryptonic ("the Platform"). By registering, accessing, or using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, you must discontinue use immediately.',
     ],
   },
   {
-    title: "2. Account Registration and Security",
+    title: "2. Eligibility",
     items: [
-      "Users are responsible for maintaining the confidentiality of their account credentials.",
-      "Users are responsible for all activities conducted under their accounts.",
-      "Sharing, selling, transferring, or allowing others to use your account is prohibited.",
-      "Task Earn Pro reserves the right to suspend or terminate accounts found to contain false, misleading, or fraudulent information.",
+      "You must be at least 18 years old.",
+      "You must provide accurate and complete registration details.",
+      "Cryptonic reserves the right to verify user identity at any time (KYC).",
     ],
   },
   {
-    title: "3. Services Provided",
-    intro: "Task Earn Pro may provide users with opportunities to participate in:",
+    title: "3. Account Registration",
     items: [
-      "Daily Check-In Rewards",
-      "AI Training Tasks",
-      "Data Categorization",
-      "Text Annotation",
-      "Questionnaires and Surveys",
-      "Sentence Arrangement Tasks",
-      "Product Review Analysis",
-      "Trading Platform Activities",
-      "Digital Gaming Activities",
-      "Promotional Campaigns",
-      "Referral Programs",
-      "Other earning opportunities introduced by Task Earn Pro",
-    ],
-    footer: "Participation in any activity does not guarantee earnings or rewards.",
-  },
-  {
-    title: "4. Task Completion and Reward Rules",
-    items: [
-      "Rewards are granted only after successful validation and approval of completed tasks.",
-      "Certain tasks may require 100% accuracy to qualify for rewards.",
-      "Incorrect, incomplete, duplicate, manipulated, or fraudulent submissions may be rejected without compensation.",
-      "Task Earn Pro reserves the sole right to determine whether a task qualifies for reward issuance.",
+      "Only one account per user is allowed.",
+      "Multiple or duplicate accounts will be suspended.",
+      "You are responsible for safeguarding your login credentials.",
     ],
   },
   {
-    title: "5. Trading Platform Disclaimer",
+    title: "4. Services Provided",
     items: [
-      "Trading activities involve financial risk.",
-      "Users participate in trading-related activities at their own risk.",
-      "Task Earn Pro does not guarantee profits, returns, or successful trading outcomes.",
-      "Users are solely responsible for any financial decisions they make.",
-      "Task Earn Pro shall not be liable for trading losses incurred by users.",
+      "Cryptonic offers a digital trading platform where users predict price movements (BUY/SELL) of financial assets.",
+      "The platform does not provide investment advice or guarantees of profit.",
     ],
   },
   {
-    title: "6. Digital Gaming Disclaimer",
+    title: "5. Risk Disclosure",
     items: [
-      "Digital gaming activities are intended for entertainment and reward purposes only.",
-      "Participation does not guarantee winnings or rewards.",
-      "Users must comply with all applicable laws relating to online gaming in their jurisdiction.",
-      "Any attempt to manipulate, exploit, or cheat gaming systems may result in immediate account termination.",
+      "Trading involves a high level of risk.",
+      "You may lose all your invested capital.",
+      "Trading outcomes are not guaranteed.",
+      "You are solely responsible for your trading decisions.",
     ],
   },
   {
-    title: "7. Identity Verification (KYC)",
-    intro: "To prevent fraud and comply with regulatory requirements, users may be required to complete identity verification, including:",
+    title: "6. Deposits",
     items: [
-      "Government-issued identification verification",
-      "Selfie verification",
-      "Facial recognition verification",
-      "Liveness video verification",
-      "Additional verification checks when necessary",
-    ],
-    footer: "Failure to complete KYC requirements may result in restrictions on account functionality, rewards, or withdrawals.",
-  },
-  {
-    title: "8. Earnings, Rewards, and Bonuses",
-    items: [
-      "Earnings, bonuses, and rewards are subject to verification before approval.",
-      "Welcome bonuses, referral bonuses, promotional rewards, and task rewards may be modified or discontinued at any time.",
-      "Rewards obtained through fraud, abuse, system manipulation, or violation of these Terms may be revoked.",
+      "Deposits can be made via approved payment methods (e.g., M-PESA or other supported channels).",
+      "Funds must originate from accounts owned by you.",
+      "Cryptonic is not responsible for delays caused by payment providers.",
     ],
   },
   {
-    title: "9. Withdrawals",
+    title: "7. Withdrawals",
     items: [
-      "Users must meet the minimum withdrawal threshold before submitting withdrawal requests.",
-      "Withdrawal requests may undergo manual or automated review.",
-      "Processing times may vary depending on payment providers and verification status.",
-      "Task Earn Pro reserves the right to delay, reject, or reverse withdrawals where suspicious activity is detected.",
+      "Withdrawal requests must be submitted through the Platform.",
+      "Identity verification may be required before processing withdrawals.",
+      "Withdrawals will be sent to the registered user's payment account.",
+      "Processing time depends on system checks and third-party providers.",
+      "Suspicious activity may lead to delays or account review.",
     ],
   },
   {
-    title: "10. Prohibited Activities",
+    title: "8. Bonuses & Promotions",
+    items: [
+      "Bonuses are subject to specific conditions and wagering requirements.",
+      "Abuse of promotions (e.g., multiple accounts, hedging, arbitrage) is prohibited.",
+      "Cryptonic reserves the right to revoke bonuses or related profits.",
+    ],
+  },
+  {
+    title: "9. Prohibited Activities",
     intro: "Users are strictly prohibited from:",
     items: [
-      "Creating multiple accounts",
-      "Using bots, scripts, automation software, or artificial methods to complete tasks",
-      "Providing false information",
-      "Manipulating surveys, tasks, games, or trading systems",
-      "Exploiting bugs or platform vulnerabilities",
-      "Engaging in fraudulent, illegal, abusive, or deceptive activities",
-      "Circumventing security measures or KYC requirements",
+      "Engaging in fraud or money laundering",
+      "Using bots, scripts, or automated trading systems without approval",
+      "Exploiting system errors or price delays",
+      "Attempting unauthorized system access",
+    ],
+    footer: "Violations may result in account suspension, termination, or fund restriction.",
+  },
+  {
+    title: "10. Market Data Disclaimer",
+    items: [
+      "Price feeds and charts are sourced from third-party providers.",
+      "Cryptonic does not guarantee accuracy or uninterrupted availability.",
+      "Platform delays or technical errors may occur.",
     ],
   },
   {
-    title: "11. Fraud Prevention",
-    intro: "Task Earn Pro actively monitors platform activity for fraud, abuse, and suspicious behavior. Accounts may be suspended, restricted, or terminated if fraud is suspected, including but not limited to:",
+    title: "11. Trade Execution",
+    intro: "All trades are final once confirmed. Cryptonic is not liable for losses due to:",
     items: [
-      "Multiple account creation",
-      "Identity fraud",
-      "Fake verification documents",
-      "Automated task completion",
-      "Referral abuse",
-      "Payment fraud",
+      "Internet connectivity issues",
+      "Device failure",
+      "User mistakes",
     ],
   },
   {
-    title: "12. Account Suspension and Termination",
-    intro: "Task Earn Pro reserves the right to suspend, restrict, or permanently terminate accounts at its sole discretion where:",
+    title: "12. Fees & Charges",
     items: [
-      "These Terms are violated",
-      "Fraudulent activity is detected",
-      "False information is provided",
-      "Security risks arise",
-      "Legal or regulatory obligations require action",
-    ],
-    footer: "Users whose accounts are terminated may forfeit pending earnings, rewards, and platform privileges where permitted by law.",
-  },
-  {
-    title: "13. Intellectual Property",
-    items: [
-      "All platform content, software, trademarks, logos, graphics, text, designs, and intellectual property remain the exclusive property of Task Earn Pro and its licensors.",
-      "No content may be copied, reproduced, distributed, or modified without written permission.",
+      "Cryptonic may apply transaction or service fees where applicable.",
+      "Fees will be disclosed within the platform.",
     ],
   },
   {
-    title: "14. Privacy",
-    intro: "By using Task Earn Pro, users consent to the collection, processing, storage, and use of personal information for:",
+    title: "13. Limitation of Liability",
     items: [
-      "Account management",
-      "Identity verification",
-      "Fraud prevention",
-      "Reward processing",
-      "Customer support",
-      "Legal compliance",
+      "Cryptonic is not liable for any direct or indirect financial losses.",
+      "Users accept full responsibility for their use of the platform.",
     ],
   },
   {
-    title: "15. Limitation of Liability",
-    intro: 'Task Earn Pro is provided on an "AS IS" and "AS AVAILABLE" basis. To the fullest extent permitted by law, Task Earn Pro shall not be liable for:',
+    title: "14. Account Suspension & Termination",
     items: [
-      "Financial losses",
-      "Trading losses",
-      "Gaming losses",
-      "Loss of earnings",
-      "Service interruptions",
-      "Technical failures",
-      "Third-party payment delays",
-      "Unauthorized account access resulting from user negligence",
+      "Accounts may be suspended for violation of these Terms.",
+      "Funds may be withheld during investigations of suspicious activity.",
     ],
   },
   {
-    title: "16. Modification of Services",
+    title: "15. Anti-Money Laundering (AML) & KYC",
     items: [
-      "Task Earn Pro may modify, suspend, restrict, or discontinue any feature, reward system, game, task category, trading activity, or service without prior notice.",
+      "Users must comply with AML regulations.",
+      "Verification documents may be requested at any time.",
+      "Failure to comply may result in account restriction.",
     ],
   },
   {
-    title: "17. Amendments to These Terms",
+    title: "16. Privacy Policy",
     items: [
-      "Task Earn Pro reserves the right to update these Terms and Conditions at any time.",
-      "Continued use of the platform following any update constitutes acceptance of the revised Terms.",
+      "User information is handled according to our Privacy Policy.",
+    ],
+  },
+  {
+    title: "17. Amendments",
+    items: [
+      "Cryptonic reserves the right to modify these Terms at any time.",
+      "Continued use indicates acceptance of updated Terms.",
     ],
   },
   {
     title: "18. Governing Law",
     items: [
-      "These Terms and Conditions shall be governed by and interpreted in accordance with the laws of Kenya.",
-    ],
-  },
-  {
-    title: "19. Contact Information",
-    items: [
-      "For questions, complaints, or support inquiries, contact Task Earn Pro Support at: support@taskearnpro.com",
+      "These Terms shall be governed by the laws of the applicable jurisdiction where Cryptonic operates.",
     ],
   },
 ];
@@ -198,16 +150,12 @@ export default function Terms() {
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <CircleDollarSign className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-sm">TaskEarn Pro</span>
-          </div>
-          <Link href="/auth/register"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/auth/register"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            Back to Cryptonic
           </Link>
         </div>
       </div>
@@ -216,21 +164,23 @@ export default function Terms() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         {/* Title block */}
         <div className="mb-8">
-          <h1 className="text-3xl font-extrabold mb-2">Terms and Conditions</h1>
-          <p className="text-muted-foreground text-sm">Effective Date: June 2026</p>
+          <h1 className="text-3xl font-extrabold mb-1">Terms &amp; Conditions</h1>
+          <p className="text-muted-foreground text-sm">
+            Cryptonic — please read carefully before using the platform.
+          </p>
         </div>
 
-        {/* Intro */}
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 mb-8">
+        {/* Intro banner */}
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8">
           <p className="text-sm leading-relaxed text-foreground/80">
-            Welcome to Task Earn Pro. By accessing, registering, or using our platform, you agree to comply with
-            and be legally bound by these Terms and Conditions. If you do not agree with any part of these Terms,
-            you must discontinue use of the platform immediately.
+            Welcome to Cryptonic ("the Platform"). By registering, accessing, or using our services,
+            you agree to comply with and be bound by these Terms and Conditions. If you do not agree,
+            you must discontinue use immediately.
           </p>
         </div>
 
         {/* Sections */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {SECTIONS.map((s) => (
             <div key={s.title} className="border border-border rounded-xl overflow-hidden">
               <div className="bg-muted/40 px-5 py-3 border-b border-border">
@@ -243,13 +193,13 @@ export default function Terms() {
                 <ul className="space-y-2">
                   {s.items.map((item, i) => (
                     <li key={i} className="flex gap-2.5 text-sm">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                       <span className="text-foreground/80 leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
                 {s.footer && (
-                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-2">{s.footer}</p>
+                  <p className="text-sm text-warning font-medium mt-2">{s.footer}</p>
                 )}
               </div>
             </div>
@@ -258,12 +208,12 @@ export default function Terms() {
 
         {/* Footer agreement */}
         <div className="mt-8 border border-border rounded-xl p-5 bg-muted/30 text-sm text-muted-foreground leading-relaxed">
-          By creating an account, accessing, or using Task Earn Pro, you acknowledge that you have read, understood,
-          and agreed to these Terms and Conditions.
+          By creating an account, accessing, or using Cryptonic, you acknowledge that you have read,
+          understood, and agreed to these Terms and Conditions.
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          © 2026 TaskEarn Pro · support@taskearnpro.com
+          © 2026 Cryptonic · All rights reserved
         </p>
       </div>
     </div>
