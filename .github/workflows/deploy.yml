@@ -30,7 +30,15 @@ jobs:
         run: |
           mkdir -p artifacts/task-earn-pro/.vercel/output/static
           cp -r artifacts/task-earn-pro/dist/. artifacts/task-earn-pro/.vercel/output/static/
-          echo '{"version":3}' > artifacts/task-earn-pro/.vercel/output/config.json
+          cat > artifacts/task-earn-pro/.vercel/output/config.json << 'EOF'
+          {
+            "version": 3,
+            "routes": [
+              { "handle": "filesystem" },
+              { "src": "/(.*)", "dest": "/index.html" }
+            ]
+          }
+          EOF
 
       - name: Pull Vercel project settings
         working-directory: artifacts/task-earn-pro
