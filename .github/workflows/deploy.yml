@@ -38,7 +38,7 @@ jobs:
         working-directory: artifacts/task-earn-pro
         run: |
           mkdir -p .vercel/output/static
-          cp -r dist/. .vercel/output/static/
+          cp -r dist/public/. .vercel/output/static/
           python3 -c "
           import json
           config = {
