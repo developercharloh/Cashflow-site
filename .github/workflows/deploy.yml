@@ -26,35 +26,36 @@ jobs:
       - name: Build frontend
         run: pnpm --filter @workspace/task-earn-pro run build
 
-      - name: Structure Vercel prebuilt output
-        run: |
-          mkdir -p artifacts/task-earn-pro/.vercel/output/static
-          cp -r artifacts/task-earn-pro/dist/. artifacts/task-earn-pro/.vercel/output/static/
-          cat > artifacts/task-earn-pro/.vercel/output/config.json << 'EOF'
-          {
-            "version": 3,
-            "routes": [
-              { "handle": "filesystem" },
-              { "src": "/(.*)", "dest": "/index.html" }
-            ]
-          }
-          EOF
-
       - name: Pull Vercel project settings
         working-directory: artifacts/task-earn-pro
-        run: |
-          npx vercel pull --yes --environment=production \
-            --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+        run: npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      - name: Deploy prebuilt output to Vercel
+      - name: Structure Vercel prebuilt output
         working-directory: artifacts/task-earn-pro
         run: |
-          npx vercel deploy --prebuilt --prod \
-            --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+          mkdir -p .vercel/output/static
+          cp -r dist/. .vercel/output/static/
+          python3 -c "
+          import json
+          config = {
+            'version': 3,
+            'routes': [
+              {'handle': 'filesystem'},
+              {'src': '/(.*)', 'dest': '/index.html'}
+            ]
+          }
+          print(json.dumps(config, indent=2))
+          " > .vercel/output/config.json
+          echo "=== config.json ===" && cat .vercel/output/config.json
+          echo "=== static files ===" && ls .vercel/output/static/
+
+      - name: Deploy prebuilt output to Vercel
+        working-directory: artifacts/task-earn-pro
+        run: npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
