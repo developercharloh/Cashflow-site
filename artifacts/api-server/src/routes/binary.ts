@@ -11,7 +11,6 @@ const STATIC_PAYOUTS: Partial<Record<Direction, number>> = {
   rise: 1.85, fall: 1.85, even: 1.90, odd: 1.90, matches: 9.00, differs: 1.10,
 };
 
-/** Over [n]: 9-n winning digits. Under [n]: n winning digits. 5% house edge. */
 function overUnderPayout(dir: "over" | "under", barrier: number): number {
   const winCount = dir === "over" ? 9 - barrier : barrier;
   if (winCount <= 0) return 9.50;
@@ -33,7 +32,15 @@ function generateWin(direction: Direction, lastDigit: number, barrier: number): 
 
 router.post("/binary/trade", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { stake, direction, barrier = 5, isDemo } = req.body;
+    const {
+      stake,
+      direction,
+      barrier = 5,
+      isDemo,
+      market = "Signal",
+      contractType = "",
+    } = req.body;
+
     if (!stake || stake <= 0 || !direction) {
       res.status(400).json({ error: "Invalid trade parameters" }); return;
     }
@@ -47,6 +54,10 @@ router.post("/binary/trade", requireAuth, async (req: AuthRequest, res) => {
       : (STATIC_PAYOUTS[dir] ?? 1.85);
     const payout = win ? Math.round(stake * multiplier * 100) / 100 : 0;
     const netChange = Math.round((payout - stake) * 100) / 100;
+
+    const label = contractType || dir.toUpperCase();
+    const winEmoji = win ? "✅" : "❌";
+    const description = `${market} | ${label} → ${win ? "WIN" : "LOSS"} — $${Number(stake).toFixed(2)}`;
 
     if (isDemo) {
       res.json({ win, payout, netChange, lastDigit }); return;
@@ -64,7 +75,7 @@ router.post("/binary/trade", requireAuth, async (req: AuthRequest, res) => {
       type: win ? "earning" : "withdrawal",
       amount: win ? payout : stake,
       status: "completed",
-      description: `Binary ${dir.toUpperCase()} ${win ? "WIN" : "LOSS"} — stake $${stake.toFixed(2)}`,
+      description,
     });
 
     res.json({ win, payout, netChange, lastDigit, newBalance });

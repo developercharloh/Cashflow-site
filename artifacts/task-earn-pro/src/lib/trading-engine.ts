@@ -1,182 +1,242 @@
-// ─── Trading Engine: synthetic market data, tick simulation, signal generation ───
+// ────────────────────────────────────────────────────────────
+//  Elite Signals Pro – Trading Engine
+//  Deriv Volatility Indices · Digit Contracts
+// ────────────────────────────────────────────────────────────
 
 export interface MarketDef {
   id: string;
-  symbol: string;
   name: string;
-  category: "digits" | "updown" | "highslows";
-  contractTypes: ContractType[];
-  vol: number;
-  base: number;
-  icon: string;
-  iconBg: string;
-  pips: number; // decimal places for price display
+  shortName: string;
+  vol: number; // volatility factor
+  basePrice: number;
+  pips: number;
+  color: string;
 }
 
-export type ContractType =
-  | "even-odd"
-  | "over-under"
-  | "matches-differs"
-  | "rise-fall"
-  | "higher-lower"
-  | "touch-notouch";
-
 export interface TickStats {
-  lastPrice: number;
+  ticks: number[];
   lastDigit: number;
-  digits: number[]; // last 1000 last-digits
-  digitFreq: number[]; // [0..9] count
-  digitPct: number[]; // [0..9] percentage
+  digitFreq: number[];       // freq[0..9] = count
+  digitPct: number[];        // pct[0..9] = percentage
   evenCount: number;
   oddCount: number;
   evenPct: number;
   oddPct: number;
-  mostFrequent: { digit: number; pct: number };
-  leastFrequent: { digit: number; pct: number };
-  ticks: { price: number; idx: number }[];
+  mostFrequent: number;
+  leastFrequent: number;
+  avgDigit: number;
 }
 
-export interface Signal {
-  id: string;
-  symbol: string;
-  market: string;
-  contractType: ContractType;
-  direction: string;
-  confidence: number;
-  status: "active" | "won" | "lost" | "pending";
-  timestamp: Date;
-  payout?: number;
+export interface AISignal {
+  direction: "even" | "odd" | "over" | "under" | "matches" | "differs";
+  barrier: number;          // 0-9 (used by over/under and matches/differs)
+  contractType: string;     // human readable: "Even/Odd", "Over 5", "Matches 7"
+  contractLabel: string;    // full label e.g. "ODD" "OVER 5" "MATCHES 7"
+  payout: number;           // multiplier e.g. 1.90
+  confidence: number;       // 0-100
+  reasoning: string;
 }
 
 export interface TradeRecord {
   id: string;
-  symbol: string;
   market: string;
-  contractType: ContractType;
+  marketName: string;
+  contractType: string;
+  contractLabel: string;
   direction: string;
   stake: number;
   payout: number;
-  profit: number;
-  outcome: "won" | "lost";
+  netChange: number;
+  win: boolean;
+  lastDigit: number;
   timestamp: Date;
+  status: "analyzing" | "executing" | "complete";
 }
 
-// ─── Deriv Synthetic Index catalogue ──────────────────────────────────────────
-
-export const MARKETS: MarketDef[] = [
-  // Digits
-  { id: "1HZ10V",  symbol: "1HZ10V",  name: "Volatility 10 (1s) Index",  category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0004, base: 5000, icon: "EO", iconBg: "bg-purple-600",  pips: 2 },
-  { id: "R_10",    symbol: "R_10",    name: "Volatility 10 Index",        category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0005, base: 5200, icon: "EO", iconBg: "bg-purple-500",  pips: 2 },
-  { id: "1HZ25V",  symbol: "1HZ25V",  name: "Volatility 25 (1s) Index",  category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0012, base: 3200, icon: "OU", iconBg: "bg-orange-500",  pips: 2 },
-  { id: "R_25",    symbol: "R_25",    name: "Volatility 25 Index",        category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0013, base: 3400, icon: "OU", iconBg: "bg-orange-400",  pips: 2 },
-  { id: "1HZ50V",  symbol: "1HZ50V",  name: "Volatility 50 (1s) Index",  category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0025, base: 2100, icon: "MD", iconBg: "bg-yellow-500",  pips: 2 },
-  { id: "R_50",    symbol: "R_50",    name: "Volatility 50 Index",        category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0027, base: 2300, icon: "MD", iconBg: "bg-yellow-400",  pips: 2 },
-  { id: "1HZ75V",  symbol: "1HZ75V",  name: "Volatility 75 (1s) Index",  category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0040, base: 1400, icon: "MD", iconBg: "bg-red-500",     pips: 2 },
-  { id: "R_75",    symbol: "R_75",    name: "Volatility 75 Index",        category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0045, base: 1600, icon: "MD", iconBg: "bg-red-400",     pips: 2 },
-  { id: "1HZ100V", symbol: "1HZ100V", name: "Volatility 100 (1s) Index", category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.0065, base: 850,  icon: "MD", iconBg: "bg-pink-600",    pips: 2 },
-  { id: "R_100",   symbol: "R_100",   name: "Volatility 100 Index",       category: "digits",    contractTypes: ["even-odd","over-under","matches-differs"], vol: 0.007,  base: 950,  icon: "MD", iconBg: "bg-pink-500",    pips: 2 },
-  // Up & Down
-  { id: "R_10_RF", symbol: "R_10",    name: "Volatility 10 Index",        category: "updown",    contractTypes: ["rise-fall","higher-lower"], vol: 0.0005, base: 5200, icon: "RF", iconBg: "bg-green-600",  pips: 2 },
-  { id: "R_25_RF", symbol: "R_25",    name: "Volatility 25 Index",        category: "updown",    contractTypes: ["rise-fall","higher-lower"], vol: 0.0013, base: 3400, icon: "HL", iconBg: "bg-blue-500",   pips: 2 },
-  { id: "R_50_RF", symbol: "R_50",    name: "Volatility 50 Index",        category: "updown",    contractTypes: ["rise-fall","higher-lower"], vol: 0.0027, base: 2300, icon: "RF", iconBg: "bg-teal-500",   pips: 2 },
-  { id: "JD10",    symbol: "JD10",    name: "Jump 10 Index",              category: "updown",    contractTypes: ["rise-fall"], vol: 0.003, base: 900,  icon: "RF", iconBg: "bg-indigo-500", pips: 2 },
-  { id: "JD25",    symbol: "JD25",    name: "Jump 25 Index",              category: "updown",    contractTypes: ["rise-fall"], vol: 0.005, base: 700,  icon: "RF", iconBg: "bg-indigo-600", pips: 2 },
-  { id: "JD50",    symbol: "JD50",    name: "Jump 50 Index",              category: "updown",    contractTypes: ["rise-fall"], vol: 0.008, base: 500,  icon: "RF", iconBg: "bg-violet-500", pips: 2 },
-  // Highs & Lows
-  { id: "R_10_HL", symbol: "R_10",    name: "Volatility 10 Index",        category: "highslows", contractTypes: ["touch-notouch"], vol: 0.0005, base: 5200, icon: "TN", iconBg: "bg-rose-500",   pips: 2 },
-  { id: "R_25_HL", symbol: "R_25",    name: "Volatility 25 Index",        category: "highslows", contractTypes: ["touch-notouch"], vol: 0.0013, base: 3400, icon: "TN", iconBg: "bg-rose-600",   pips: 2 },
-  { id: "R_50_HL", symbol: "R_50",    name: "Volatility 50 Index",        category: "highslows", contractTypes: ["touch-notouch"], vol: 0.0027, base: 2300, icon: "TN", iconBg: "bg-fuchsia-600", pips: 2 },
-  { id: "stpidx",  symbol: "stpidx",  name: "Step Index",                 category: "highslows", contractTypes: ["touch-notouch","rise-fall"], vol: 0.0010, base: 8000, icon: "TN", iconBg: "bg-cyan-600",   pips: 2 },
-  { id: "BOOM300", symbol: "BOOM300", name: "Boom 300 Index",             category: "highslows", contractTypes: ["touch-notouch","rise-fall"], vol: 0.0020, base: 2900, icon: "TN", iconBg: "bg-amber-600",  pips: 2 },
-  { id: "BOOM500", symbol: "BOOM500", name: "Boom 500 Index",             category: "highslows", contractTypes: ["touch-notouch","rise-fall"], vol: 0.0015, base: 4000, icon: "TN", iconBg: "bg-amber-500",  pips: 2 },
-  { id: "CRASH300",symbol: "CRASH300",name: "Crash 300 Index",            category: "highslows", contractTypes: ["touch-notouch","rise-fall"], vol: 0.0020, base: 2900, icon: "TN", iconBg: "bg-red-700",    pips: 2 },
-  { id: "CRASH500",symbol: "CRASH500",name: "Crash 500 Index",            category: "highslows", contractTypes: ["touch-notouch","rise-fall"], vol: 0.0015, base: 4000, icon: "TN", iconBg: "bg-red-600",    pips: 2 },
+// ─── Deriv Volatility Indices (Digits) ───────────────────────
+export const DIGIT_MARKETS: MarketDef[] = [
+  { id: "R_10",     name: "Volatility 10 Index",       shortName: "V10",      vol: 0.0010, basePrice: 3215.45, pips: 2, color: "#4ade80" },
+  { id: "1HZ10V",   name: "Volatility 10 (1s) Index",  shortName: "V10 (1s)", vol: 0.0010, basePrice: 1245.12, pips: 2, color: "#34d399" },
+  { id: "R_25",     name: "Volatility 25 Index",       shortName: "V25",      vol: 0.0025, basePrice: 5672.33, pips: 2, color: "#22d3ee" },
+  { id: "1HZ25V",   name: "Volatility 25 (1s) Index",  shortName: "V25 (1s)", vol: 0.0025, basePrice: 2341.67, pips: 2, color: "#38bdf8" },
+  { id: "R_50",     name: "Volatility 50 Index",       shortName: "V50",      vol: 0.0050, basePrice: 4823.19, pips: 2, color: "#818cf8" },
+  { id: "1HZ50V",   name: "Volatility 50 (1s) Index",  shortName: "V50 (1s)", vol: 0.0050, basePrice: 1987.54, pips: 2, color: "#a78bfa" },
+  { id: "R_75",     name: "Volatility 75 Index",       shortName: "V75",      vol: 0.0075, basePrice: 7234.88, pips: 2, color: "#f472b6" },
+  { id: "1HZ75V",   name: "Volatility 75 (1s) Index",  shortName: "V75 (1s)", vol: 0.0075, basePrice: 3156.43, pips: 2, color: "#fb7185" },
+  { id: "R_100",    name: "Volatility 100 Index",      shortName: "V100",     vol: 0.0100, basePrice: 9412.67, pips: 2, color: "#fb923c" },
+  { id: "1HZ100V",  name: "Volatility 100 (1s) Index", shortName: "V100(1s)", vol: 0.0100, basePrice: 4567.21, pips: 2, color: "#fbbf24" },
 ];
 
-// ─── Payout tables matching Deriv ─────────────────────────────────────────────
-
-export const PAYOUTS: Record<string, number> = {
-  even: 1.90, odd: 1.90,
-  rise: 1.85, fall: 1.85,
-  higher: 1.85, lower: 1.85,
-  matches: 9.00, differs: 1.10,
-  touch: 1.75, notouch: 1.90,
-};
-
-// Over/Under payouts: digits that can win = (9 - barrier) for over, barrier for under
-export function getOverUnderPayout(dir: "over" | "under", barrier: number): number {
-  const winDigits = dir === "over" ? 9 - barrier : barrier;
-  if (winDigits <= 0) return 9.50;
-  return Math.round((0.95 / (winDigits / 10)) * 100) / 100;
+// ─── Tick Simulation ─────────────────────────────────────────
+export function buildTicks(market: MarketDef, count = 100): number[] {
+  let price = market.basePrice;
+  const ticks: number[] = [];
+  for (let i = 0; i < count; i++) {
+    price = Math.max(0.01, price * (1 + (Math.random() - 0.5) * 2 * market.vol));
+    ticks.push(price);
+  }
+  return ticks;
 }
 
-// ─── Tick helpers ─────────────────────────────────────────────────────────────
-
-export function lastDigit(price: number): number {
+export function getLastDigit(price: number): number {
   return Math.floor(Math.round(price * 100)) % 10;
 }
 
-export function nextPrice(p: number, vol: number): number {
-  return Math.max(0.01, p * (1 + (Math.random() - 0.5) * 2 * vol));
-}
-
-export function buildTicks(base: number, vol: number, n = 60): { price: number; idx: number }[] {
-  let p = base;
-  return Array.from({ length: n }, (_, i) => { p = nextPrice(p, vol); return { price: p, idx: i }; });
-}
-
-// ─── 1000-tick stats ──────────────────────────────────────────────────────────
-
-export function computeTickStats(ticks: { price: number; idx: number }[], lastPrice: number): TickStats {
-  // last 1000 digit samples
-  const allTicks = ticks.length > 1000 ? ticks.slice(-1000) : ticks;
-  const digits = allTicks.map(t => lastDigit(t.price));
-  const digitFreq = Array(10).fill(0) as number[];
-  for (const d of digits) digitFreq[d]++;
-  const n = digits.length || 1;
-  const digitPct = digitFreq.map(c => Math.round((c / n) * 1000) / 10);
-  const even = digits.filter(d => d % 2 === 0).length;
-  const odd  = n - even;
-  const ld = lastDigit(lastPrice);
-  const maxIdx = digitFreq.indexOf(Math.max(...digitFreq));
-  const minIdx = digitFreq.indexOf(Math.min(...digitFreq));
+// ─── Tick Statistics ─────────────────────────────────────────
+export function computeTickStats(ticks: number[]): TickStats {
+  const digits = ticks.map(getLastDigit);
+  const digitFreq = Array(10).fill(0);
+  let evenCount = 0, oddCount = 0;
+  for (const d of digits) {
+    digitFreq[d]++;
+    if (d % 2 === 0) evenCount++; else oddCount++;
+  }
+  const total = digits.length || 1;
+  const digitPct = digitFreq.map(f => Math.round((f / total) * 100));
+  const evenPct = Math.round((evenCount / total) * 100);
+  const oddPct = 100 - evenPct;
+  const mostFrequent = digitFreq.indexOf(Math.max(...digitFreq));
+  const leastFrequent = digitFreq.indexOf(Math.min(...digitFreq));
+  const avgDigit = Math.round(digits.reduce((a, b) => a + b, 0) / total * 10) / 10;
   return {
-    lastPrice, lastDigit: ld, digits, digitFreq, digitPct,
-    evenCount: even, oddCount: odd,
-    evenPct: Math.round((even / n) * 1000) / 10,
-    oddPct:  Math.round((odd  / n) * 1000) / 10,
-    mostFrequent:  { digit: maxIdx, pct: digitPct[maxIdx] },
-    leastFrequent: { digit: minIdx, pct: digitPct[minIdx] },
-    ticks: allTicks,
+    ticks,
+    lastDigit: digits[digits.length - 1],
+    digitFreq, digitPct,
+    evenCount, oddCount,
+    evenPct, oddPct,
+    mostFrequent, leastFrequent,
+    avgDigit,
   };
 }
 
-// ─── Signal generation (deterministic from tick stats) ────────────────────────
-
-export function generateSignal(stats: TickStats, market: MarketDef): { direction: string; confidence: number; contractType: ContractType } {
-  const { evenPct, leastFrequent, digitPct, lastDigit: ld } = stats;
-  // Even/Odd: bias toward the side that's been winning less (reversion)
-  if (market.contractTypes.includes("even-odd")) {
-    const dir = evenPct < 50 ? "EVEN" : "ODD";
-    const imbalance = Math.abs(evenPct - 50);
-    const conf = Math.min(95, 75 + imbalance * 1.5);
-    return { direction: dir, confidence: Math.round(conf), contractType: "even-odd" };
-  }
-  if (market.contractTypes.includes("rise-fall")) {
-    // Use price trend: last vs 5 ticks ago
-    const ticks = stats.ticks;
-    const trend = ticks.length > 5 ? ticks[ticks.length - 1].price - ticks[ticks.length - 5].price : 0;
-    const dir = trend >= 0 ? "RISE" : "FALL";
-    const conf = Math.min(93, 70 + Math.abs(trend / ticks[ticks.length - 1].price) * 5000);
-    return { direction: dir, confidence: Math.round(conf), contractType: "rise-fall" };
-  }
-  if (market.contractTypes.includes("touch-notouch")) {
-    const dir = ld > 5 ? "NO TOUCH" : "TOUCH";
-    return { direction: dir, confidence: 73 + Math.floor(Math.random() * 12), contractType: "touch-notouch" };
-  }
-  return { direction: "EVEN", confidence: 80, contractType: "even-odd" };
+// ─── Over/Under Payout ───────────────────────────────────────
+export function overUnderPayout(dir: "over" | "under", barrier: number): number {
+  const winCount = dir === "over" ? 9 - barrier : barrier;
+  if (winCount <= 0) return 9.50;
+  return Math.round((0.95 / (winCount / 10)) * 100) / 100;
 }
 
-export type AccountMode = "demo" | "real";
+// ─── AI Signal Generation ────────────────────────────────────
+export function generateAISignal(ticks: number[], _market: MarketDef): AISignal {
+  const stats = computeTickStats(ticks.slice(-100));
+  const last20 = ticks.slice(-20).map(getLastDigit);
+  const last20Even = last20.filter(d => d % 2 === 0).length;
+  const last20Odd = 20 - last20Even;
+  const avgLast10 = ticks.slice(-10).map(getLastDigit).reduce((a, b) => a + b, 0) / 10;
 
+  // Strategy 1: DIFFERS — pick most frequent digit (high win rate ~90%)
+  const mfDigit = stats.mostFrequent;
+  const mfPct = stats.digitPct[mfDigit];
+  if (mfPct >= 18) {
+    return {
+      direction: "differs",
+      barrier: mfDigit,
+      contractType: `Differs`,
+      contractLabel: `DIFFERS ${mfDigit}`,
+      payout: 1.10,
+      confidence: Math.min(94, 72 + mfPct),
+      reasoning: `Digit ${mfDigit} dominant at ${mfPct}% — high DIFFERS probability`,
+    };
+  }
+
+  // Strategy 2: EVEN/ODD contrarian
+  const evenImbalance = Math.abs(last20Even - last20Odd);
+  if (evenImbalance >= 5) {
+    const dir = last20Even > last20Odd ? "odd" : "even"; // contrarian
+    const label = dir.toUpperCase();
+    const pct = dir === "odd" ? last20Odd : last20Even;
+    return {
+      direction: dir,
+      barrier: 0,
+      contractType: "Even/Odd",
+      contractLabel: label,
+      payout: 1.90,
+      confidence: Math.min(91, 68 + evenImbalance * 2),
+      reasoning: `${dir === "odd" ? "Even" : "Odd"} dominant (${Math.round((last20Even / 20) * 100)}% even last 20) — contrarian ${label}`,
+    };
+  }
+
+  // Strategy 3: OVER/UNDER based on digit average
+  if (avgLast10 >= 6.5) {
+    // High digits dominating → expect reversion → UNDER 5
+    return {
+      direction: "under",
+      barrier: 5,
+      contractType: "Under",
+      contractLabel: "UNDER 5",
+      payout: overUnderPayout("under", 5),
+      confidence: Math.min(88, 60 + Math.round((avgLast10 - 5) * 8)),
+      reasoning: `High digit avg (${avgLast10.toFixed(1)}) → UNDER 5 reversion play`,
+    };
+  }
+  if (avgLast10 <= 3.5) {
+    // Low digits dominating → OVER 4
+    return {
+      direction: "over",
+      barrier: 4,
+      contractType: "Over",
+      contractLabel: "OVER 4",
+      payout: overUnderPayout("over", 4),
+      confidence: Math.min(88, 60 + Math.round((5 - avgLast10) * 8)),
+      reasoning: `Low digit avg (${avgLast10.toFixed(1)}) → OVER 4 reversion play`,
+    };
+  }
+
+  // Strategy 4: MATCHES — low frequency digit (rare but 9x payout)
+  const lfDigit = stats.leastFrequent;
+  const lfPct = stats.digitPct[lfDigit];
+  if (lfPct <= 5) {
+    return {
+      direction: "matches",
+      barrier: lfDigit,
+      contractType: "Matches",
+      contractLabel: `MATCHES ${lfDigit}`,
+      payout: 9.00,
+      confidence: Math.min(72, 45 + (10 - lfPct) * 2),
+      reasoning: `Digit ${lfDigit} underrepresented (${lfPct}%) — MATCHES bounce play`,
+    };
+  }
+
+  // Fallback: EVEN/ODD based on overall balance
+  const dir = stats.evenPct > 50 ? "odd" : "even";
+  return {
+    direction: dir,
+    barrier: 0,
+    contractType: "Even/Odd",
+    contractLabel: dir.toUpperCase(),
+    payout: 1.90,
+    confidence: Math.min(85, 65 + Math.abs(stats.evenPct - 50)),
+    reasoning: `Default contrarian: ${dir.toUpperCase()} on ${stats.evenPct}% even balance`,
+  };
+}
+
+// ─── Legacy exports (backward compat) ─────────────────────────
+export const MARKETS = DIGIT_MARKETS;
+export type { AISignal as Signal };
 export const DEMO_START = 10000;
+
+export type AccountMode = "demo" | "real";
+export type ContractType = "even-odd" | "over-under" | "matches-differs" | "rise-fall";
+
+export const PAYOUTS: Record<string, number> = {
+  even: 1.90, odd: 1.90, matches: 9.00, differs: 1.10, rise: 1.85, fall: 1.85,
+};
+export const getOverUnderPayout = overUnderPayout;
+export const lastDigit = getLastDigit;
+
+/** @deprecated use generateAISignal */
+export function generateSignal(stats: TickStats, _market: MarketDef) {
+  const dir = stats.evenPct > 50 ? "odd" : "even";
+  const imbalance = Math.abs(stats.evenPct - 50);
+  return {
+    direction: dir as "even" | "odd",
+    contractType: "even-odd" as ContractType,
+    confidence: Math.min(92, 70 + imbalance * 1.5),
+    payout: 1.90,
+  };
+}
+
+/** next tick price helper */
+export function nextPrice(price: number, vol: number): number {
+  return Math.max(0.01, price * (1 + (Math.random() - 0.5) * 2 * vol));
+}
