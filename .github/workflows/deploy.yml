@@ -44,6 +44,11 @@ jobs:
           config = {
             'version': 3,
             'routes': [
+              {
+                'src': '/api/(.*)',
+                'dest': 'https://github-importer-jakejamesgu.replit.app/api/\$1',
+                'headers': {'X-Forwarded-Host': 'elite-signals-pro-alpha.vercel.app'}
+              },
               {'handle': 'filesystem'},
               {'src': '/(.*)', 'dest': '/index.html'}
             ]
