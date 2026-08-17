@@ -1,13 +1,13 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Home, BarChart2, Zap, Clock, Settings } from "lucide-react";
+import { Home, BarChart2, Zap, Wallet, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home",     icon: Home },
   { href: "/markets",   label: "Markets",  icon: BarChart2 },
   { href: "/signals",   label: "Signals",  icon: Zap },
-  { href: "/history",   label: "History",  icon: Clock },
+  { href: "/wallet",    label: "Wallet",   icon: Wallet },
   { href: "/settings",  label: "Settings", icon: Settings },
 ];
 

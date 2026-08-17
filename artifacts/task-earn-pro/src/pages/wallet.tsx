@@ -213,12 +213,27 @@ export default function WalletPage() {
     });
   };
 
-  // Auto-verify pending deposits on every wallet load
+  // Auto-verify pending deposits + auto-complete stale pending transactions on every wallet load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reference") || params.get("trxref")) {
       window.history.replaceState({}, "", window.location.pathname);
     }
+
+    // Auto-complete stale pending transactions (>5 min old)
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch("/api/wallet/auto-complete", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()).then(data => {
+        if (data.completed > 0) {
+          toast({ title: "Transactions Updated", description: `${data.completed} pending transaction${data.completed > 1 ? "s" : ""} marked as completed.` });
+          invalidate();
+        }
+      }).catch(() => {});
+    }
+
     verifyPendingMutation.mutate(undefined, {
       onSuccess: (data) => {
         if (data.count > 0) {

@@ -26,6 +26,7 @@ import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
 import AdminKycPage from "@/pages/admin/kyc";
 import CallbackPage from "@/pages/callback";
+import WalletPage from "@/pages/wallet";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -48,6 +49,7 @@ function Router() {
         <Route path="/signals"             component={SignalsPage} />
         <Route path="/analytics"           component={AnalyticsPage} />
         <Route path="/history"             component={HistoryPage} />
+        <Route path="/wallet"              component={WalletPage} />
         <Route path="/settings"            component={SettingsPage} />
         <Route path="/binary"              component={BinaryTradingPage} />
         <Route path="/auth/login"          component={Login} />

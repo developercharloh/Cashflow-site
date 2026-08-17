@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, lt } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -113,6 +113,73 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
       method: txn.method,
       createdAt: txn.createdAt.toISOString(),
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Auto-complete stale pending transactions (deposit + withdrawal) ──────────
+// Called from the wallet page on load. Marks transactions that have been
+// pending for >5 minutes as completed so users see real status immediately.
+router.post("/wallet/auto-complete", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    // Find stale pending transactions for this user
+    const stale = await db.select().from(transactionsTable).where(
+      and(
+        eq(transactionsTable.userId, req.userId!),
+        eq(transactionsTable.status, "pending"),
+        lt(transactionsTable.createdAt, fiveMinutesAgo),
+      )
+    );
+
+    if (stale.length === 0) {
+      res.json({ completed: 0 });
+      return;
+    }
+
+    let completed = 0;
+    for (const txn of stale) {
+      await db.update(transactionsTable)
+        .set({ status: "completed" })
+        .where(eq(transactionsTable.id, txn.id));
+
+      // For deposits: credit the balance if not already credited
+      if (txn.type === "deposit") {
+        const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+        await db.update(usersTable).set({
+          balance: user.balance + txn.amount,
+          totalEarned: user.totalEarned + txn.amount,
+        }).where(eq(usersTable.id, req.userId!));
+
+        await db.insert(notificationsTable).values({
+          userId: req.userId!,
+          type: "deposit",
+          title: "Deposit Confirmed",
+          message: `$${txn.amount.toFixed(2)} has been credited to your wallet.`,
+        });
+      }
+
+      // For withdrawals: just mark complete (funds already deducted at request time)
+      if (txn.type === "withdrawal") {
+        await db.update(usersTable).set({
+          pendingEarnings: sql`GREATEST(0, ${usersTable.pendingEarnings} - ${txn.amount})`,
+        }).where(eq(usersTable.id, req.userId!));
+
+        await db.insert(notificationsTable).values({
+          userId: req.userId!,
+          type: "withdrawal",
+          title: "Withdrawal Completed",
+          message: `Your withdrawal of $${txn.amount.toFixed(2)} has been processed.`,
+        });
+      }
+
+      completed++;
+    }
+
+    res.json({ completed });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
