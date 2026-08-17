@@ -119,6 +119,56 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── Crypto wallet addresses (from env) ──────────────────────────────────────
+router.get("/wallet/crypto-config", requireAuth, async (_req, res) => {
+  res.json({
+    trc20: process.env.USDT_TRC20_ADDRESS ?? "",
+    bep20: process.env.USDT_BEP20_ADDRESS ?? "",
+    erc20: process.env.USDT_ERC20_ADDRESS ?? "",
+    paypalEmail: process.env.PAYPAL_DEPOSIT_EMAIL ?? "",
+  });
+});
+
+// ─── Submit crypto / PayPal deposit (manual confirmation) ────────────────────
+router.post("/wallet/crypto-deposit", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { amount, method, txHash, network } = req.body;
+    if (!amount || amount <= 0) { res.status(400).json({ error: "Invalid amount" }); return; }
+    if (!method) { res.status(400).json({ error: "Method required" }); return; }
+    if (!txHash?.trim()) { res.status(400).json({ error: "Transaction hash / reference is required" }); return; }
+
+    const labelMap: Record<string, string> = {
+      "usdt-trc20": "USDT TRC-20",
+      "usdt-bep20": "USDT BEP-20",
+      "usdt-erc20": "USDT ERC-20",
+      "paypal": "PayPal",
+    };
+    const label = labelMap[method] ?? method;
+
+    await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      amount,
+      status: "pending",
+      description: `${label} deposit of $${Number(amount).toFixed(2)} — TX: ${txHash.trim()}`,
+      method,
+      accountDetails: txHash.trim(),
+    });
+
+    await db.insert(notificationsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      title: "Deposit Submitted",
+      message: `Your $${Number(amount).toFixed(2)} ${label} deposit is under review and will be credited shortly.`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── Auto-complete stale pending transactions (deposit + withdrawal) ──────────
 // Called from the wallet page on load. Marks transactions that have been
 // pending for >5 minutes as completed so users see real status immediately.
