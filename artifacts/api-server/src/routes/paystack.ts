@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { db, usersTable, transactionsTable, notificationsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -9,6 +9,44 @@ const router = Router();
 const SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
 const PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY!;
 const CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL!;
+
+// ─── Atomic deposit settlement ────────────────────────────────────────────────
+// Atomically claim a pending transaction and credit the wallet inside a single
+// database transaction. Returns the credited USD amount on success, null if
+// already settled by another concurrent path (webhook / polling / verify-pending).
+// Any failure after the claim is fully rolled back — no orphaned "completed"
+// transaction without a corresponding balance credit.
+async function settleDeposit(
+  txnId: number,
+  userId: number,
+  actualUsd: number,
+): Promise<number | null> {
+  return db.transaction(async (tx) => {
+    // Claim: atomically transition pending → completed.
+    // If another path already settled this, 0 rows are updated and we bail.
+    const claimed = await tx.update(transactionsTable)
+      .set({ status: "completed", amount: actualUsd })
+      .where(and(eq(transactionsTable.id, txnId), eq(transactionsTable.status, "pending")))
+      .returning({ id: transactionsTable.id });
+
+    if (claimed.length === 0) return null; // already settled; roll back (no-op)
+
+    // SQL-level atomic balance increment — safe against concurrent updates
+    await tx.update(usersTable).set({
+      balance: sql`${usersTable.balance} + ${actualUsd}`,
+      totalEarned: sql`${usersTable.totalEarned} + ${actualUsd}`,
+    }).where(eq(usersTable.id, userId));
+
+    await tx.insert(notificationsTable).values({
+      userId,
+      type: "deposit",
+      title: "Deposit Confirmed",
+      message: `$${actualUsd.toFixed(2)} has been credited to your wallet.`,
+    });
+
+    return actualUsd;
+  });
+}
 
 // ─── Exchange rates ───────────────────────────────────────────────────────────
 const DEPOSIT_RATE_KES = 134;    // 1 USD = 134 KES for incoming payments
@@ -150,6 +188,18 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
     const amountKobo = amountKes * 100;
     const reference = `dep_${req.userId}_${Date.now()}`;
 
+    // Pre-insert pending record BEFORE calling Paystack so the webhook always
+    // finds it if charge.success fires before this handler finishes.
+    const [pendingTxn] = await db.insert(transactionsTable).values({
+      userId: req.userId!,
+      type: "deposit",
+      amount,
+      status: "pending",
+      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via ${provider === "mpesa" ? "M-Pesa" : "Airtel Money"}`,
+      method: "paystack",
+      accountDetails: reference,
+    }).returning();
+
     const chargeBody = {
       email: user.email,
       amount: amountKobo,
@@ -166,27 +216,28 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
       },
     };
 
-    const response = await fetch("https://api.paystack.co/charge", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(chargeBody),
-    });
-
-    const data = await response.json() as any;
-    if (!data.status) {
-      res.status(400).json({ error: data.message ?? "Paystack error" }); return;
+    let data: any;
+    try {
+      const response = await fetch("https://api.paystack.co/charge", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(chargeBody),
+      });
+      data = await response.json();
+    } catch (fetchErr) {
+      // Network/transport failure — outcome is UNKNOWN (Paystack may have accepted
+      // the charge). Leave the row pending so the webhook or polling can settle it.
+      throw fetchErr;
     }
 
-    // Record pending transaction
-    await db.insert(transactionsTable).values({
-      userId: req.userId!,
-      type: "deposit",
-      amount,
-      status: "pending",
-      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via ${provider === "mpesa" ? "M-Pesa" : "Airtel Money"}`,
-      method: "paystack",
-      accountDetails: reference,
-    });
+    if (!data.status) {
+      // Paystack returned a definitive error — mark as rejected, but only if still
+      // pending (webhook may have settled it between our call and now).
+      await db.update(transactionsTable)
+        .set({ status: "rejected", rejectionReason: data.message ?? "Paystack error" })
+        .where(and(eq(transactionsTable.id, pendingTxn.id), eq(transactionsTable.status, "pending")));
+      res.status(400).json({ error: data.message ?? "Paystack error" }); return;
+    }
 
     res.json({
       status: data.data?.status ?? "pending",
@@ -246,18 +297,15 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
       return;
     }
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-
-    await db.update(usersTable).set({
-      balance: user.balance + actualUsd,
-      totalEarned: user.totalEarned + actualUsd,
-    }).where(eq(usersTable.id, userId));
-
-    // Mark transaction complete with actual credited amount
     if (txn) {
-      await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
-        .where(eq(transactionsTable.id, txn.id));
+      // Atomically claim pending → completed; skip if already settled
+      const credited = await settleDeposit(txn.id, userId, actualUsd);
+      if (!credited) {
+        res.json({ message: "Already credited", alreadyCredited: true });
+        return;
+      }
     } else {
+      // No pending record — insert a completed one directly
       await db.insert(transactionsTable).values({
         userId,
         type: "deposit",
@@ -267,14 +315,17 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
         method: "paystack",
         accountDetails: reference,
       });
+      await db.update(usersTable).set({
+        balance: sql`${usersTable.balance} + ${actualUsd}`,
+        totalEarned: sql`${usersTable.totalEarned} + ${actualUsd}`,
+      }).where(eq(usersTable.id, userId));
+      await db.insert(notificationsTable).values({
+        userId,
+        type: "deposit",
+        title: "Deposit Successful",
+        message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
+      });
     }
-
-    await db.insert(notificationsTable).values({
-      userId,
-      type: "deposit",
-      title: "Deposit Successful",
-      message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
-    });
 
     res.json({ message: "Deposit credited", amount: actualUsd });
   } catch (err) {
@@ -534,6 +585,66 @@ router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
+// ─── Poll status of a specific STK push charge ───────────────────────────────
+// Used by the frontend to check if the user entered their M-Pesa PIN after STK push.
+// Returns { status: "pending"|"completed"|"rejected", amount? }
+router.get("/paystack/deposit/charge/status/:reference", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const reference = String(req.params["reference"]);
+
+    // Look up the transaction in the DB (must belong to this user)
+    const existing = await db.select().from(transactionsTable)
+      .where(eq(transactionsTable.accountDetails, reference));
+    const txn = existing.find(t => t.userId === req.userId!);
+
+    if (!txn) {
+      res.status(404).json({ error: "Transaction not found" }); return;
+    }
+
+    // Already settled — return DB status immediately
+    if (txn.status === "completed") {
+      res.json({ status: "completed", amount: txn.amount }); return;
+    }
+    if (txn.status === "rejected") {
+      res.json({ status: "rejected", reason: txn.rejectionReason }); return;
+    }
+
+    // Still pending — ask Paystack
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${SECRET_KEY}` },
+    });
+    const data = await response.json() as any;
+
+    if (!data.status || data.data.status !== "success") {
+      // Not yet confirmed (could be "send_otp", "open", etc.)
+      res.json({ status: "pending" }); return;
+    }
+
+    // Paystack confirmed — atomically claim and credit
+    const meta = data.data.metadata ?? {};
+    const currency: string = data.data.currency ?? "KES";
+    const expectedUsd: number = Number(meta.expectedUsd ?? 0);
+    const actualUsd = paystackAmountToUsd(data.data.amount, currency);
+
+    if (expectedUsd > 0 && !isValidAmount(actualUsd, expectedUsd)) {
+      await db.update(transactionsTable).set({
+        status: "rejected",
+        rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
+      }).where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
+      res.json({ status: "rejected", reason: "Amount mismatch" }); return;
+    }
+
+    // settleDeposit atomically claims pending → completed and credits
+    const credited = await settleDeposit(txn.id, req.userId!, actualUsd);
+    // credited === null means another path (webhook/verify-pending) already settled it
+    const finalAmount = credited ?? txn.amount;
+    res.json({ status: "completed", amount: finalAmount });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── Auto-verify all pending deposits for logged-in user ─────────────────────
 router.post("/paystack/deposit/verify-pending", requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -564,28 +675,15 @@ router.post("/paystack/deposit/verify-pending", requireAuth, async (req: AuthReq
             await db.update(transactionsTable).set({
               status: "rejected",
               rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
-            }).where(eq(transactionsTable.id, txn.id));
+            }).where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
             continue;
           }
 
-          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-
-          await db.update(usersTable).set({
-            balance: user.balance + actualUsd,
-            totalEarned: user.totalEarned + actualUsd,
-          }).where(eq(usersTable.id, req.userId!));
-
-          await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
-            .where(eq(transactionsTable.id, txn.id));
-
-          await db.insert(notificationsTable).values({
-            userId: req.userId!,
-            type: "deposit",
-            title: "Deposit Confirmed",
-            message: `$${actualUsd.toFixed(2)} has been credited to your wallet.`,
-          });
-
-          credited.push({ ref, amount: actualUsd });
+          // Atomically claim pending → completed; skip if already settled by another path
+          const result = await settleDeposit(txn.id, req.userId!, actualUsd);
+          if (result !== null) {
+            credited.push({ ref, amount: result });
+          }
         }
       } catch {
         // skip individual failures
@@ -707,24 +805,67 @@ router.post("/paystack/webhook", async (req, res) => {
         await db.update(transactionsTable).set({
           status: "rejected",
           rejectionReason: `Amount mismatch: received $${actualUsd.toFixed(4)}, expected $${expectedUsd.toFixed(4)}`,
-        }).where(eq(transactionsTable.id, existing[0].id));
+        }).where(and(eq(transactionsTable.id, existing[0].id), eq(transactionsTable.status, "pending")));
       }
       res.sendStatus(200); return;
     }
 
-    await db.update(usersTable).set({
-      balance: user.balance + actualUsd,
-      totalEarned: user.totalEarned + actualUsd,
-    }).where(eq(usersTable.id, userId));
+    // ── Settle the deposit inside a single serialized transaction ──────────────
+    // A pg advisory lock (keyed on the reference string) serializes concurrent
+    // webhook deliveries and the charge-endpoint race so only one path credits the wallet.
+    await db.transaction(async (tx) => {
+      // Derive a stable 63-bit lock key from the reference string (fits pg bigint)
+      let lockKey = 0n;
+      for (let i = 0; i < reference.length; i++) {
+        lockKey = (lockKey * 31n + BigInt(reference.charCodeAt(i))) & 0x7FFFFFFFFFFFFFFFn;
+      }
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey.toString()}::bigint)`);
 
-    if (existing[0]) {
-      await db.update(transactionsTable).set({ status: "completed", amount: actualUsd })
-        .where(eq(transactionsTable.id, existing[0].id));
-    }
+      // Re-read inside the locked transaction — authoritative view
+      const rows = await tx.select()
+        .from(transactionsTable)
+        .where(eq(transactionsTable.accountDetails, reference));
 
-    await db.insert(notificationsTable).values({
-      userId, type: "deposit", title: "Deposit Successful",
-      message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
+      const row = rows[0];
+
+      if (row) {
+        if (row.status !== "pending") return; // already settled by another path
+        // Claim + credit + notify inline (can't nest db.transaction() for settleDeposit)
+        const claimed = await tx.update(transactionsTable)
+          .set({ status: "completed", amount: actualUsd })
+          .where(and(eq(transactionsTable.id, row.id), eq(transactionsTable.status, "pending")))
+          .returning({ id: transactionsTable.id });
+        if (claimed.length === 0) return; // shouldn't happen under the advisory lock
+        await tx.update(usersTable).set({
+          balance: sql`${usersTable.balance} + ${actualUsd}`,
+          totalEarned: sql`${usersTable.totalEarned} + ${actualUsd}`,
+        }).where(eq(usersTable.id, userId));
+        await tx.insert(notificationsTable).values({
+          userId, type: "deposit", title: "Deposit Successful",
+          message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
+        });
+      } else {
+        // No row at all — rare edge case (charge request failed before pre-insert,
+        // or webhook arrived from a flow that bypassed the charge endpoint).
+        // Insert a completed record + credit atomically under the advisory lock.
+        await tx.insert(transactionsTable).values({
+          userId,
+          type: "deposit",
+          amount: actualUsd,
+          status: "completed",
+          description: `Deposit of $${actualUsd.toFixed(2)} via Paystack (webhook)`,
+          method: "paystack",
+          accountDetails: reference,
+        });
+        await tx.update(usersTable).set({
+          balance: sql`${usersTable.balance} + ${actualUsd}`,
+          totalEarned: sql`${usersTable.totalEarned} + ${actualUsd}`,
+        }).where(eq(usersTable.id, userId));
+        await tx.insert(notificationsTable).values({
+          userId, type: "deposit", title: "Deposit Successful",
+          message: `$${actualUsd.toFixed(2)} has been added to your wallet.`,
+        });
+      }
     });
   }
 

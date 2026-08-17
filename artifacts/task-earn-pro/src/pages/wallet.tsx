@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetWallet, useGetTransactions, useRequestWithdrawal,
-  useInitializeDeposit, usePaystackWithdraw, usePaystackWithdrawMobile, useGetBanks,
+  useInitializeDeposit, useChargeDeposit, usePaystackWithdraw, usePaystackWithdrawMobile, useGetBanks,
   useVerifyPendingDeposits, useGetKycStatus,
   getGetWalletQueryKey, getGetTransactionsQueryKey,
 } from "@workspace/api-client-react";
@@ -128,6 +128,15 @@ export default function WalletPage() {
   const [stage, setStage] = useState<Stage>({ view: "none" });
   const [txnType, setTxnType] = useState("all");
 
+  // STK Push state (M-Pesa deposit polling)
+  type StkStatus = "idle" | "sending" | "sent" | "confirmed" | "failed";
+  const [stkState, setStkState] = useState<{
+    status: StkStatus;
+    reference?: string;
+    amount?: number;
+    countdown: number;
+  }>({ status: "idle", countdown: 120 });
+
   // Deposit form state
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPhone, setDepositPhone] = useState("");
@@ -170,6 +179,7 @@ export default function WalletPage() {
   const isKycApproved = kyc?.kycStatus === "approved";
 
   const depositMutation = useInitializeDeposit();
+  const chargeDepositMutation = useChargeDeposit();
   const paystackWithdrawMutation = usePaystackWithdraw();
   const mobileWithdrawMutation = usePaystackWithdrawMobile();
   const manualWithdrawMutation = useRequestWithdrawal();
@@ -186,6 +196,80 @@ export default function WalletPage() {
     setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
     setManualAmount(""); setManualAccount("");
     setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardName("");
+    setStkState({ status: "idle", countdown: 120 });
+  };
+
+  // ── STK push polling ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (stkState.status !== "sent" || !stkState.reference) return;
+
+    const token = localStorage.getItem("token");
+    let attempts = 0;
+    const maxAttempts = 24; // 24 × 5 s = 120 s = 2 min
+
+    // Countdown timer
+    const countdownInterval = setInterval(() => {
+      setStkState(prev => ({ ...prev, countdown: Math.max(0, prev.countdown - 1) }));
+    }, 1000);
+
+    // Polling
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const r = await fetch(`/api/paystack/deposit/charge/status/${stkState.reference}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        if (d.status === "completed") {
+          clearInterval(pollInterval);
+          clearInterval(countdownInterval);
+          setStkState(prev => ({ ...prev, status: "confirmed", amount: d.amount }));
+          invalidate();
+          toast({ title: "Deposit Confirmed! 🎉", description: `$${d.amount?.toFixed(2)} has been credited to your wallet.` });
+          setTimeout(() => close(), 3000);
+          return;
+        }
+        if (d.status === "rejected") {
+          clearInterval(pollInterval);
+          clearInterval(countdownInterval);
+          setStkState(prev => ({ ...prev, status: "failed" }));
+          return;
+        }
+      } catch { /* network hiccup — keep polling */ }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        clearInterval(countdownInterval);
+        setStkState(prev => ({ ...prev, status: "failed" }));
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearInterval(countdownInterval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stkState.status, stkState.reference]);
+
+  // ── Send M-Pesa STK push ────────────────────────────────────────────────────
+  const handleMpesaDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
+    const amt = parseFloat(depositAmount);
+    if (!amt || amt < 0.1) { toast({ title: "Minimum deposit is $0.10", variant: "destructive" }); return; }
+    if (!depositPhone.trim()) { toast({ title: "Phone number is required for M-Pesa", variant: "destructive" }); return; }
+
+    setStkState({ status: "sending", countdown: 120 });
+    chargeDepositMutation.mutate(
+      { data: { amount: amt, phone: depositPhone.trim(), provider: method.id } },
+      {
+        onSuccess: (data: any) => {
+          setStkState({ status: "sent", reference: data.reference, amount: amt, countdown: 120 });
+        },
+        onError: (err: any) => {
+          setStkState({ status: "idle", countdown: 120 });
+          toast({ title: "STK Push failed", description: err.data?.error ?? err.message, variant: "destructive" });
+        },
+      }
+    );
   };
 
   const formatCardNumber = (val: string) =>
@@ -545,31 +629,112 @@ export default function WalletPage() {
                 </p>
               </div>
 
-              {/* Phone number — only for mobile money */}
+              {/* Phone number — required for mobile money */}
               {isMobileMoney(stage.method.id) && (
                 <div>
-                  <Label>{stage.method.id === "airtel" ? "Airtel" : "M-Pesa"} Phone Number</Label>
+                  <Label>{stage.method.id === "airtel" ? "Airtel" : "M-Pesa"} Phone Number <span className="text-red-500">*</span></Label>
                   <Input
                     type="tel"
                     placeholder="e.g. 0712345678 or +254712345678"
                     value={depositPhone}
                     onChange={e => setDepositPhone(e.target.value)}
+                    disabled={stkState.status !== "idle"}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Optional — pre-fills your number on Paystack's page</p>
+                  <p className="text-xs text-muted-foreground mt-1">You'll receive an STK push PIN prompt on this number</p>
                 </div>
               )}
 
-              <Button
-                className="w-full"
-                onClick={() => handleDeposit(stage.method)}
-                disabled={depositMutation.isPending}
-              >
-                {depositMutation.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
-                  : depositAmount && parseFloat(depositAmount) >= 0.1
-                    ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} via Paystack →`
-                    : `Proceed to Checkout →`}
-              </Button>
+              {/* STK push waiting UI — shown after push is sent */}
+              {isMobileMoney(stage.method.id) && stkState.status !== "idle" && (
+                <div className={`rounded-xl border p-4 space-y-3 ${
+                  stkState.status === "confirmed"
+                    ? "bg-green-50 border-green-200"
+                    : stkState.status === "failed"
+                      ? "bg-red-50 border-red-200"
+                      : "bg-green-50/60 border-green-200"
+                }`}>
+                  {(stkState.status === "sending" || stkState.status === "sent") && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-green-700 shrink-0" />
+                        <p className="text-sm font-semibold text-green-800">
+                          {stkState.status === "sending" ? "Sending STK push…" : "Waiting for PIN confirmation"}
+                        </p>
+                      </div>
+                      {stkState.status === "sent" && (
+                        <>
+                          <p className="text-xs text-green-700">
+                            Check your phone — enter your M-Pesa PIN to confirm the deposit of{" "}
+                            <span className="font-bold">KES {Math.round((stkState.amount ?? 0) * DEPOSIT_RATE).toLocaleString()}</span>.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                            <p className="text-xs text-green-700">
+                              Auto-checking… expires in <span className="font-mono font-bold">{stkState.countdown}s</span>
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {stkState.status === "confirmed" && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                      <p className="text-sm font-semibold text-green-800">
+                        Deposit confirmed! ${stkState.amount?.toFixed(2)} added to your wallet.
+                      </p>
+                    </div>
+                  )}
+                  {stkState.status === "failed" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        <p className="text-sm font-semibold text-red-700">PIN not confirmed in time</p>
+                      </div>
+                      <p className="text-xs text-red-600">
+                        If you entered your PIN, tap "Check deposit status" on the payment screen — it may still be processing.
+                      </p>
+                      <button
+                        className="text-xs underline text-red-700"
+                        onClick={() => setStkState({ status: "idle", countdown: 120 })}
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action button — STK push for M-Pesa, Paystack redirect for others */}
+              {isMobileMoney(stage.method.id) ? (
+                <Button
+                  className="w-full"
+                  onClick={() => handleMpesaDeposit(stage.method)}
+                  disabled={stkState.status !== "idle" || chargeDepositMutation.isPending}
+                >
+                  {stkState.status === "sending"
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending…</>
+                    : stkState.status === "sent"
+                      ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Waiting for PIN…</>
+                      : stkState.status === "confirmed"
+                        ? <><CheckCircle className="w-4 h-4 mr-2" />Confirmed!</>
+                        : depositAmount && parseFloat(depositAmount) >= 0.1
+                          ? `Send M-Pesa STK Push — KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} →`
+                          : "Send M-Pesa STK Push →"}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={() => handleDeposit(stage.method)}
+                  disabled={depositMutation.isPending}
+                >
+                  {depositMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
+                    : depositAmount && parseFloat(depositAmount) >= 0.1
+                      ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} via Paystack →`
+                      : `Proceed to Checkout →`}
+                </Button>
+              )}
               <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
                 ← Choose a different method
               </button>
