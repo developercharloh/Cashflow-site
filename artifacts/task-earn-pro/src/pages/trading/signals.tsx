@@ -281,6 +281,8 @@ export default function SignalsPage() {
   const marketIndexRef = useRef(0);
   const tradeCountRef = useRef(0);
   const winCountRef = useRef(0);
+  // Tracks real-mode balance using server-confirmed values — updated after each trade
+  const realBalanceRef = useRef<number>(user?.balance ?? 0);
 
   // Keep refs in sync
   useEffect(() => { stakeRef.current = stake; }, [stake]);
@@ -288,6 +290,10 @@ export default function SignalsPage() {
   useEffect(() => { stopLossRef.current = stopLoss; }, [stopLoss]);
   useEffect(() => { martingaleRef.current = martingale; }, [martingale]);
   useEffect(() => { selectedMarketRef.current = selectedMarket; }, [selectedMarket]);
+  // Keep real balance ref in sync with server-fetched user balance
+  useEffect(() => {
+    if (user?.balance !== undefined) realBalanceRef.current = user.balance;
+  }, [user?.balance]);
 
   // ── Reset session ─────────────────────────────────────────
   const resetSession = () => {
@@ -316,6 +322,23 @@ export default function SignalsPage() {
       }
 
       const tradeStake = currentStakeRef.current;
+
+      // ── Real-mode balance gate (per iteration) ─────────
+      if (isRealMode) {
+        const bal = realBalanceRef.current;
+        if (bal <= 0) {
+          isRunningRef.current = false;
+          setIsRunning(false);
+          setExecStatus("⛔  Balance is $0.00 — deposit funds to continue trading");
+          break;
+        }
+        if (tradeStake > bal) {
+          isRunningRef.current = false;
+          setIsRunning(false);
+          setExecStatus(`⛔  Stake $${tradeStake.toFixed(2)} exceeds balance $${bal.toFixed(2)} — auto execution stopped`);
+          break;
+        }
+      }
 
       // ── Phase 1: Analyzing ─────────────────────────────
       setExecStatus(`🔍  Analyzing ${market.shortName}…`);
@@ -384,13 +407,39 @@ export default function SignalsPage() {
           }),
         });
         const data = await res.json();
+
+        // ── Hard stop on balance / auth errors ────────────
+        if (!res.ok) {
+          const msg: string = data.error ?? "Trade failed";
+          const isBalanceError = /insufficient|balance|funds/i.test(msg);
+          if (isRealMode) {
+            isRunningRef.current = false;
+            setIsRunning(false);
+            setExecStatus(isBalanceError
+              ? `⛔  ${msg} — deposit funds to continue`
+              : `⛔  ${msg} — auto execution stopped`
+            );
+            // Refund any optimistic demo deduction (shouldn't be set in real mode, but safety)
+            break;
+          }
+          // Demo: refund stake and retry
+          const nb = demoBalanceRef.current + tradeStake;
+          demoBalanceRef.current = nb;
+          setDemoBalance(nb);
+          localStorage.setItem("elite_demo", nb.toString());
+          setExecStatus("⚠️  Trade error — retrying…");
+          await sleep(2000);
+          continue;
+        }
+
         win = data.win ?? false;
         payout = data.payout ?? 0;
         lastDigit = data.lastDigit ?? 0;
         netChange = data.netChange ?? (win ? payout - tradeStake : -tradeStake);
 
-        // Real mode: refresh balance from server
+        // Real mode: update tracked balance from server response, then refresh React state
         if (isRealMode) {
+          if (data.newBalance !== undefined) realBalanceRef.current = data.newBalance;
           queryClient.invalidateQueries({ queryKey: getGetMeQueryOptions().queryKey });
         } else {
           // Demo: credit payout on win
@@ -402,7 +451,7 @@ export default function SignalsPage() {
           }
         }
       } catch {
-        // On error, refund demo and continue
+        // Network/parse error — refund demo, retry
         if (!isRealMode) {
           const nb = demoBalanceRef.current + tradeStake;
           demoBalanceRef.current = nb;
@@ -473,12 +522,24 @@ export default function SignalsPage() {
 
   // ── Start ─────────────────────────────────────────────────
   const handleStart = useCallback(() => {
+    // Real-mode pre-flight balance check
+    if (isRealMode) {
+      const realBalance = user?.balance ?? 0;
+      if (realBalance <= 0) {
+        setExecStatus("⛔  No balance — deposit funds to start real trading");
+        return;
+      }
+      if (stake > realBalance) {
+        setExecStatus(`⛔  Insufficient balance — stake $${stake.toFixed(2)} exceeds your balance $${realBalance.toFixed(2)}`);
+        return;
+      }
+    }
     resetSession();
     isRunningRef.current = true;
     currentStakeRef.current = stake;
     setIsRunning(true);
     runLoop();
-  }, [stake, runLoop]);
+  }, [stake, isRealMode, user, runLoop]);
 
   // ── Stop ──────────────────────────────────────────────────
   const handleStop = () => {
