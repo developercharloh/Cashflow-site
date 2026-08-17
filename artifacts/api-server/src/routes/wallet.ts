@@ -142,9 +142,18 @@ router.post("/wallet/auto-complete", requireAuth, async (req: AuthRequest, res) 
 
     let completed = 0;
     for (const txn of stale) {
-      await db.update(transactionsTable)
+      // Atomically flip pending → completed; if another path (e.g. webhook)
+      // already completed this transaction the WHERE clause won't match and
+      // no rows are returned, so we skip crediting entirely.
+      const updated = await db.update(transactionsTable)
         .set({ status: "completed" })
-        .where(eq(transactionsTable.id, txn.id));
+        .where(and(
+          eq(transactionsTable.id, txn.id),
+          eq(transactionsTable.status, "pending"),
+        ))
+        .returning({ id: transactionsTable.id });
+
+      if (updated.length === 0) continue; // already completed by another path
 
       // For deposits: credit the balance if not already credited
       if (txn.type === "deposit") {
