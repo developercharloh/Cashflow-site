@@ -9,7 +9,7 @@ const router = Router();
 const DIDIT_API_KEY    = process.env.DIDIT_API_KEY;
 const DIDIT_WORKFLOW_ID = process.env.DIDIT_WORKFLOW_ID ?? "6958dd4e-b834-4e4d-80a7-c64f1e30a6c8";
 const DIDIT_BASE_URL   = "https://verification.didit.me";
-const CALLBACK_URL     = "https://taskearn-pro.vercel.app/profile?kyc=done";
+const CALLBACK_URL     = "https://lipwatasks.site/profile?kyc=done";
 
 interface DiditSession {
   session_id: string;

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Elite Signals Pro — one-click deploy script
+# LipwaTasks — one-click deploy script
 # Commits any pending changes, pushes to GitHub → triggers Vercel via CI.
 #
 # REQUIREMENTS (Replit Secrets):
@@ -44,4 +44,4 @@ git remote set-url github "https://github.com/developercharloh/Cashflow-site.git
 
 info "✅ Pushed! GitHub Actions is now building & deploying to Vercel."
 info "   Actions:  https://github.com/developercharloh/Cashflow-site/actions"
-info "   Live URL: https://elite-signals-pro.vercel.app"
+info "   Live URL: https://lipwatasks.site"

@@ -8,7 +8,7 @@ const router = Router();
 router.get("/referrals", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    const referralLink = `https://taskearn-pro.vercel.app/auth/register?ref=${user.referralCode}`;
+    const referralLink = `https://lipwatasks.site/auth/register?ref=${user.referralCode}`;
 
     const referred = await db.select().from(usersTable).where(eq(usersTable.referredBy, req.userId!));
     const activeReferrals = referred.filter(u => u.tasksCompleted > 0).length;
