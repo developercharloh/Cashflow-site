@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://task-earn-pro--taskearnke.replit.app/api/:path*"
+      "destination": "https://github-importer-jakejamesgu.replit.app/api/:path*"
     },
     {
       "source": "/(.*)",
