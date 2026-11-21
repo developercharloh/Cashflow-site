@@ -60,7 +60,7 @@ export default function Login() {
           <div className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow-lg">
             <CircleDollarSign className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">LipwaTasks</span>
+          <span className="text-xl font-bold tracking-tight">Lipwa Tasks</span>
         </div>
 
         <div className="space-y-8 relative z-10">
@@ -81,7 +81,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-white/25 text-xs relative z-10">© {new Date().getFullYear()} LipwaTasks</p>
+        <p className="text-white/25 text-xs relative z-10">© {new Date().getFullYear()} Lipwa Tasks</p>
       </div>
 
       {/* ── Right panel – login form ── */}
@@ -93,11 +93,11 @@ export default function Login() {
             <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CircleDollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">LipwaTasks</span>
+            <span className="text-xl font-bold">Lipwa Tasks</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Welcome back</h2>
-          <p className="text-muted-foreground text-sm mb-7">Log in to open your LipwaTasks account.</p>
+          <p className="text-muted-foreground text-sm mb-7">Log in to open your Lipwa Tasks account.</p>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">

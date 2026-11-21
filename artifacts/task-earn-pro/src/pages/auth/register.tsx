@@ -138,7 +138,7 @@ export default function Register() {
     registerMutation.mutate({ data: registrationData }, {
       onSuccess: (data: any) => {
         setToken(data.token);
-        toast({ title: "Account created!", description: "Welcome to LipwaTasks." });
+        toast({ title: "Account created!", description: "Welcome to Lipwa Tasks." });
         setLocation("/dashboard");
       },
       onError: (error: any) => {
@@ -168,7 +168,7 @@ export default function Register() {
           <div className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow">
             <CircleDollarSign className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">LipwaTasks</span>
+          <span className="text-xl font-bold tracking-tight">Lipwa Tasks</span>
         </div>
 
         <div className="space-y-8">
@@ -187,7 +187,7 @@ export default function Register() {
           </div>
         </div>
 
-        <p className="text-white/30 text-xs">© {new Date().getFullYear()} LipwaTasks. All rights reserved.</p>
+        <p className="text-white/30 text-xs">© {new Date().getFullYear()} Lipwa Tasks. All rights reserved.</p>
       </div>
 
       {/* Right panel – form */}
@@ -198,7 +198,7 @@ export default function Register() {
             <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CircleDollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">LipwaTasks</span>
+            <span className="text-xl font-bold">Lipwa Tasks</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Create your account</h2>

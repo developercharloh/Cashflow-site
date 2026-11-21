@@ -19,7 +19,7 @@ export default function Dashboard() {
   return (
     <div className="px-4 pb-10 pt-8 sm:px-7 sm:pt-12">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-primary">LipwaTasks home</p><h1 data-testid="text-worker-greeting" className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">Welcome, {firstName}.</h1><p className="mt-2 text-sm text-muted-foreground">Work areas, account tools, and what is coming next.</p></div>
+        <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-primary">Lipwa Tasks home</p><h1 data-testid="text-worker-greeting" className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">Welcome, {firstName}.</h1><p className="mt-2 text-sm text-muted-foreground">Work areas, account tools, and what is coming next.</p></div>
         <Link href="/tasks" data-testid="link-home-work" className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">Explore work <ArrowRight className="h-4 w-4" /></Link>
       </div>
 

@@ -13,9 +13,9 @@ export default function Landing() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 md:px-10">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="LipwaTasks home" data-testid="link-brand-home">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Lipwa Tasks home" data-testid="link-brand-home">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary font-serif text-xl text-primary-foreground">L</span>
-            <span className="font-semibold tracking-tight">LipwaTasks</span>
+            <span className="font-semibold tracking-tight">Lipwa Tasks</span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex" aria-label="Main navigation">
             <a data-testid="link-landing-work-nav" className="hover:text-foreground" href="#work">Work areas</a>
@@ -36,7 +36,7 @@ export default function Landing() {
               <h1 className="font-serif text-[3.5rem] leading-[.98] tracking-[-.045em] sm:text-6xl lg:text-[5.35rem]">Work with clarity.<br /><span className="text-primary">Start with Lipwa.</span></h1>
               <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Explore academic support, data entry, transcription, and AI training ideas, alongside Simple Quiz and wallet tools. Soft Loans and Forex are coming soon.</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/auth/register" data-testid="link-hero-register" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">Join LipwaTasks <ArrowRight className="h-4 w-4" /></Link>
+                <Link href="/auth/register" data-testid="link-hero-register" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">Join Lipwa Tasks <ArrowRight className="h-4 w-4" /></Link>
                 <a data-testid="link-hero-work" href="#work" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card/70 px-6 font-semibold transition-colors hover:bg-muted">See work areas <ArrowDown className="h-4 w-4" /></a>
               </div>
               <p className="mt-5 text-xs text-muted-foreground">Work-area examples are ideas only. No client-funded freelance listings are available yet.</p>
@@ -46,7 +46,7 @@ export default function Landing() {
               <div className="absolute -bottom-7 -left-8 h-48 w-48 rounded-full border border-primary/15" />
               <div className="relative rounded-[1.7rem] border border-border bg-card p-5 shadow-[0_24px_70px_-32px_hsl(205_29%_17%_/.28)] sm:p-7">
                 <div className="flex items-center justify-between border-b border-border pb-5">
-                  <div><span className="font-mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">LipwaTasks</span><h2 className="mt-2 font-serif text-2xl">A focused set of tools.</h2></div>
+                  <div><span className="font-mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">Lipwa Tasks</span><h2 className="mt-2 font-serif text-2xl">A focused set of tools.</h2></div>
                   <div className="grid h-11 w-11 place-items-center rounded-full bg-accent text-primary"><ShieldCheck className="h-5 w-5" /></div>
                 </div>
                 <div className="space-y-4 py-6">
@@ -87,7 +87,7 @@ export default function Landing() {
           <div className="mx-auto max-w-7xl px-5 py-20 md:px-10 md:py-24">
             <div className="max-w-2xl"><p className="font-mono text-[11px] uppercase tracking-[.2em] text-primary">More in the app</p><h2 className="mt-4 font-serif text-4xl leading-tight md:text-5xl">One home for work and useful tools.</h2></div>
             <div className="mt-9 grid gap-3 md:grid-cols-2">
-              <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><ClipboardList className="h-5 w-5 text-primary" /><h3 className="font-serif text-xl">Simple Quiz</h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">A separate interactive quiz with a one-time platform-funded $1–$5 reward based on quiz results. Not freelance work, a client job, or a client payment.</p><Link href="/auth/register" data-testid="link-landing-quiz" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">Learn about LipwaTasks <ArrowRight className="h-4 w-4" /></Link></article>
+               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><ClipboardList className="h-5 w-5 text-primary" /><h3 className="font-serif text-xl">Simple Quiz</h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">A separate interactive quiz with a one-time platform-funded $1–$5 reward based on quiz results. Not freelance work, a client job, or a client payment.</p><Link href="/auth/register" data-testid="link-landing-quiz" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">Learn about Lipwa Tasks <ArrowRight className="h-4 w-4" /></Link></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><WalletCards className="h-5 w-5 text-primary" /><h3 className="font-serif text-xl">Wallet</h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Review your account balance and wallet activity in the existing wallet.</p></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><Landmark className="h-5 w-5 text-muted-foreground" /><h3 className="font-serif text-xl">Soft Loans <span className="font-sans text-xs text-muted-foreground">Coming Soon</span></h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Soft Loans are not available yet.</p></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><CandlestickChart className="h-5 w-5 text-muted-foreground" /><h3 className="font-serif text-xl">Forex <span className="font-sans text-xs text-muted-foreground">Coming Soon</span></h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Forex is not available yet. No forex trades or deposits are available.</p></article>
@@ -101,7 +101,7 @@ export default function Landing() {
             <Link href="/auth/register" data-testid="link-standards-register" className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#d5e3d5] px-5 font-semibold text-[#183b32] transition-transform hover:-translate-y-0.5">Create your account <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <div className="mt-10 flex flex-col justify-between gap-5 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground"><span className="grid h-7 w-7 place-items-center rounded-lg bg-primary font-serif text-primary-foreground">L</span>LipwaTasks</Link>
+            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground"><span className="grid h-7 w-7 place-items-center rounded-lg bg-primary font-serif text-primary-foreground">L</span>Lipwa Tasks</Link>
             <p>Practical work and useful tools, with clear expectations.</p>
             <div className="flex gap-5"><Link href="/auth/login" data-testid="link-footer-login">Log in</Link><Link href="/auth/register" data-testid="link-footer-register">Register</Link></div>
           </div>

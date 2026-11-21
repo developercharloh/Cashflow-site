@@ -78,6 +78,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-7">
+          <Link
+            href="/dashboard"
+            data-testid="link-app-brand"
+            aria-label="Lipwa Tasks home"
+            className="flex items-center gap-2.5"
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-serif text-lg font-semibold text-primary-foreground">
+              L
+            </span>
+            <span className="font-semibold tracking-tight">Lipwa Tasks</span>
+          </Link>
+        </div>
+      </header>
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
       <BottomNav />
     </div>
