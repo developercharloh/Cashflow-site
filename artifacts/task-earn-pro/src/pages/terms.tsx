@@ -5,7 +5,7 @@ const SECTIONS = [
   {
     title: "1. Introduction",
     items: [
-      'Welcome to Elite Signals Pro ("the Platform"). By registering, accessing, or using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, you must discontinue use immediately.',
+      'Welcome to LipwaTasks ("the Platform"). By registering, accessing, or using our services, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, you must discontinue use immediately.',
     ],
   },
   {
@@ -13,7 +13,7 @@ const SECTIONS = [
     items: [
       "You must be at least 18 years old.",
       "You must provide accurate and complete registration details.",
-      "Elite Signals Pro reserves the right to verify user identity at any time (KYC).",
+      "LipwaTasks reserves the right to verify user identity at any time (KYC).",
     ],
   },
   {
@@ -27,17 +27,16 @@ const SECTIONS = [
   {
     title: "4. Services Provided",
     items: [
-      "Elite Signals Pro offers a digital trading platform where users predict price movements (BUY/SELL) of financial assets.",
+      "LipwaTasks offers a digital platform for completing tasks and earning rewards.",
       "The platform does not provide investment advice or guarantees of profit.",
     ],
   },
   {
-    title: "5. Risk Disclosure",
+    title: "5. Earnings and Task Availability",
     items: [
-      "Trading involves a high level of risk.",
-      "You may lose all your invested capital.",
-      "Trading outcomes are not guaranteed.",
-      "You are solely responsible for your trading decisions.",
+      "Task availability, eligibility, and rewards may vary.",
+      "Earnings are not guaranteed and depend on completed tasks being reviewed and approved.",
+      "You are responsible for reading each task's instructions before participating.",
     ],
   },
   {
@@ -45,7 +44,7 @@ const SECTIONS = [
     items: [
       "Deposits can be made via approved payment methods (e.g., M-PESA or other supported channels).",
       "Funds must originate from accounts owned by you.",
-      "Elite Signals Pro is not responsible for delays caused by payment providers.",
+      "LipwaTasks is not responsible for delays caused by payment providers.",
     ],
   },
   {
@@ -63,7 +62,7 @@ const SECTIONS = [
     items: [
       "Bonuses are subject to specific conditions and wagering requirements.",
       "Abuse of promotions (e.g., multiple accounts, hedging, arbitrage) is prohibited.",
-      "Elite Signals Pro reserves the right to revoke bonuses or related profits.",
+      "LipwaTasks reserves the right to revoke bonuses or related profits.",
     ],
   },
   {
@@ -71,23 +70,22 @@ const SECTIONS = [
     intro: "Users are strictly prohibited from:",
     items: [
       "Engaging in fraud or money laundering",
-      "Using bots, scripts, or automated trading systems without approval",
-      "Exploiting system errors or price delays",
+      "Using bots, scripts, or automated systems to complete tasks without approval",
+      "Exploiting system errors or platform delays",
       "Attempting unauthorized system access",
     ],
     footer: "Violations may result in account suspension, termination, or fund restriction.",
   },
   {
-    title: "10. Market Data Disclaimer",
+    title: "10. Platform Availability",
     items: [
-      "Price feeds and charts are sourced from third-party providers.",
-      "Elite Signals Pro does not guarantee accuracy or uninterrupted availability.",
-      "Platform delays or technical errors may occur.",
+      "LipwaTasks does not guarantee uninterrupted service or continuous task availability.",
+      "Platform delays, third-party provider outages, or technical errors may occur.",
     ],
   },
   {
-    title: "11. Trade Execution",
-    intro: "All trades are final once confirmed. Elite Signals Pro is not liable for losses due to:",
+    title: "11. Task Submissions",
+    intro: "All task submissions and transactions are final once confirmed. LipwaTasks is not liable for losses due to:",
     items: [
       "Internet connectivity issues",
       "Device failure",
@@ -97,14 +95,14 @@ const SECTIONS = [
   {
     title: "12. Fees & Charges",
     items: [
-      "Elite Signals Pro may apply transaction or service fees where applicable.",
+      "LipwaTasks may apply transaction or service fees where applicable.",
       "Fees will be disclosed within the platform.",
     ],
   },
   {
     title: "13. Limitation of Liability",
     items: [
-      "Elite Signals Pro is not liable for any direct or indirect financial losses.",
+      "LipwaTasks is not liable for any direct or indirect financial losses.",
       "Users accept full responsibility for their use of the platform.",
     ],
   },
@@ -132,14 +130,14 @@ const SECTIONS = [
   {
     title: "17. Amendments",
     items: [
-      "Elite Signals Pro reserves the right to modify these Terms at any time.",
+      "LipwaTasks reserves the right to modify these Terms at any time.",
       "Continued use indicates acceptance of updated Terms.",
     ],
   },
   {
     title: "18. Governing Law",
     items: [
-      "These Terms shall be governed by the laws of the applicable jurisdiction where Elite Signals Pro operates.",
+      "These Terms shall be governed by the laws of the applicable jurisdiction where LipwaTasks operates.",
     ],
   },
 ];
@@ -155,7 +153,7 @@ export default function Terms() {
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Elite Signals Pro
+            Back to LipwaTasks
           </Link>
         </div>
       </div>
@@ -166,14 +164,14 @@ export default function Terms() {
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold mb-1">Terms &amp; Conditions</h1>
           <p className="text-muted-foreground text-sm">
-            Elite Signals Pro — please read carefully before using the platform.
+            LipwaTasks — please read carefully before using the platform.
           </p>
         </div>
 
         {/* Intro banner */}
         <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8">
           <p className="text-sm leading-relaxed text-foreground/80">
-            Welcome to Elite Signals Pro ("the Platform"). By registering, accessing, or using our services,
+            Welcome to LipwaTasks ("the Platform"). By registering, accessing, or using our services,
             you agree to comply with and be bound by these Terms and Conditions. If you do not agree,
             you must discontinue use immediately.
           </p>
@@ -208,12 +206,12 @@ export default function Terms() {
 
         {/* Footer agreement */}
         <div className="mt-8 border border-border rounded-xl p-5 bg-muted/30 text-sm text-muted-foreground leading-relaxed">
-          By creating an account, accessing, or using Elite Signals Pro, you acknowledge that you have read,
+          By creating an account, accessing, or using LipwaTasks, you acknowledge that you have read,
           understood, and agreed to these Terms and Conditions.
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          © 2026 Elite Signals Pro · All rights reserved
+          © {new Date().getFullYear()} LipwaTasks · All rights reserved
         </p>
       </div>
     </div>

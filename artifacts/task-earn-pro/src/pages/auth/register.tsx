@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2, ChevronsUpDown, Check, CircleDollarSign, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,11 +107,11 @@ const COUNTRIES = [
 ];
 
 const formSchema = z.object({
-  name: z.string().min(2, "Full name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
+  name: z.string().trim().min(2, "Full name must be at least 2 characters"),
+  email: z.string().trim().email("Invalid email address"),
   country: z.string().min(1, "Please select your country"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  referralCode: z.string().optional(),
+  referralCode: z.string().trim().optional(),
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: "You must agree to the Terms and Conditions to continue",
   }),
@@ -123,6 +124,7 @@ export default function Register() {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+  const { setToken } = useAuth();
   const registerMutation = useRegister();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -131,13 +133,26 @@ export default function Register() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    registerMutation.mutate({ data: values } as any, {
-      onSuccess: () => {
-        toast({ title: "Account created! 🎁", description: "Log in to claim your free Starter Gift Card." });
-        setLocation("/auth/login");
+    const { agreedToTerms, ...registrationData } = values;
+    void agreedToTerms;
+    registerMutation.mutate({ data: registrationData }, {
+      onSuccess: (data: any) => {
+        setToken(data.token);
+        toast({ title: "Account created!", description: "Welcome to LipwaTasks." });
+        setLocation("/dashboard");
       },
       onError: (error: any) => {
-        toast({ title: "Registration failed", description: error?.data?.error ?? error.message ?? "An error occurred.", variant: "destructive" });
+        const responseBody = error?.data;
+        const backendUnavailable =
+          typeof responseBody === "string" &&
+          /this app isn't live yet|<html[\s>]/i.test(responseBody);
+        toast({
+          title: backendUnavailable ? "Sign-up service unavailable" : "Registration failed",
+          description: backendUnavailable
+            ? "We can't reach the registration service right now. Please try again later."
+            : responseBody?.error ?? error.message ?? "An error occurred.",
+          variant: "destructive",
+        });
       },
     });
   }
@@ -153,7 +168,7 @@ export default function Register() {
           <div className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow">
             <CircleDollarSign className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Elite Signals Pro</span>
+          <span className="text-xl font-bold tracking-tight">LipwaTasks</span>
         </div>
 
         <div className="space-y-8">
@@ -185,7 +200,7 @@ export default function Register() {
           </div>
         </div>
 
-        <p className="text-white/30 text-xs">© 2025 Elite Signals Pro. All rights reserved.</p>
+        <p className="text-white/30 text-xs">© {new Date().getFullYear()} LipwaTasks. All rights reserved.</p>
       </div>
 
       {/* Right panel – form */}
@@ -196,7 +211,7 @@ export default function Register() {
             <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CircleDollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">Elite Signals Pro</span>
+            <span className="text-xl font-bold">LipwaTasks</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Create your account</h2>
@@ -311,10 +326,7 @@ export default function Register() {
                       />
                     </FormControl>
                     <label htmlFor="terms-register" className="text-sm text-muted-foreground leading-snug cursor-pointer select-none">
-                      I agree to the{" "}
-                      <Link href="/terms" className="text-emerald-600 hover:underline font-medium">
-                        Terms and Conditions
-                      </Link>
+                      I agree to the Terms and Conditions
                     </label>
                   </div>
                   <FormMessage />

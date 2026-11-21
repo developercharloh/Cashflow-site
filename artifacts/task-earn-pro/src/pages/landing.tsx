@@ -8,9 +8,9 @@ export default function Landing() {
       <header className="h-20 flex items-center justify-between px-6 lg:px-12 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            T
+            L
           </div>
-          <span className="text-xl font-bold tracking-tight">Elite Signals Pro</span>
+          <span className="text-xl font-bold tracking-tight">LipwaTasks</span>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it Works</a>
@@ -97,11 +97,11 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
-              T
+              L
             </div>
-            <span className="font-semibold">Elite Signals Pro</span>
+            <span className="font-semibold">LipwaTasks</span>
           </div>
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Elite Signals Pro. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} LipwaTasks. All rights reserved.</p>
         </div>
       </footer>
     </div>
