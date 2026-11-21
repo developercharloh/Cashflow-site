@@ -107,11 +107,11 @@ const COUNTRIES = [
 ];
 
 const formSchema = z.object({
-  name: z.string().min(2, "Full name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
+  name: z.string().trim().min(2, "Full name must be at least 2 characters"),
+  email: z.string().trim().email("Invalid email address"),
   country: z.string().min(1, "Please select your country"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  referralCode: z.string().optional(),
+  referralCode: z.string().trim().optional(),
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: "You must agree to the Terms and Conditions to continue",
   }),
@@ -135,14 +135,24 @@ export default function Register() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     const { agreedToTerms, ...registrationData } = values;
     void agreedToTerms;
-    registerMutation.mutate({ data: registrationData } as any, {
+    registerMutation.mutate({ data: registrationData }, {
       onSuccess: (data: any) => {
         setToken(data.token);
         toast({ title: "Account created!", description: "Welcome to LipwaTasks." });
         setLocation("/dashboard");
       },
       onError: (error: any) => {
-        toast({ title: "Registration failed", description: error?.data?.error ?? error.message ?? "An error occurred.", variant: "destructive" });
+        const responseBody = error?.data;
+        const backendUnavailable =
+          typeof responseBody === "string" &&
+          /this app isn't live yet|<html[\s>]/i.test(responseBody);
+        toast({
+          title: backendUnavailable ? "Sign-up service unavailable" : "Registration failed",
+          description: backendUnavailable
+            ? "We can't reach the registration service right now. Please try again later."
+            : responseBody?.error ?? error.message ?? "An error occurred.",
+          variant: "destructive",
+        });
       },
     });
   }

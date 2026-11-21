@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-//  Elite Signals Pro – Trading Engine
+//  LipwaTasks – Trading Engine
 //  Deriv Volatility Indices · Digit Contracts
 // ────────────────────────────────────────────────────────────
 

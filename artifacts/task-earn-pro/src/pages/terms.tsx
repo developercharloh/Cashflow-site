@@ -32,12 +32,11 @@ const SECTIONS = [
     ],
   },
   {
-    title: "5. Risk Disclosure",
+    title: "5. Earnings and Task Availability",
     items: [
-      "Trading involves a high level of risk.",
-      "You may lose all your invested capital.",
-      "Trading outcomes are not guaranteed.",
-      "You are solely responsible for your trading decisions.",
+      "Task availability, eligibility, and rewards may vary.",
+      "Earnings are not guaranteed and depend on completed tasks being reviewed and approved.",
+      "You are responsible for reading each task's instructions before participating.",
     ],
   },
   {
@@ -71,22 +70,21 @@ const SECTIONS = [
     intro: "Users are strictly prohibited from:",
     items: [
       "Engaging in fraud or money laundering",
-      "Using bots, scripts, or automated trading systems without approval",
-      "Exploiting system errors or price delays",
+      "Using bots, scripts, or automated systems to complete tasks without approval",
+      "Exploiting system errors or platform delays",
       "Attempting unauthorized system access",
     ],
     footer: "Violations may result in account suspension, termination, or fund restriction.",
   },
   {
-    title: "10. Market Data Disclaimer",
+    title: "10. Platform Availability",
     items: [
-      "Price feeds and charts are sourced from third-party providers.",
-      "LipwaTasks does not guarantee accuracy or uninterrupted availability.",
-      "Platform delays or technical errors may occur.",
+      "LipwaTasks does not guarantee uninterrupted service or continuous task availability.",
+      "Platform delays, third-party provider outages, or technical errors may occur.",
     ],
   },
   {
-    title: "11. Trade Execution",
+    title: "11. Task Submissions",
     intro: "All task submissions and transactions are final once confirmed. LipwaTasks is not liable for losses due to:",
     items: [
       "Internet connectivity issues",
