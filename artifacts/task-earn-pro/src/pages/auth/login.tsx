@@ -9,20 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CircleDollarSign, TrendingUp, Shield, Zap, Eye, EyeOff } from "lucide-react";
+import { Loader2, CircleDollarSign, Shield, Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-
-const PERKS = [
-  { icon: <TrendingUp className="w-4 h-4 text-emerald-400" />, text: "Earn up to $500/month from tasks" },
-  { icon: <Zap className="w-4 h-4 text-yellow-400" />, text: "Instant M-Pesa & PayPal withdrawals" },
-  { icon: <Shield className="w-4 h-4 text-blue-400" />, text: "Trusted by 284,000+ members worldwide" },
-];
-
-const TESTIMONIALS = [
-  { name: "Grace K.", country: "🇰🇪 Kenya", earned: "$312", text: "I earned my first $50 in just 3 days!" },
-  { name: "James O.", country: "🇳🇬 Nigeria", earned: "$480", text: "Best side hustle I've ever found." },
-  { name: "Amara D.", country: "🇬🇭 Ghana", earned: "$198", text: "Withdrew to my M-Pesa within minutes." },
-];
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -79,41 +67,21 @@ export default function Login() {
           {/* Headline */}
           <div>
             <p className="text-5xl font-extrabold leading-tight mb-4">
-              Your phone.<br />Your income. 💸
+              Welcome back.<br />Pick up where you left off.
             </p>
             <p className="text-white/60 text-sm leading-relaxed">
-              Log in and start completing tasks — surveys, videos, AI training, and more.
+              Sign in to explore academic writing, data entry, transcription, AI training, Simple Quiz, and your wallet.
             </p>
           </div>
 
-          {/* Perks */}
           <div className="space-y-3">
-            {PERKS.map(p => (
-              <div key={p.text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">{p.icon}</div>
-                <span className="text-sm text-white/80">{p.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Testimonials */}
-          <div className="space-y-3">
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} className="bg-white/8 border border-white/10 rounded-xl p-3 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="text-white/40 text-[11px]">{t.country}</p>
-                  </div>
-                  <span className="text-emerald-400 font-bold text-sm">{t.earned}</span>
-                </div>
-                <p className="text-white/55 text-xs">"{t.text}"</p>
-              </div>
+            {["Four illustrative freelance work areas", "One separate platform-funded Simple Quiz", "Soft Loans and Forex are coming soon"].map((text) => (
+              <div key={text} className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-emerald-300">•</span><span className="text-sm text-white/80">{text}</span></div>
             ))}
           </div>
         </div>
 
-        <p className="text-white/25 text-xs relative z-10">© {new Date().getFullYear()} LipwaTasks · Payments in 48 hrs or less</p>
+        <p className="text-white/25 text-xs relative z-10">© {new Date().getFullYear()} LipwaTasks</p>
       </div>
 
       {/* ── Right panel – login form ── */}
@@ -128,18 +96,8 @@ export default function Login() {
             <span className="text-xl font-bold">LipwaTasks</span>
           </div>
 
-          {/* Mobile stats strip */}
-          <div className="lg:hidden flex gap-2 mb-7">
-            {[["$4.2M+", "Paid out"], ["284K+", "Members"], ["180+", "Countries"]].map(([v, l]) => (
-              <div key={l} className="flex-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2 text-center">
-                <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">{v}</p>
-                <p className="text-muted-foreground text-[10px]">{l}</p>
-              </div>
-            ))}
-          </div>
-
-          <h2 className="text-2xl font-bold mb-1">Welcome back 👋</h2>
-          <p className="text-muted-foreground text-sm mb-7">Log in to continue earning</p>
+          <h2 className="text-2xl font-bold mb-1">Welcome back</h2>
+          <p className="text-muted-foreground text-sm mb-7">Log in to open your LipwaTasks account.</p>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -200,15 +158,15 @@ export default function Login() {
               <Button type="submit" className="w-full h-11 text-base font-semibold bg-emerald-600 hover:bg-emerald-700" disabled={loginMutation.isPending}>
                 {loginMutation.isPending
                   ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Logging in…</>
-                  : "Log In & Start Earning →"}
+                  : "Log in"}
               </Button>
             </form>
           </Form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             New here?{" "}
-            <Link href="/auth/register" className="font-semibold text-emerald-600 hover:underline">
-              Create a free account
+              <Link href="/auth/register" className="font-semibold text-emerald-600 hover:underline">
+              Create an account
             </Link>
           </p>
 
@@ -220,13 +178,13 @@ export default function Login() {
             </div>
             <div className="w-px h-3 bg-border" />
             <div className="flex items-center gap-1.5 text-xs">
-              <Zap className="w-3.5 h-3.5 text-yellow-500" />
-              Instant payouts
+              <CircleDollarSign className="w-3.5 h-3.5 text-emerald-500" />
+              Wallet access
             </div>
             <div className="w-px h-3 bg-border" />
             <div className="flex items-center gap-1.5 text-xs">
-              <CircleDollarSign className="w-3.5 h-3.5 text-emerald-500" />
-              Free to join
+              <Shield className="w-3.5 h-3.5 text-emerald-500" />
+              Privacy minded
             </div>
           </div>
         </div>
