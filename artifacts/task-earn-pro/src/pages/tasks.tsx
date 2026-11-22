@@ -172,7 +172,6 @@ export default function TasksPage() {
   const submissionStatus = (status: string) =>
     status === "approved" ? "Approved · reward credited" : status === "submitted" ? "Under review" : status === "rejected" ? "Not approved" : status;
 
-export default function TasksPage() {
   return (
     <div className="px-4 pb-10 pt-8 sm:px-7 sm:pt-12">
       <header className="max-w-3xl">

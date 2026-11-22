@@ -2,7 +2,11 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 
-const JWT_SECRET = process.env.SESSION_SECRET ?? "taskearnpro-secret-key";
+const configuredSessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === "production" && !configuredSessionSecret) {
+  throw new Error("SESSION_SECRET must be configured in production.");
+}
+const JWT_SECRET = configuredSessionSecret ?? "taskearnpro-local-development-only";
 
 export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
