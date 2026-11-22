@@ -6,7 +6,7 @@ import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 export default function Login() {
   const { login, user } = useAuth();
   const [, setLoc] = useLocation();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -22,7 +22,7 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
       // Navigation handled by the useEffect watching `user`
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -113,7 +113,7 @@ export default function Login() {
         )}
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {/* Email field */}
+          {/* Username field */}
           <div style={{
             borderRadius: "16px", padding: "14px 16px",
             background: "rgba(255,255,255,0.04)",
@@ -135,7 +135,7 @@ export default function Login() {
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: "10px", fontWeight: 700, color: "rgba(148,163,184,0.6)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "2px" }}>Username</p>
               <input
-                type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                type="text" autoComplete="username" required value={username} onChange={e => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 style={{
                   width: "100%", background: "transparent", border: "none", outline: "none",
