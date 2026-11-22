@@ -1,10 +1,46 @@
 import { Router } from "express";
 import { db, usersTable, transactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { timingSafeEqual } from "node:crypto";
 import { hashPassword, comparePassword, signToken, generateReferralCode, generateResetToken } from "../lib/auth";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
+const adminLoginAttempts = new Map<string, { count: number; resetAt: number }>();
+const ADMIN_LOGIN_LIMIT = 10;
+const ADMIN_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function matchesSecret(provided: string, expected: string): boolean {
+  const providedBytes = Buffer.from(provided);
+  const expectedBytes = Buffer.from(expected);
+  if (providedBytes.length !== expectedBytes.length) {
+    timingSafeEqual(expectedBytes, Buffer.alloc(expectedBytes.length));
+    return false;
+  }
+  return timingSafeEqual(providedBytes, expectedBytes);
+}
+
+function isAdminLoginRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const current = adminLoginAttempts.get(ip);
+  if (current && current.resetAt > now) {
+    current.count += 1;
+    return current.count > ADMIN_LOGIN_LIMIT;
+  }
+
+  adminLoginAttempts.set(ip, { count: 1, resetAt: now + ADMIN_LOGIN_WINDOW_MS });
+  if (adminLoginAttempts.size > 5000) {
+    for (const [key, attempt] of adminLoginAttempts) {
+      if (attempt.resetAt <= now) adminLoginAttempts.delete(key);
+    }
+    while (adminLoginAttempts.size > 4000) {
+      const firstKey = adminLoginAttempts.keys().next().value;
+      if (!firstKey) break;
+      adminLoginAttempts.delete(firstKey);
+    }
+  }
+  return false;
+}
 
 router.post("/auth/register", async (req, res) => {
   try {
@@ -78,6 +114,60 @@ router.post("/auth/login", async (req, res) => {
     res.json({ user: sanitizeUser(user), token });
   } catch (err) {
     req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/admin-login", async (req, res) => {
+  try {
+    if (isAdminLoginRateLimited(req.ip || req.socket.remoteAddress || "unknown")) {
+      res.status(429).json({ error: "Too many login attempts. Try again later." });
+      return;
+    }
+
+    const { username, password } = req.body as { username?: unknown; password?: unknown };
+    const configuredUsername = process.env.LIPWA_ADMIN_USERNAME?.trim();
+    const configuredPassword = process.env.LIPWA_ADMIN_PASSWORD;
+    if (!configuredUsername || !configuredPassword) {
+      res.status(503).json({ error: "Admin login is not configured." });
+      return;
+    }
+    if (typeof username !== "string" || typeof password !== "string" ||
+        username.length > 100 || password.length > 1024) {
+      res.status(401).json({ error: "Invalid credentials." });
+      return;
+    }
+
+    const usernameMatches = matchesSecret(
+      username.trim().toLocaleLowerCase("en-US"),
+      configuredUsername.toLocaleLowerCase("en-US"),
+    );
+    const passwordMatches = matchesSecret(password, configuredPassword);
+    if (!usernameMatches || !passwordMatches) {
+      res.status(401).json({ error: "Invalid credentials." });
+      return;
+    }
+
+    const adminAccounts = await db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      isAdmin: usersTable.isAdmin,
+      isBanned: usersTable.isBanned,
+    }).from(usersTable).where(eq(usersTable.isAdmin, true)).limit(20);
+    const admin = adminAccounts.find((account) => !account.isBanned);
+    if (!admin) {
+      res.status(503).json({ error: "No active administrator account is available." });
+      return;
+    }
+
+    const token = signToken({ userId: admin.id, isAdmin: true });
+    res.json({
+      user: { id: admin.id, name: admin.name, email: admin.email, isAdmin: true },
+      token,
+    });
+  } catch (err) {
+    req.log.error(err, "Admin login failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });

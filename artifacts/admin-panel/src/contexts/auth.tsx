@@ -10,7 +10,7 @@ interface AdminUser {
 
 interface AuthCtx {
   user: AdminUser | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -21,7 +21,12 @@ function decodeJwt(token: string): AdminUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/")));
     if (!payload.isAdmin) return null;
-    return { id: payload.id, name: payload.name, email: payload.email, isAdmin: payload.isAdmin };
+    return {
+      id: payload.userId ?? payload.id,
+      name: payload.name ?? "Administrator",
+      email: payload.email ?? "",
+      isAdmin: payload.isAdmin,
+    };
   } catch {
     return null;
   }
@@ -45,12 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const data = await post<{ token: string }>("/auth/login", { email, password });
-    const decoded = decodeJwt(data.token);
-    if (!decoded?.isAdmin) throw new Error("Not an admin account");
+  const login = async (username: string, password: string) => {
+    const data = await post<{ token: string; user: AdminUser }>("/auth/admin-login", { username, password });
+    if (!data.user?.isAdmin || !decodeJwt(data.token)?.isAdmin) {
+      throw new Error("Not an admin account");
+    }
     localStorage.setItem("token", data.token);
-    setUser(decoded);
+    setUser(data.user);
   };
 
   const logout = () => {
