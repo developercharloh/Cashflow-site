@@ -43,45 +43,17 @@ const CRYPTO_IDS = ["usdt-trc20", "usdt-bep20", "usdt-erc20"];
 const DEPOSIT_METHODS = [
   {
     id: "card",
-    label: "Card Payment",
-    sub: "Visa, Mastercard, Amex — all cards",
+    label: "Card Deposit",
+    sub: "Coming Soon — card deposits are not available yet",
     icon: <CreditCard className="w-6 h-6 text-blue-500" />,
     color: "border-blue-500/20 bg-blue-500/5",
   },
   {
     id: "mpesa",
-    label: "M-Pesa",
-    sub: "Mobile money — Kenya & East Africa",
+    label: "M-Pesa Express",
+    sub: "Secure STK push to your Kenyan phone",
     icon: <Smartphone className="w-6 h-6 text-green-500" />,
     color: "border-green-500/20 bg-green-500/5",
-  },
-  {
-    id: "usdt-trc20",
-    label: "USDT TRC-20",
-    sub: "Tron network (fast, low fees)",
-    icon: <span className="w-6 h-6 flex items-center justify-center text-orange-400 font-black text-xs">₮</span>,
-    color: "border-orange-500/20 bg-orange-500/5",
-  },
-  {
-    id: "usdt-bep20",
-    label: "USDT BEP-20",
-    sub: "Binance Smart Chain",
-    icon: <span className="w-6 h-6 flex items-center justify-center text-yellow-400 font-black text-xs">₮</span>,
-    color: "border-yellow-500/20 bg-yellow-500/5",
-  },
-  {
-    id: "usdt-erc20",
-    label: "USDT ERC-20",
-    sub: "Ethereum network",
-    icon: <span className="w-6 h-6 flex items-center justify-center text-purple-400 font-black text-xs">₮</span>,
-    color: "border-purple-500/20 bg-purple-500/5",
-  },
-  {
-    id: "paypal",
-    label: "PayPal",
-    sub: "Pay with your PayPal balance",
-    icon: <span className="w-6 h-6 flex items-center justify-center text-blue-400 font-black text-sm">$</span>,
-    color: "border-blue-400/20 bg-blue-400/5",
   },
 ];
 
@@ -170,8 +142,8 @@ export default function WalletPage() {
   const [cardName, setCardName] = useState("");
 
   // Exchange rates
-  const DEPOSIT_RATE = 134;    // 1 USD = 134 KES (deposit)
-  const WITHDRAWAL_RATE = 121; // 1 USD = 121 KES (withdrawal)
+  const DEPOSIT_RATE = 130;    // 1 USD = 130 KES (deposit)
+  const WITHDRAWAL_RATE = 125; // 1 USD = 125 KES (withdrawal)
 
   const isMobileMoney = (id: string) => id === "mpesa";
 
@@ -417,7 +389,7 @@ export default function WalletPage() {
     });
   };
 
-  const handleMobileWithdraw = (provider: "mpesa") => {
+  const handleMobileWithdraw = (provider: "mpesa" | "airtel") => {
     const amt = parseFloat(manualAmount);
     if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
     if (!manualAccount) { toast({ title: "Please enter your phone number", variant: "destructive" }); return; }
@@ -573,8 +545,8 @@ export default function WalletPage() {
                       <p className="text-xs text-muted-foreground">{new Date(txn.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-sm font-bold ${txn.type === "withdrawal" ? "text-red-500" : "text-green-600"}`}>
-                        {txn.type === "withdrawal" ? "-" : "+"}${txn.amount.toFixed(2)}
+                      <p className={`text-sm font-bold ${txn.type === "withdrawal" || txn.amount < 0 ? "text-red-500" : "text-green-600"}`}>
+                        {txn.type === "withdrawal" || txn.amount < 0 ? "-" : "+"}${Math.abs(txn.amount).toFixed(2)}
                       </p>
                       <Badge variant="outline" className={`text-[9px] ${status.class}`}>
                         <span className="flex items-center gap-0.5">{status.icon}{txn.status}</span>
@@ -608,7 +580,9 @@ export default function WalletPage() {
             {DEPOSIT_METHODS.map(m => (
               <button
                 key={m.id}
+                disabled={m.id === "card"}
                 onClick={() => {
+                  if (m.id === "card") return;
                   // Crypto + PayPal → address display flow
                   if (CRYPTO_IDS.includes(m.id) || m.id === "paypal") {
                     setStage({ view: "crypto_form", method: m });
@@ -616,7 +590,7 @@ export default function WalletPage() {
                     setStage({ view: "deposit_form", method: m });
                   }
                 }}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:border-primary/40 text-left ${m.color}`}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${m.color} ${m.id === "card" ? "cursor-not-allowed opacity-60" : "hover:border-primary/40"}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                   {m.icon}
@@ -625,7 +599,9 @@ export default function WalletPage() {
                   <p className="font-semibold text-sm text-white">{m.label}</p>
                   <p className="text-xs text-muted-foreground">{m.sub}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                {m.id === "card"
+                  ? <Badge variant="outline" className="shrink-0 text-[10px]">Coming Soon</Badge>
+                  : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
               </button>
             ))}
             <button
@@ -800,7 +776,7 @@ export default function WalletPage() {
               {/* Phone number — required for mobile money */}
               {isMobileMoney(stage.method.id) && (
                 <div>
-                  <Label>{stage.method.id === "airtel" ? "Airtel" : "M-Pesa"} Phone Number <span className="text-red-500">*</span></Label>
+                  <Label>M-Pesa Phone Number <span className="text-red-500">*</span></Label>
                   <Input
                     type="tel"
                     placeholder="e.g. 0712345678 or +254712345678"

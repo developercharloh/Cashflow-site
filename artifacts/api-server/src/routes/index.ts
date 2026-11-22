@@ -12,6 +12,7 @@ import adminRouter from "./admin";
 import paystackRouter from "./paystack";
 import binaryRouter from "./binary";
 import kycRouter from "./kyc";
+import workSubmissionsRouter from "./work-submissions";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(adminRouter);
 router.use(paystackRouter);
 router.use(binaryRouter);
 router.use(kycRouter);
+router.use(workSubmissionsRouter);
 
 export default router;

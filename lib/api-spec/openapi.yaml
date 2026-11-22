@@ -345,6 +345,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/TaskSubmitResult"
 
+  /tasks/work-submissions/upload-url:
+    post:
+      operationId: requestTaskSubmissionUpload
+      tags: [tasks]
+      summary: Request a private upload URL for task work
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskFileInput"
+      responses:
+        "200":
+          description: Private upload URL and object path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFileUpload"
+
+  /tasks/{id}/work-submissions:
+    post:
+      operationId: submitWrittenTask
+      tags: [tasks]
+      summary: Submit written or attached task work for review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskWorkSubmissionInput"
+      responses:
+        "201":
+          description: Work submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskWorkSubmission"
+
+  /tasks/work-submissions/mine:
+    get:
+      operationId: getMyWorkSubmissions
+      tags: [tasks]
+      summary: Get the current user's written-work submissions
+      responses:
+        "200":
+          description: Submitted work and review status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskWorkSubmission"
+
+  /storage/task-submissions/{id}/file:
+    get:
+      operationId: downloadTaskSubmissionFile
+      tags: [tasks]
+      summary: Download a private task attachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Private work attachment
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: The signed-in user cannot access the file
+        "404":
+          description: Attachment not found
+
   /tasks/{id}/complete:
     post:
       operationId: completeTask
@@ -953,6 +1036,123 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUser"
 
+  /admin/users/{id}:
+    patch:
+      operationId: adminUpdateUser
+      tags: [admin]
+      summary: Admin — update user profile, access, and role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{id}/balance-adjustments:
+    post:
+      operationId: adminAdjustUserBalance
+      tags: [admin]
+      summary: Admin — adjust user wallet balance with reason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BalanceAdjustmentInput"
+      responses:
+        "200":
+          description: Wallet adjustment applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/task-submissions:
+    get:
+      operationId: adminGetTaskSubmissions
+      tags: [admin]
+      summary: Admin — list written-work submissions for review
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Submission review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTaskSubmission"
+
+  /admin/task-submissions/{id}/review:
+    patch:
+      operationId: adminReviewTaskSubmission
+      tags: [admin]
+      summary: Admin — approve or reject submitted work
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskReviewInput"
+      responses:
+        "200":
+          description: Submission review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTaskSubmission"
+
+  /admin/audit-log:
+    get:
+      operationId: adminGetAuditLog
+      tags: [admin]
+      summary: Admin — view recent sensitive account and task changes
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Recent admin actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminAuditEntry"
+
   /admin/tasks:
     get:
       operationId: adminGetTasks
@@ -1340,7 +1540,7 @@ components:
     # ── Tasks ─────────────────────────────────────────────────────────────────
     Task:
       type: object
-      required: [id, title, description, category, taskType, reward, estimatedMinutes, difficulty, minLevel, isActive]
+      required: [id, title, description, category, taskType, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, isActive]
       properties:
         id:
           type: integer
@@ -1354,6 +1554,10 @@ components:
           type: string
         reward:
           type: number
+        fundingBudget:
+          type: number
+        maxCompletions:
+          type: integer
         estimatedMinutes:
           type: integer
         timeLimitSeconds:
@@ -1540,7 +1744,7 @@ components:
 
     TaskInput:
       type: object
-      required: [title, description, category, reward, estimatedMinutes, difficulty, minLevel]
+      required: [title, description, category, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, instructions]
       properties:
         title:
           type: string
@@ -1550,6 +1754,10 @@ components:
           type: string
         reward:
           type: number
+        fundingBudget:
+          type: number
+        maxCompletions:
+          type: integer
         estimatedMinutes:
           type: integer
         difficulty:
@@ -1557,7 +1765,9 @@ components:
         minLevel:
           type: integer
         instructions:
-          type: ["string", "null"]
+          type: string
+        taskType:
+          type: string
         isActive:
           type: boolean
 
@@ -1578,6 +1788,149 @@ components:
           type: string
         estimatedMinutes:
           type: integer
+        fundingBudget:
+          type: number
+        maxCompletions:
+          type: integer
+        category:
+          type: string
+        instructions:
+          type: string
+        taskType:
+          type: string
+
+    TaskFileInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+
+    TaskFileUpload:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+
+    TaskWorkSubmissionInput:
+      type: object
+      properties:
+        textSubmission:
+          type: string
+        attachmentPath:
+          type: string
+        attachmentName:
+          type: string
+        attachmentContentType:
+          type: string
+        attachmentSize:
+          type: integer
+
+    TaskWorkSubmission:
+      type: object
+      required: [id, taskId, taskTitle, reward, status, submittedAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        taskTitle:
+          type: string
+        reward:
+          type: number
+        status:
+          type: string
+        textSubmission:
+          type: ["string", "null"]
+        attachmentName:
+          type: ["string", "null"]
+        attachmentPath:
+          type: ["string", "null"]
+        reviewNote:
+          type: ["string", "null"]
+        submittedAt:
+          type: string
+
+    AdminTaskSubmission:
+      allOf:
+        - $ref: "#/components/schemas/TaskWorkSubmission"
+        - type: object
+          required: [userId, userName, userEmail]
+          properties:
+            userId:
+              type: integer
+            userName:
+              type: string
+            userEmail:
+              type: string
+
+    TaskReviewInput:
+      type: object
+      required: [decision, note]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: string
+
+    AdminUserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        level:
+          type: integer
+        isAdmin:
+          type: boolean
+        isBanned:
+          type: boolean
+        isEmailVerified:
+          type: boolean
+
+    BalanceAdjustmentInput:
+      type: object
+      required: [amount, reason]
+      properties:
+        amount:
+          type: number
+        reason:
+          type: string
+
+    AdminAuditEntry:
+      type: object
+      required: [id, adminUserId, adminName, action, targetType, targetId, details, createdAt]
+      properties:
+        id:
+          type: integer
+        adminUserId:
+          type: integer
+        adminName:
+          type: string
+        action:
+          type: string
+        targetType:
+          type: string
+        targetId:
+          type: integer
+        details:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
 
     # ── Wallet ────────────────────────────────────────────────────────────────
     Wallet:
@@ -1851,7 +2204,7 @@ components:
     # ── Admin ─────────────────────────────────────────────────────────────────
     AdminUser:
       type: object
-      required: [id, email, name, level, balance, tasksCompleted, referralCount, isBanned, isAdmin, createdAt]
+      required: [id, email, name, level, balance, tasksCompleted, referralCount, isBanned, isAdmin, createdAt, isEmailVerified, phone, country, totalEarned, pendingEarnings]
       properties:
         id:
           type: integer
@@ -1871,6 +2224,16 @@ components:
           type: boolean
         isAdmin:
           type: boolean
+        isEmailVerified:
+          type: boolean
+        phone:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        totalEarned:
+          type: number
+        pendingEarnings:
+          type: number
         createdAt:
           type: string
 

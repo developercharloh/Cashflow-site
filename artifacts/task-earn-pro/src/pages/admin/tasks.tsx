@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Loader2, CheckSquare } from "lucide-react";
+import { Link } from "wouter";
+import { Plus, Pencil, Trash2, Loader2, CheckSquare, ClipboardCheck } from "lucide-react";
 
-const CATEGORIES = ["Surveys", "Video Watching", "Article Reading", "Digital Engagement Tasks", "AI Training Tasks", "Data Categorization", "Daily Check-In Tasks"];
+const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"];
 
 function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: any) => void; onClose: () => void }) {
   const [form, setForm] = useState({
@@ -20,10 +21,12 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
     description: initial?.description ?? "",
     category: initial?.category ?? "",
     reward: initial?.reward ?? "",
+    fundingBudget: initial?.fundingBudget ?? "",
+    maxCompletions: initial?.maxCompletions ?? 1,
     estimatedMinutes: initial?.estimatedMinutes ?? "",
-    difficulty: initial?.difficulty ?? "easy",
+    difficulty: "hard",
     minLevel: initial?.minLevel ?? 1,
-    instructions: initial?.instructions ?? "",
+    instructions: initial?.instructions ?? "Complete every part of the task. Show your working, follow the supplied format, verify accuracy, and explain any assumptions. Submissions are checked against the requirements before the reward is approved.",
     isActive: initial?.isActive ?? true,
   });
 
@@ -46,32 +49,34 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
             <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
+          {form.category === "Academic Writing" && <p className="mt-1 text-xs text-muted-foreground">Limit listings to proofreading, citation formatting, and research organization. Do not post requests to complete graded coursework.</p>}
         </div>
         <div>
           <Label>Reward ($)</Label>
-          <Input type="number" min="0" step="0.01" value={form.reward} onChange={e => set("reward", parseFloat(e.target.value))} />
+          <Input type="number" min="0.01" step="0.01" value={form.reward} onChange={e => set("reward", e.target.value)} />
         </div>
         <div>
-          <Label>Est. Minutes</Label>
-          <Input type="number" min="1" value={form.estimatedMinutes} onChange={e => set("estimatedMinutes", parseInt(e.target.value))} />
+          <Label>Total platform budget ($)</Label>
+          <Input type="number" min="0.01" step="0.01" value={form.fundingBudget} onChange={e => set("fundingBudget", e.target.value)} />
+        </div>
+        <div>
+          <Label>Maximum accepted submissions</Label>
+          <Input type="number" min="1" max="500" step="1" value={form.maxCompletions} onChange={e => set("maxCompletions", Number(e.target.value))} />
+        </div>
+        <div>
+          <Label>Estimated minutes</Label>
+          <Input type="number" min="1" max="1440" value={form.estimatedMinutes} onChange={e => set("estimatedMinutes", e.target.value)} />
         </div>
         <div>
           <Label>Difficulty</Label>
-          <Select value={form.difficulty} onValueChange={v => set("difficulty", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex h-10 items-center rounded-md border border-border bg-muted px-3 text-sm font-semibold text-red-500">Expert only</div>
         </div>
         <div>
           <Label>Min Level (1-4)</Label>
           <Select value={String(form.minLevel)} onValueChange={v => set("minLevel", parseInt(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[1,2,3,4].map(l => <SelectItem key={l} value={String(l)}>Level {l}</SelectItem>)}
+              {[1,2,3,4,5,6,7].map(l => <SelectItem key={l} value={String(l)}>Level {l}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -86,9 +91,14 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
           </Select>
         </div>
         <div className="col-span-2">
-          <Label>Instructions (optional)</Label>
-          <Textarea value={form.instructions} onChange={e => set("instructions", e.target.value)} rows={2} />
+          <Label>Detailed instructions and quality checks (required)</Label>
+          <Textarea value={form.instructions} onChange={e => set("instructions", e.target.value)} rows={5} />
+          <p className="mt-1 text-xs text-muted-foreground">Minimum 50 characters. State the deliverable, format, accuracy requirements, and review criteria.</p>
         </div>
+      </div>
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-5 text-muted-foreground">
+        Maximum task payout is <strong className="text-foreground">${(Number(form.reward || 0) * Number(form.maxCompletions || 0)).toFixed(2)}</strong>.
+        The total platform budget must cover all accepted places. This is an in-app payout cap, not an escrow transfer. Rewards are credited only when work is approved.
       </div>
       <div className="flex gap-2 pt-2">
         <Button className="flex-1" onClick={() => onSave(form)} data-testid="button-save-task">Save Task</Button>
@@ -137,14 +147,17 @@ export default function AdminTasks() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Task Management</h1>
-          <p className="text-muted-foreground mt-1">Create and manage available tasks</p>
+          <p className="text-muted-foreground mt-1">Publish expert work with a fixed reward pool and capped places</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} data-testid="button-create-task">
-          <Plus className="w-4 h-4 mr-2" />New Task
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/admin/task-submissions"><Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4" />Review submissions</Button></Link>
+          <Button onClick={() => setShowCreate(true)} data-testid="button-create-task">
+            <Plus className="w-4 h-4 mr-2" />New Task
+          </Button>
+        </div>
       </div>
 
       <Card className="border-border">
@@ -161,7 +174,7 @@ export default function AdminTasks() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Title", "Category", "Reward", "Difficulty", "Level", "Status", "Actions"].map(h => (
+                    {["Title", "Category", "Reward", "Budget / places", "Difficulty", "Level", "Status", "Actions"].map(h => (
                       <th key={h} className="text-left py-3 px-3 text-xs text-muted-foreground font-medium">{h}</th>
                     ))}
                   </tr>
@@ -172,6 +185,7 @@ export default function AdminTasks() {
                       <td className="py-3 px-3 font-medium max-w-[200px] truncate">{task.title}</td>
                       <td className="py-3 px-3 text-xs text-muted-foreground">{task.category}</td>
                       <td className="py-3 px-3 text-green-500 font-medium">${task.reward.toFixed(2)}</td>
+                      <td className="py-3 px-3 text-xs text-muted-foreground">${task.fundingBudget.toFixed(2)} · {task.maxCompletions} max</td>
                       <td className="py-3 px-3"><Badge variant="outline" className={`text-xs ${DIFF_COLOR[task.difficulty] ?? ""}`}>{task.difficulty}</Badge></td>
                       <td className="py-3 px-3 text-muted-foreground">L{task.minLevel}+</td>
                       <td className="py-3 px-3">
@@ -201,14 +215,32 @@ export default function AdminTasks() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Create New Task</DialogTitle></DialogHeader>
-          <TaskForm onSave={handleCreate} onClose={() => setShowCreate(false)} />
+          <TaskForm onSave={(data) => handleCreate({
+            ...data,
+            taskType: "written",
+            reward: Number(data.reward),
+            fundingBudget: Number(data.fundingBudget),
+            maxCompletions: Number(data.maxCompletions),
+            estimatedMinutes: Number(data.estimatedMinutes),
+            minLevel: Number(data.minLevel),
+            difficulty: "hard",
+          })} onClose={() => setShowCreate(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editTask} onOpenChange={() => setEditTask(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Edit Task</DialogTitle></DialogHeader>
-          {editTask && <TaskForm initial={editTask} onSave={handleUpdate} onClose={() => setEditTask(null)} />}
+          {editTask && <TaskForm initial={editTask} onSave={(data) => handleUpdate({
+            ...data,
+            taskType: "written",
+            reward: Number(data.reward),
+            fundingBudget: Number(data.fundingBudget),
+            maxCompletions: Number(data.maxCompletions),
+            estimatedMinutes: Number(data.estimatedMinutes),
+            minLevel: Number(data.minLevel),
+            difficulty: "hard",
+          })} onClose={() => setEditTask(null)} />}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable, taskAttemptsTable } from "@workspace/db";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable, taskAttemptsTable, taskSubmissionsTable } from "@workspace/db";
+import { eq, and, gte, desc, or } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
 import { getRandomQuestions, CATEGORY_DESCRIPTIONS, QUESTION_BANK } from "../lib/questionBank";
@@ -370,9 +370,8 @@ const TARGET_TASK_COUNT = TASK_SEEDS.length; // 918
 async function seedTasksIfNeeded() {
   try {
     const existing = await db.select({ id: tasksTable.id }).from(tasksTable);
-    if (existing.length >= TARGET_TASK_COUNT) return;
-    // Re-seed: clear old tasks and insert the full set
-    await db.delete(tasksTable);
+    if (existing.length > 0) return;
+    // Seed legacy quiz inventory only into an empty table; never delete admin tasks.
     for (const seed of TASK_SEEDS) {
       await db.insert(tasksTable).values({
         ...seed,
@@ -383,13 +382,15 @@ async function seedTasksIfNeeded() {
     }
   } catch (_) { /* silently skip if table doesn't exist yet */ }
 }
-seedTasksIfNeeded();
+// Legacy quiz catalog is intentionally not auto-seeded in Lipwa Tasks.
+// Admin-created written tasks are the only listings shown in the Work area.
 
 // ─── GET /tasks/categories ────────────────────────────────────────────────────
 
 router.get("/tasks/categories", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const tasks = await db.select().from(tasksTable).where(eq(tasksTable.isActive, true));
+    const tasks = (await db.select().from(tasksTable).where(eq(tasksTable.isActive, true)))
+      .filter((task) => task.taskType === "written");
     const map: Record<string, { count: number; totalReward: number; maxReward: number }> = {};
     for (const t of tasks) {
       if (!map[t.category]) map[t.category] = { count: 0, totalReward: 0, maxReward: 0 };
@@ -438,7 +439,16 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { category } = req.query as { category?: string };
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    const allTasks = await db.select().from(tasksTable).where(eq(tasksTable.isActive, true));
+    const openSubmissions = await db.select({ taskId: taskSubmissionsTable.taskId }).from(taskSubmissionsTable)
+      .where(or(eq(taskSubmissionsTable.status, "submitted"), eq(taskSubmissionsTable.status, "approved")));
+    const reservedByTask = new Map<number, number>();
+    for (const submission of openSubmissions) reservedByTask.set(submission.taskId, (reservedByTask.get(submission.taskId) ?? 0) + 1);
+    const allTasks = (await db.select().from(tasksTable).where(eq(tasksTable.isActive, true)))
+      .filter((task) =>
+        task.taskType === "written" &&
+        (reservedByTask.get(task.id) ?? 0) < task.maxCompletions &&
+        task.reward * ((reservedByTask.get(task.id) ?? 0) + 1) <= task.fundingBudget + 0.000001
+      );
 
     // Fetch all user attempts: passed = cooldown, failed = task disappears permanently
     const userAttempts = await db.select().from(taskAttemptsTable)
@@ -484,6 +494,8 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
         instructions: t.instructions,
         category: t.category,
         reward: t.reward,
+        fundingBudget: t.fundingBudget,
+        maxCompletions: t.maxCompletions,
         estimatedMinutes: t.estimatedMinutes,
         timeLimitSeconds: t.timeLimitSeconds,
         difficulty: t.difficulty,
@@ -547,7 +559,7 @@ router.get("/tasks/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(String(req.params["id"]));
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
-    if (!task) { res.status(404).json({ error: "Task not found" }); return; }
+    if (!task || task.taskType !== "written" || !task.isActive) { res.status(404).json({ error: "Task not found" }); return; }
     res.json(task);
   } catch (err) {
     req.log.error(err);
@@ -562,6 +574,11 @@ router.post("/tasks/:id/start", requireAuth, async (req: AuthRequest, res) => {
     const id = parseInt(String(req.params["id"]));
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
     if (!task || !task.isActive) { res.status(404).json({ error: "Task not found" }); return; }
+    if (task.taskType !== "written") { res.status(404).json({ error: "Task not found" }); return; }
+    if (task.taskType === "written") {
+      res.status(400).json({ error: "Written work must be submitted for review, not started as a quiz." });
+      return;
+    }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
 
@@ -668,8 +685,9 @@ router.post("/tasks/:id/submit", requireAuth, async (req: AuthRequest, res) => {
     };
 
     const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, id));
-    if (!task) { res.status(404).json({ error: "Task not found" }); return; }
-
+    if (!task || task.taskType !== "written") { res.status(404).json({ error: "Task not found" }); return; }
+    res.status(400).json({ error: "Written work must use the admin-reviewed submission flow." });
+    return;
     // Load the attempt — must belong to this user
     const [attempt] = await db.select().from(taskAttemptsTable)
       .where(and(eq(taskAttemptsTable.id, attemptId), eq(taskAttemptsTable.userId, req.userId!)));

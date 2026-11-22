@@ -1,7 +1,7 @@
 import { useAdminGetAnalytics } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle, ShieldCheck } from "lucide-react";
+import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle, ShieldCheck, ClipboardCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 
@@ -76,6 +76,7 @@ export default function AdminDashboard() {
         {[
           { label: "Manage Users", href: "/admin/users", icon: <Users className="w-6 h-6 text-primary" /> },
           { label: "Manage Tasks", href: "/admin/tasks", icon: <CheckSquare className="w-6 h-6 text-blue-400" /> },
+          { label: "Review Work", href: "/admin/task-submissions", icon: <ClipboardCheck className="w-6 h-6 text-green-500" /> },
           { label: "Withdrawals", href: "/admin/withdrawals", icon: <Wallet2 className="w-6 h-6 text-yellow-500" /> },
           { label: "Analytics", href: "/admin/analytics", icon: <BarChart3 className="w-6 h-6 text-purple-500" /> },
         ].map(({ label, href, icon }) => (

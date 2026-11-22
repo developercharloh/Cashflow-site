@@ -130,119 +130,18 @@ router.get("/wallet/crypto-config", requireAuth, async (_req, res) => {
 });
 
 // ─── Submit crypto / PayPal deposit (manual confirmation) ────────────────────
-router.post("/wallet/crypto-deposit", requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const { amount, method, txHash, network } = req.body;
-    if (!amount || amount <= 0) { res.status(400).json({ error: "Invalid amount" }); return; }
-    if (!method) { res.status(400).json({ error: "Method required" }); return; }
-    if (!txHash?.trim()) { res.status(400).json({ error: "Transaction hash / reference is required" }); return; }
-
-    const labelMap: Record<string, string> = {
-      "usdt-trc20": "USDT TRC-20",
-      "usdt-bep20": "USDT BEP-20",
-      "usdt-erc20": "USDT ERC-20",
-      "paypal": "PayPal",
-    };
-    const label = labelMap[method] ?? method;
-
-    await db.insert(transactionsTable).values({
-      userId: req.userId!,
-      type: "deposit",
-      amount,
-      status: "pending",
-      description: `${label} deposit of $${Number(amount).toFixed(2)} — TX: ${txHash.trim()}`,
-      method,
-      accountDetails: txHash.trim(),
-    });
-
-    await db.insert(notificationsTable).values({
-      userId: req.userId!,
-      type: "deposit",
-      title: "Deposit Submitted",
-      message: `Your $${Number(amount).toFixed(2)} ${label} deposit is under review and will be credited shortly.`,
-    });
-
-    res.json({ ok: true });
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+router.post("/wallet/crypto-deposit", requireAuth, async (_req: AuthRequest, res) => {
+  res.status(410).json({ error: "Only M-Pesa Express deposits are available. Card deposits are coming soon." });
 });
 
 // ─── Auto-complete stale pending transactions (deposit + withdrawal) ──────────
 // Called from the wallet page on load. Marks transactions that have been
 // pending for >5 minutes as completed so users see real status immediately.
 router.post("/wallet/auto-complete", requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-    // Find stale pending transactions for this user
-    const stale = await db.select().from(transactionsTable).where(
-      and(
-        eq(transactionsTable.userId, req.userId!),
-        eq(transactionsTable.status, "pending"),
-        lt(transactionsTable.createdAt, fiveMinutesAgo),
-      )
-    );
-
-    if (stale.length === 0) {
-      res.json({ completed: 0 });
-      return;
-    }
-
-    let completed = 0;
-    for (const txn of stale) {
-      // Atomically flip pending → completed; if another path (e.g. webhook)
-      // already completed this transaction the WHERE clause won't match and
-      // no rows are returned, so we skip crediting entirely.
-      const updated = await db.update(transactionsTable)
-        .set({ status: "completed" })
-        .where(and(
-          eq(transactionsTable.id, txn.id),
-          eq(transactionsTable.status, "pending"),
-        ))
-        .returning({ id: transactionsTable.id });
-
-      if (updated.length === 0) continue; // already completed by another path
-
-      // For deposits: credit the balance if not already credited
-      if (txn.type === "deposit") {
-        const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-        await db.update(usersTable).set({
-          balance: user.balance + txn.amount,
-          totalEarned: user.totalEarned + txn.amount,
-        }).where(eq(usersTable.id, req.userId!));
-
-        await db.insert(notificationsTable).values({
-          userId: req.userId!,
-          type: "deposit",
-          title: "Deposit Confirmed",
-          message: `$${txn.amount.toFixed(2)} has been credited to your wallet.`,
-        });
-      }
-
-      // For withdrawals: just mark complete (funds already deducted at request time)
-      if (txn.type === "withdrawal") {
-        await db.update(usersTable).set({
-          pendingEarnings: sql`GREATEST(0, ${usersTable.pendingEarnings} - ${txn.amount})`,
-        }).where(eq(usersTable.id, req.userId!));
-
-        await db.insert(notificationsTable).values({
-          userId: req.userId!,
-          type: "withdrawal",
-          title: "Withdrawal Completed",
-          message: `Your withdrawal of $${txn.amount.toFixed(2)} has been processed.`,
-        });
-      }
-
-      completed++;
-    }
-
-    res.json({ completed });
-  } catch (err) {
-    req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  // Pending money movements must not be marked paid based on age alone.
+  // Deposits are reconciled with Paystack in the verified-charge/status routes;
+  // withdrawals wait for their provider/admin settlement flow.
+  res.json({ completed: 0 });
 });
 
 export default router;

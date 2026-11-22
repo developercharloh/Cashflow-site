@@ -49,8 +49,8 @@ async function settleDeposit(
 }
 
 // ─── Exchange rates ───────────────────────────────────────────────────────────
-const DEPOSIT_RATE_KES = 134;    // 1 USD = 134 KES for incoming payments
-const WITHDRAWAL_RATE_KES = 121; // 1 USD = 121 KES for outgoing payments (KES users receive)
+const DEPOSIT_RATE_KES = 130;    // User-configured incoming payment rate
+const WITHDRAWAL_RATE_KES = 125; // User-configured amount paid to users in KES
 
 // Convert actual Paystack amount (smallest unit, i.e. cents/kobo) → USD
 // Always derives from actual payment received — never from stored metadata
@@ -71,11 +71,15 @@ function isValidAmount(actualUsd: number, expectedUsd: number): boolean {
 router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, method, phone } = req.body; // amount in USD
+    if (method !== "mpesa") {
+      res.status(400).json({ error: method === "card" ? "Card deposits are coming soon. Use M-Pesa Express." : "Only M-Pesa Express deposits are currently available." });
+      return;
+    }
     if (!amount || amount < 0.1) {
       res.status(400).json({ error: "Minimum deposit is $0.10" }); return;
     }
 
-    const isMobileMoney = method === "mpesa" || method === "airtel";
+    const isMobileMoney = true;
 
     // Mobile money requires a phone number
     if (isMobileMoney && !phone) {
@@ -85,17 +89,13 @@ router.post("/paystack/deposit/initialize", requireAuth, async (req: AuthRequest
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    // Convert USD → KES for mobile money (deposit rate: 1 USD = 134 KES)
+    // Convert USD → KES for mobile money at the configured deposit rate.
     // For card/bank we still charge in KES so Paystack shows the correct amount
     const amountKes = Math.round(amount * DEPOSIT_RATE_KES);   // e.g. $2 → 268 KES
     const amountKobo = amountKes * 100;                        // Paystack uses smallest unit (1 KES = 100 kobo)
 
     // Restrict channels by payment method
-    const channels = isMobileMoney
-      ? ["mobile_money"]
-      : method === "bank"
-        ? ["bank", "ussd"]
-        : ["card"];
+    const channels = ["mobile_money"];
 
     const reference = `dep_${req.userId}_${Date.now()}`;
 
@@ -168,8 +168,8 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
     if (!phone) {
       res.status(400).json({ error: "Phone number is required" }); return;
     }
-    if (!["mpesa", "airtel"].includes(provider)) {
-      res.status(400).json({ error: "Invalid provider — must be mpesa or airtel" }); return;
+    if (provider !== "mpesa") {
+      res.status(400).json({ error: "Only M-Pesa Express deposits are currently available." }); return;
     }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
@@ -195,7 +195,7 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
       type: "deposit",
       amount,
       status: "pending",
-      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via ${provider === "mpesa" ? "M-Pesa" : "Airtel Money"}`,
+      description: `Deposit of $${amount.toFixed(2)} (KES ${amountKes}) via M-Pesa Express`,
       method: "paystack",
       accountDetails: reference,
     }).returning();
@@ -204,7 +204,7 @@ router.post("/paystack/deposit/charge", requireAuth, async (req: AuthRequest, re
       email: user.email,
       amount: amountKobo,
       currency: "KES",
-      mobile_money: { phone: normalizedPhone, provider },
+      mobile_money: { phone: normalizedPhone, provider: "mpesa" },
       reference,
       metadata: {
         userId: req.userId,
@@ -366,7 +366,7 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
       res.status(400).json({ error: "Insufficient balance" }); return;
     }
 
-    // Convert USD → KES (withdrawal rate: 1 USD = 121 KES)
+    // Convert USD → KES at the configured withdrawal rate.
     const amountKes = Math.round(amount * WITHDRAWAL_RATE_KES);
     const amountKobo = amountKes * 100; // Paystack smallest unit
 

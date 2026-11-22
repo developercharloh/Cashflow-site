@@ -79,7 +79,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-7">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-7">
           <Link
             href="/dashboard"
             data-testid="link-app-brand"
@@ -91,8 +91,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </span>
             <span className="font-semibold tracking-tight">Lipwa Tasks</span>
           </Link>
+          {user.isAdmin && <Link href="/admin" className="rounded-lg border border-primary/25 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10">Admin panel</Link>}
         </div>
       </header>
+      {user.isAdmin && location.startsWith("/admin") && (
+        <nav aria-label="Admin navigation" className="border-b border-border bg-card/80">
+          <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-7">
+            {[
+              ["/admin", "Overview"],
+              ["/admin/users", "Users"],
+              ["/admin/tasks", "Tasks"],
+              ["/admin/task-submissions", "Work review"],
+              ["/admin/audit-log", "Audit log"],
+              ["/admin/withdrawals", "Withdrawals"],
+              ["/admin/kyc", "KYC"],
+              ["/admin/analytics", "Analytics"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium ${location === href ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>{label}</Link>
+            ))}
+          </div>
+        </nav>
+      )}
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
       <BottomNav />
     </div>

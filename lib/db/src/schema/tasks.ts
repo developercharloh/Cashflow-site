@@ -1,6 +1,7 @@
 import { pgTable, text, serial, timestamp, boolean, integer, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./users";
 
 export const tasksTable = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -10,6 +11,8 @@ export const tasksTable = pgTable("tasks", {
   category: text("category").notNull(),
   taskType: text("task_type").notNull().default("standard"),
   reward: real("reward").notNull(),
+  fundingBudget: real("funding_budget").notNull().default(0),
+  maxCompletions: integer("max_completions").notNull().default(1),
   estimatedMinutes: integer("estimated_minutes").notNull(),
   timeLimitSeconds: integer("time_limit_seconds"),
   difficulty: text("difficulty").notNull().default("easy"),
@@ -50,6 +53,34 @@ export const taskAttemptsTable = pgTable("task_attempts", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
+export const taskSubmissionsTable = pgTable("task_submissions", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").notNull().references(() => tasksTable.id),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  status: text("status").notNull().default("submitted"),
+  textSubmission: text("text_submission"),
+  attachmentPath: text("attachment_path"),
+  attachmentName: text("attachment_name"),
+  attachmentContentType: text("attachment_content_type"),
+  attachmentSize: integer("attachment_size"),
+  reviewNote: text("review_note"),
+  reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const adminAuditLogsTable = pgTable("admin_audit_logs", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id").notNull().references(() => usersTable.id),
+  action: text("action").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: integer("target_id").notNull(),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertTaskSchema = createInsertSchema(tasksTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasksTable.$inferSelect;
@@ -61,3 +92,4 @@ export type UserTask = typeof userTasksTable.$inferSelect;
 export const insertTaskAttemptSchema = createInsertSchema(taskAttemptsTable).omit({ id: true });
 export type InsertTaskAttempt = z.infer<typeof insertTaskAttemptSchema>;
 export type TaskAttempt = typeof taskAttemptsTable.$inferSelect;
+export type TaskSubmission = typeof taskSubmissionsTable.$inferSelect;
