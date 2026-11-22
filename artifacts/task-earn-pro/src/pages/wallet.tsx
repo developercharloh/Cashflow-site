@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   useGetWallet, useGetTransactions, useRequestWithdrawal,
-  useInitializeDeposit, useChargeDeposit, usePaystackWithdraw, usePaystackWithdrawMobile, useGetBanks,
+  useChargeDeposit,
   useVerifyPendingDeposits, useGetKycStatus,
   getGetWalletQueryKey, getGetTransactionsQueryKey,
 } from "@workspace/api-client-react";
@@ -56,23 +56,23 @@ const DEPOSIT_METHODS = [
 
 const WITHDRAW_METHODS = [
   {
-    id: "bank_paystack",
+    id: "bank",
     label: "Bank Transfer",
-    sub: "Instant via Paystack",
+    sub: "Bank account payout",
     icon: <Landmark className="w-6 h-6 text-green-600" />,
     color: "border-green-100 bg-green-50/50",
   },
   {
     id: "card",
     label: "Debit / Credit Card",
-    sub: "Visa, Mastercard · Processed within 24h",
+    sub: "Coming Soon — card withdrawals are not available yet",
     icon: <CreditCard className="w-6 h-6 text-blue-500" />,
     color: "border-blue-100 bg-blue-50/50",
   },
   {
     id: "mpesa",
     label: "M-Pesa",
-    sub: "Instant · Paystack Transfer",
+    sub: "Receive your payout on M-Pesa",
     icon: <Smartphone className="w-6 h-6 text-green-600" />,
     color: "border-green-100 bg-green-50/50",
   },
@@ -112,21 +112,15 @@ export default function WalletPage() {
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPhone, setDepositPhone] = useState("");
 
-  // Bank withdrawal state (Paystack)
+  // Bank withdrawal state
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [bankCode, setBankCode] = useState("");
+  const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
 
   // Manual withdrawal state (M-Pesa / PayPal)
   const [manualAmount, setManualAmount] = useState("");
   const [manualAccount, setManualAccount] = useState("");
-
-  // Card withdrawal state
-  const [cardAmount, setCardAmount] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardName, setCardName] = useState("");
 
   // Exchange rates
   const DEPOSIT_RATE = 130;    // 1 USD = 130 KES (deposit)
@@ -139,20 +133,10 @@ export default function WalletPage() {
     txnType !== "all" ? { type: txnType } : {},
     { query: { queryKey: getGetTransactionsQueryKey(txnType !== "all" ? { type: txnType } : {}) } }
   );
-  const { data: banks } = useGetBanks({
-    query: {
-      queryKey: ["getBanks"],
-      enabled: stage.view === "withdraw_form" && (stage as any).method?.id === "bank_paystack",
-    },
-  });
-
   const { data: kyc } = useGetKycStatus({ query: { queryKey: ["kycStatus"] } });
   const isKycApproved = kyc?.kycStatus === "approved";
 
-  const depositMutation = useInitializeDeposit();
   const chargeDepositMutation = useChargeDeposit();
-  const paystackWithdrawMutation = usePaystackWithdraw();
-  const mobileWithdrawMutation = usePaystackWithdrawMobile();
   const manualWithdrawMutation = useRequestWithdrawal();
   const verifyPendingMutation = useVerifyPendingDeposits();
 
@@ -164,9 +148,8 @@ export default function WalletPage() {
   const close = () => {
     setStage({ view: "none" });
     setDepositAmount(""); setDepositPhone("");
-    setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
+    setWithdrawAmount(""); setBankName(""); setAccountNumber(""); setAccountName("");
     setManualAmount(""); setManualAccount("");
-    setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardName("");
     setStkState({ status: "idle", countdown: 120 });
   };
 
@@ -174,6 +157,7 @@ export default function WalletPage() {
   useEffect(() => {
     if (stkState.status !== "sent" || !stkState.reference) return;
 
+    const depositReference = stkState.reference;
     const token = localStorage.getItem("token");
     let attempts = 0;
     const maxAttempts = 24; // 24 × 5 s = 120 s = 2 min
@@ -187,7 +171,7 @@ export default function WalletPage() {
     const pollInterval = setInterval(async () => {
       attempts++;
       try {
-        const r = await fetch(`/api/paystack/deposit/charge/status/${stkState.reference}`, {
+        const r = await fetch(`/api/wallet/deposits/${encodeURIComponent(depositReference)}/status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const d = await r.json();
@@ -243,32 +227,7 @@ export default function WalletPage() {
     );
   };
 
-  const formatCardNumber = (val: string) =>
-    val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-
-  const formatExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 4);
-    return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-  };
-
-  const handleCardWithdraw = () => {
-    const amt = parseFloat(cardAmount);
-    if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
-    const rawCard = cardNumber.replace(/\s/g, "");
-    if (rawCard.length < 13) { toast({ title: "Enter a valid card number", variant: "destructive" }); return; }
-    if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) { toast({ title: "Enter expiry as MM/YY", variant: "destructive" }); return; }
-    if (!cardName.trim()) { toast({ title: "Enter the cardholder name", variant: "destructive" }); return; }
-    const details = `Card: **** **** **** ${rawCard.slice(-4)} | Expiry: ${cardExpiry} | Name: ${cardName.trim()}`;
-    manualWithdrawMutation.mutate({ data: { amount: amt, method: "card", accountDetails: details } }, {
-      onSuccess: () => {
-        toast({ title: "Withdrawal Requested", description: "We'll send it to your card within 24 hours." });
-        close(); invalidate();
-      },
-      onError: (err: any) => toast({ title: "Error", description: err.data?.error ?? err.message, variant: "destructive" }),
-    });
-  };
-
-  // Reconcile pending deposits against Paystack on load; never complete by age alone.
+  // Reconcile pending deposits with the payment provider; never complete by age alone.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reference") || params.get("trxref")) {
@@ -287,27 +246,21 @@ export default function WalletPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
-    const amt = parseFloat(depositAmount);
-    if (!amt || amt < 0.1) { toast({ title: "Minimum deposit is $0.10", variant: "destructive" }); return; }
-    depositMutation.mutate(
-      { data: { amount: amt, method: method.id, phone: isMobileMoney(method.id) ? depositPhone.trim() || undefined : undefined } } as any,
-      {
-        onSuccess: (data: any) => { window.location.href = data.authorizationUrl; },
-        onError: (err: any) => toast({ title: "Deposit failed", description: err.data?.error ?? err.message, variant: "destructive" }),
-      }
-    );
-  };
-
   const handleBankWithdraw = () => {
     const amt = parseFloat(withdrawAmount);
     if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
-    if (!bankCode || !accountNumber || !accountName) {
+    if (!bankName || !accountNumber || !accountName) {
       toast({ title: "Please fill all bank details", variant: "destructive" }); return;
     }
-    paystackWithdrawMutation.mutate({ data: { amount: amt, bankCode, accountNumber, accountName } }, {
+    manualWithdrawMutation.mutate({
+      data: {
+        amount: amt,
+        method: "bank",
+        accountDetails: JSON.stringify({ bankName, accountNumber, accountName }),
+      },
+    }, {
       onSuccess: () => {
-        toast({ title: "Withdrawal Initiated", description: "Paystack is processing your bank transfer." });
+        toast({ title: "Withdrawal request received", description: "Status: Pending." });
         close(); invalidate();
       },
       onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
@@ -318,9 +271,11 @@ export default function WalletPage() {
     const amt = parseFloat(manualAmount);
     if (!amt || amt < 0.5) { toast({ title: "Minimum withdrawal is $0.50", variant: "destructive" }); return; }
     if (!manualAccount) { toast({ title: "Please enter your phone number", variant: "destructive" }); return; }
-    mobileWithdrawMutation.mutate({ data: { amount: amt, phone: manualAccount, provider } }, {
+    manualWithdrawMutation.mutate({
+      data: { amount: amt, method: provider, accountDetails: manualAccount },
+    }, {
       onSuccess: () => {
-        toast({ title: "Withdrawal Initiated!", description: `Paystack is sending KES ${Math.round(amt * WITHDRAWAL_RATE).toLocaleString()} to your M-Pesa number.` });
+        toast({ title: "Withdrawal request received", description: "Status: Pending." });
         close(); invalidate();
       },
       onError: (err: any) => toast({ title: "Withdrawal failed", description: err.data?.error ?? err.message, variant: "destructive" }),
@@ -333,7 +288,7 @@ export default function WalletPage() {
     if (!manualAccount) { toast({ title: "Please enter your account details", variant: "destructive" }); return; }
     manualWithdrawMutation.mutate({ data: { amount: amt, method: methodId, accountDetails: manualAccount } }, {
       onSuccess: () => {
-        toast({ title: "Withdrawal Requested", description: "We'll process it within 24 hours." });
+        toast({ title: "Withdrawal request received", description: "Status: Pending." });
         close(); invalidate();
       },
       onError: (err: any) => toast({ title: "Error", description: err.data?.error ?? err.message, variant: "destructive" }),
@@ -386,7 +341,7 @@ export default function WalletPage() {
           <button
             onClick={() => {
               if (!isKycApproved) {
-                toast({ title: "Identity Verification Required", description: "Complete KYC verification before withdrawing funds.", variant: "destructive" });
+                toast({ title: "Identity Verification Required", description: "Verification is coming soon. Only already verified accounts can withdraw.", variant: "destructive" });
                 setLocation("/kyc");
                 return;
               }
@@ -663,7 +618,7 @@ export default function WalletPage() {
                 </div>
               )}
 
-              {/* Action button — STK push for M-Pesa, Paystack redirect for others */}
+              {/* M-Pesa Express is active; card deposits remain unavailable. */}
               {isMobileMoney(stage.method.id) ? (
                 <Button
                   className="w-full"
@@ -683,14 +638,9 @@ export default function WalletPage() {
               ) : (
                 <Button
                   className="w-full"
-                  onClick={() => handleDeposit(stage.method)}
-                  disabled={depositMutation.isPending}
+                  disabled
                 >
-                  {depositMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
-                    : depositAmount && parseFloat(depositAmount) >= 0.1
-                      ? `Pay KES ${Math.round(parseFloat(depositAmount) * DEPOSIT_RATE).toLocaleString()} via Paystack →`
-                      : `Proceed to Checkout →`}
+                  Card deposits are coming soon
                 </Button>
               )}
               <button className="w-full text-xs text-muted-foreground text-center underline" onClick={() => setStage({ view: "deposit_pick" })}>
@@ -713,8 +663,11 @@ export default function WalletPage() {
             {WITHDRAW_METHODS.map(m => (
               <button
                 key={m.id}
-                onClick={() => setStage({ view: "withdraw_form", method: m })}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-colors hover:border-primary/40 text-left ${m.color}`}
+                disabled={m.id === "card"}
+                onClick={() => {
+                  if (m.id !== "card") setStage({ view: "withdraw_form", method: m });
+                }}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-colors text-left disabled:opacity-60 ${m.color} ${m.id !== "card" ? "hover:border-primary/40" : ""}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0 shadow-sm">
                   {m.icon}
@@ -723,7 +676,9 @@ export default function WalletPage() {
                   <p className="font-semibold text-sm">{m.label}</p>
                   <p className="text-xs text-muted-foreground">{m.sub}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                {m.id === "card"
+                  ? <Badge variant="outline" className="shrink-0 text-[10px]">Coming Soon</Badge>
+                  : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
               </button>
             ))}
           </div>
@@ -746,25 +701,16 @@ export default function WalletPage() {
               </div>
             </DialogHeader>
 
-            {/* ─ Bank Transfer (Paystack) ─ */}
-            {stage.method.id === "bank_paystack" && (
+            {/* ─ Bank Transfer ─ */}
+            {stage.method.id === "bank" && (
               <div className="space-y-4 pt-1">
                 <div>
                   <Label>Amount (USD)</Label>
                   <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
                 </div>
                 <div>
-                  <Label>Select Bank</Label>
-                  <Select value={bankCode} onValueChange={setBankCode}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={banks ? "Select your bank" : "Loading banks…"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(banks ?? []).map(b => (
-                        <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Bank Name</Label>
+                  <Input placeholder="e.g. Your bank" value={bankName} onChange={e => setBankName(e.target.value)} />
                 </div>
                 <div>
                   <Label>Account Number</Label>
@@ -774,59 +720,10 @@ export default function WalletPage() {
                   <Label>Account Name</Label>
                   <Input placeholder="e.g. John Doe" value={accountName} onChange={e => setAccountName(e.target.value)} />
                 </div>
-                <Button className="w-full" onClick={handleBankWithdraw} disabled={paystackWithdrawMutation.isPending}>
-                  {paystackWithdrawMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Processing…</>
-                    : "Withdraw via Bank Transfer"}
-                </Button>
-              </div>
-            )}
-
-            {/* ─ Debit / Credit Card ─ */}
-            {stage.method.id === "card" && (
-              <div className="space-y-4 pt-1">
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-                  <p className="text-xs text-blue-700 dark:text-blue-400">
-                    Your card details are encrypted and used only to process this payout. Funds arrive within 24 hours.
-                  </p>
-                </div>
-                <div>
-                  <Label>Amount (USD)</Label>
-                  <Input type="number" min="0.5" step="0.01" placeholder="e.g. 5" value={cardAmount} onChange={e => setCardAmount(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $0.50</p>
-                </div>
-                <div>
-                  <Label>Card Number</Label>
-                  <Input
-                    placeholder="1234 5678 9012 3456"
-                    value={cardNumber}
-                    onChange={e => setCardNumber(formatCardNumber(e.target.value))}
-                    inputMode="numeric"
-                    maxLength={19}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Expiry (MM/YY)</Label>
-                    <Input
-                      placeholder="MM/YY"
-                      value={cardExpiry}
-                      onChange={e => setCardExpiry(formatExpiry(e.target.value))}
-                      inputMode="numeric"
-                      maxLength={5}
-                    />
-                  </div>
-                  <div>
-                    <Label>Cardholder Name</Label>
-                    <Input placeholder="As on card" value={cardName} onChange={e => setCardName(e.target.value)} />
-                  </div>
-                </div>
-                <Button className="w-full" onClick={handleCardWithdraw} disabled={manualWithdrawMutation.isPending}>
+                <Button className="w-full" onClick={handleBankWithdraw} disabled={manualWithdrawMutation.isPending}>
                   {manualWithdrawMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                    : cardAmount && parseFloat(cardAmount) >= 0.5
-                      ? `Withdraw $${parseFloat(cardAmount).toFixed(2)} to Card`
-                      : "Withdraw to Card"}
+                    : "Submit for review"}
                 </Button>
               </div>
             )}
@@ -862,12 +759,10 @@ export default function WalletPage() {
                   <Input placeholder="e.g. +254 700 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
                   <p className="text-xs text-muted-foreground mt-1">Must be a registered Safaricom number</p>
                 </div>
-                <Button className="w-full" onClick={() => handleMobileWithdraw("mpesa")} disabled={mobileWithdrawMutation.isPending}>
-                  {mobileWithdrawMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending…</>
-                    : manualAmount && parseFloat(manualAmount) >= 0.5
-                      ? `Send KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via M-Pesa`
-                      : "Withdraw via M-Pesa"}
+                <Button className="w-full" onClick={() => handleMobileWithdraw("mpesa")} disabled={manualWithdrawMutation.isPending}>
+                  {manualWithdrawMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
+                    : "Submit for review"}
                 </Button>
               </div>
             )}
@@ -903,8 +798,8 @@ export default function WalletPage() {
                   <Input placeholder="e.g. +254 733 000 000" value={manualAccount} onChange={e => setManualAccount(e.target.value)} />
                   <p className="text-xs text-muted-foreground mt-1">Must be a registered Airtel number</p>
                 </div>
-                <Button className="w-full" onClick={() => handleMobileWithdraw("airtel")} disabled={mobileWithdrawMutation.isPending}>
-                  {mobileWithdrawMutation.isPending
+                <Button className="w-full" onClick={() => handleMobileWithdraw("airtel")} disabled={manualWithdrawMutation.isPending}>
+                  {manualWithdrawMutation.isPending
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending…</>
                     : manualAmount && parseFloat(manualAmount) >= 0.5
                       ? `Send KES ${Math.round(parseFloat(manualAmount) * WITHDRAWAL_RATE).toLocaleString()} via Airtel`

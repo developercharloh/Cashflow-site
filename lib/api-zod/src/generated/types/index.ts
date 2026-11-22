@@ -29,6 +29,8 @@ export * from './checkInResult';
 export * from './dashboardStats';
 export * from './depositChargeInput';
 export * from './depositChargeResponse';
+export * from './depositChargeStatusResponse';
+export * from './depositChargeStatusResponseStatus';
 export * from './depositInitInput';
 export * from './depositInitResponse';
 export * from './forgotPasswordInput';

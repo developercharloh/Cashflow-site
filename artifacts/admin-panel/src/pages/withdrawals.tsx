@@ -6,29 +6,38 @@ interface Withdrawal {
   id: number;
   userId: number;
   userName: string;
-  userEmail: string;
   amount: number;
   method: string;
-  phone?: string;
-  bankCode?: string;
-  accountNumber?: string;
-  accountName?: string;
+  accountDetails: string;
   status: string;
   createdAt: string;
-  processedAt?: string;
-  notes?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-yellow-900/40 text-yellow-400 border-yellow-800/50",
-  approved: "bg-green-900/40 text-green-400 border-green-800/50",
+  completed: "bg-green-900/40 text-green-400 border-green-800/50",
   rejected: "bg-red-900/40 text-red-400 border-red-800/50",
 };
+
+function formatAccountDetails(withdrawal: Withdrawal): string {
+  if (withdrawal.method === "mpesa") return withdrawal.accountDetails || "—";
+  try {
+    const details = JSON.parse(withdrawal.accountDetails);
+    if (details && typeof details === "object") {
+      return Object.entries(details)
+        .map(([key, value]) => `${key}: ${String(value)}`)
+        .join(" · ");
+    }
+  } catch {
+    // Older requests stored plain-text account details.
+  }
+  return withdrawal.accountDetails || "—";
+}
 
 export default function Withdrawals() {
   const [items, setItems] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "completed" | "rejected">("pending");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [acting, setActing] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -43,10 +52,11 @@ export default function Withdrawals() {
   useEffect(load, []);
 
   const approve = async (id: number) => {
+    if (!window.confirm("Confirm the payout has been sent before marking it complete.")) return;
     setActing(id);
     try {
       await patch(`/admin/withdrawals/${id}/approve`);
-      setItems(prev => prev.map(w => w.id === id ? { ...w, status: "approved" } : w));
+      setItems(prev => prev.map(w => w.id === id ? { ...w, status: "completed" } : w));
     } catch (e) { alert((e as Error).message); }
     setActing(null);
   };
@@ -71,6 +81,7 @@ export default function Withdrawals() {
         <div>
           <h1 className="text-xl font-bold text-white">Withdrawals</h1>
           <p className="text-sm text-slate-400">{pending} pending • {items.length} total</p>
+          <p className="text-xs text-slate-500 mt-1">Send the payout outside this app, then mark it complete here.</p>
         </div>
         <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors">
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -78,7 +89,7 @@ export default function Withdrawals() {
       </div>
 
       <div className="flex gap-2">
-        {(["pending", "all", "approved", "rejected"] as const).map(f => (
+        {(["pending", "all", "completed", "rejected"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-2 text-xs rounded-xl border transition-colors capitalize ${filter === f ? "bg-blue-600 text-white border-blue-600" : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"}`}>
             {f}{f === "pending" && pending > 0 ? ` (${pending})` : ""}
@@ -99,16 +110,19 @@ export default function Withdrawals() {
                     <p className="text-sm font-bold text-white">{w.userName}</p>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STATUS_STYLES[w.status] ?? ""}`}>{w.status}</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">{w.userEmail} · {w.method}</p>
+                  <p className="text-[11px] text-slate-400">{w.method}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-base font-bold text-white">${n(w.amount).toFixed(2)}</p>
+                  {w.method === "mpesa" && (
+                    <p className="text-[10px] text-slate-500">KES {Math.round(n(w.amount) * 125).toLocaleString()}</p>
+                  )}
                   <p className="text-[10px] text-slate-500">{new Date(w.createdAt).toLocaleDateString()}</p>
                 </div>
                 {w.status === "pending" && (
                   <div className="flex gap-1.5 shrink-0">
                     <button onClick={() => approve(w.id)} disabled={acting === w.id}
-                      className="p-1.5 rounded-lg bg-green-900/40 hover:bg-green-900/70 text-green-400 disabled:opacity-40 transition-colors" title="Approve">
+                      className="p-1.5 rounded-lg bg-green-900/40 hover:bg-green-900/70 text-green-400 disabled:opacity-40 transition-colors" title="Mark paid and complete">
                       <CheckCircle className="w-4 h-4" />
                     </button>
                     <button onClick={() => setRejectId(rejectId === w.id ? null : w.id)} disabled={acting === w.id}
@@ -143,14 +157,11 @@ export default function Withdrawals() {
                     {[
                       { l: "ID", v: `#${w.id}` },
                       { l: "Method", v: w.method },
-                      { l: "Phone", v: w.phone ?? "—" },
-                      { l: "Bank Code", v: w.bankCode ?? "—" },
-                      { l: "Account", v: w.accountNumber ?? "—" },
-                      { l: "Account Name", v: w.accountName ?? "—" },
+                      { l: "Account Details", v: formatAccountDetails(w) },
                       { l: "Amount", v: `$${n(w.amount).toFixed(4)}` },
+                      ...(w.method === "mpesa" ? [{ l: "Payout Amount", v: `KES ${Math.round(n(w.amount) * 125).toLocaleString()} at $1 = KES 125` }] : []),
                       { l: "Status", v: w.status },
-                      { l: "Processed", v: w.processedAt ? new Date(w.processedAt).toLocaleString() : "—" },
-                      ...(w.notes ? [{ l: "Notes", v: w.notes }] : []),
+                      { l: "Requested", v: new Date(w.createdAt).toLocaleString() },
                     ].map(({ l, v }) => (
                       <div key={l} className="bg-slate-800/60 rounded-xl p-2.5">
                         <p className="text-[10px] text-slate-500">{l}</p>

@@ -501,7 +501,7 @@ export const InitializeDepositResponse = zod.object({
 
 
 /**
- * @summary Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+ * @summary Start an M-Pesa Express deposit
  */
 export const ChargeDepositBody = zod.object({
   "amount": zod.number(),
@@ -517,7 +517,7 @@ export const ChargeDepositResponse = zod.object({
 
 
 /**
- * @summary Auto-verify all pending deposits for the logged-in user
+ * @summary Reconcile pending M-Pesa deposits for the logged-in user
  */
 export const VerifyPendingDepositsResponse = zod.object({
   "count": zod.number(),
@@ -525,6 +525,20 @@ export const VerifyPendingDepositsResponse = zod.object({
   "ref": zod.string(),
   "amount": zod.number()
 })).optional()
+})
+
+
+/**
+ * @summary Check an M-Pesa deposit status
+ */
+export const GetDepositChargeStatusParams = zod.object({
+  "reference": zod.coerce.string()
+})
+
+export const GetDepositChargeStatusResponse = zod.object({
+  "status": zod.enum(['pending', 'completed', 'rejected']),
+  "amount": zod.number().optional(),
+  "reason": zod.string().optional()
 })
 
 

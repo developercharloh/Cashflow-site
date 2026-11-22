@@ -56,20 +56,30 @@ router.get("/wallet/transactions", requireAuth, async (req: AuthRequest, res) =>
 router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, method, accountDetails } = req.body;
-    if (!amount || amount <= 0 || !method || !accountDetails) {
+    const amountUsd = Number(amount);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0 || !method || !accountDetails) {
       res.status(400).json({ error: "Amount, method, and account details are required" });
       return;
     }
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    if (user.kycStatus !== "approved") {
-      res.status(403).json({ error: "Identity verification required before withdrawal. Please complete KYC on your profile.", code: "KYC_REQUIRED" });
+    const normalizedMethod = String(method).toLowerCase();
+    if (!["mpesa", "bank", "paypal"].includes(normalizedMethod)) {
+      res.status(400).json({ error: "That withdrawal method is not currently available." });
       return;
     }
-    if (user.balance < amount) {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (user.kycStatus !== "approved") {
+      res.status(403).json({ error: "Withdrawals require an approved identity verification.", code: "KYC_REQUIRED" });
+      return;
+    }
+    if (user.balance < amountUsd) {
       res.status(400).json({ error: "Insufficient balance" });
       return;
     }
-    if (amount < 0.5) {
+    if (amountUsd < 0.5) {
       res.status(400).json({ error: "Minimum withdrawal is $0.50" });
       return;
     }
@@ -77,10 +87,10 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
     // Atomic conditional deduct: only succeeds if balance is still sufficient at commit time,
     // preventing concurrent requests from double-spending the same funds.
     const updated = await db.update(usersTable).set({
-      balance: sql`${usersTable.balance} - ${amount}`,
-      pendingEarnings: sql`${usersTable.pendingEarnings} + ${amount}`,
-      totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amount}`,
-    }).where(sql`${usersTable.id} = ${req.userId!} AND ${usersTable.balance} >= ${amount}`).returning({ id: usersTable.id });
+      balance: sql`${usersTable.balance} - ${amountUsd}`,
+      pendingEarnings: sql`${usersTable.pendingEarnings} + ${amountUsd}`,
+      totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amountUsd}`,
+    }).where(sql`${usersTable.id} = ${req.userId!} AND ${usersTable.balance} >= ${amountUsd}`).returning({ id: usersTable.id });
 
     if (updated.length === 0) {
       res.status(400).json({ error: "Insufficient balance" });
@@ -90,18 +100,20 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
     const [txn] = await db.insert(transactionsTable).values({
       userId: req.userId!,
       type: "withdrawal",
-      amount,
+      amount: amountUsd,
       status: "pending",
-      description: `Withdrawal via ${method}`,
-      method,
-      accountDetails,
+      description: `Withdrawal request via ${normalizedMethod}`,
+      method: normalizedMethod,
+      accountDetails: typeof accountDetails === "string"
+        ? accountDetails.trim()
+        : JSON.stringify(accountDetails),
     }).returning();
 
     await db.insert(notificationsTable).values({
       userId: req.userId!,
       type: "withdrawal",
-      title: "Withdrawal Requested",
-      message: `Your withdrawal of $${amount.toFixed(2)} via ${method} is being processed.`,
+      title: "Withdrawal Pending",
+      message: "Your withdrawal request is pending.",
     });
 
     res.json({

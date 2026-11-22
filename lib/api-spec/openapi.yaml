@@ -579,11 +579,11 @@ paths:
         "400":
           description: Validation error
 
-  /paystack/deposit/charge:
+  /wallet/deposits/mpesa:
     post:
       operationId: chargeDeposit
       tags: [wallet]
-      summary: Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+      summary: Start an M-Pesa Express deposit
       requestBody:
         required: true
         content:
@@ -600,11 +600,11 @@ paths:
         "400":
           description: Validation error
 
-  /paystack/deposit/verify-pending:
+  /wallet/deposits/verify-pending:
     post:
       operationId: verifyPendingDeposits
       tags: [wallet]
-      summary: Auto-verify all pending deposits for the logged-in user
+      summary: Reconcile pending M-Pesa deposits for the logged-in user
       responses:
         "200":
           description: Credits applied
@@ -612,6 +612,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VerifyPendingResult"
+
+  /wallet/deposits/{reference}/status:
+    get:
+      operationId: getDepositChargeStatus
+      tags: [wallet]
+      summary: Check an M-Pesa deposit status
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current deposit status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositChargeStatusResponse"
+        "404":
+          description: Deposit not found
 
   /paystack/deposit/verify/{reference}:
     get:
@@ -855,14 +876,16 @@ paths:
         "200":
           description: OK
 
-  /paystack/webhook:
+  /payhero/webhook:
     post:
-      operationId: paystackWebhook
+      operationId: payheroWebhook
       tags: [wallet]
-      summary: Paystack webhook receiver
+      summary: M-Pesa payment callback receiver
       responses:
         "200":
           description: OK
+        "503":
+          description: Confirmation is still pending
 
   # ─── REFERRALS ───────────────────────────────────────────────────────────────
   /referrals:
@@ -2049,6 +2072,18 @@ components:
         reference:
           type: string
         message:
+          type: string
+
+    DepositChargeStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, completed, rejected]
+        amount:
+          type: number
+        reason:
           type: string
 
     DepositInitResponse:

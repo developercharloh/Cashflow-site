@@ -399,11 +399,20 @@ router.get("/admin/withdrawals", requireAdmin, async (req: AuthRequest, res) => 
 router.patch("/admin/withdrawals/:id/approve", requireAdmin, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(String(req.params["id"]));
-    const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id));
+    const [txn] = await db.select().from(transactionsTable).where(and(
+      eq(transactionsTable.id, id),
+      eq(transactionsTable.type, "withdrawal"),
+      eq(transactionsTable.status, "pending"),
+    ));
     if (!txn) { res.status(404).json({ error: "Transaction not found" }); return; }
 
     const [updated] = await db.update(transactionsTable).set({ status: "completed" })
-      .where(eq(transactionsTable.id, id)).returning();
+      .where(and(
+        eq(transactionsTable.id, id),
+        eq(transactionsTable.type, "withdrawal"),
+        eq(transactionsTable.status, "pending"),
+      )).returning();
+    if (!updated) { res.status(409).json({ error: "Withdrawal is no longer pending" }); return; }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, txn.userId));
     if (user) {
@@ -414,8 +423,8 @@ router.patch("/admin/withdrawals/:id/approve", requireAdmin, async (req: AuthReq
       await db.insert(notificationsTable).values({
         userId: txn.userId,
         type: "withdrawal",
-        title: "Withdrawal Approved",
-        message: `Your withdrawal of $${txn.amount.toFixed(2)} has been approved and is on its way.`,
+        title: "Withdrawal Completed",
+        message: `Your withdrawal of $${txn.amount.toFixed(2)} is complete.`,
       });
     }
 
@@ -437,11 +446,20 @@ router.patch("/admin/withdrawals/:id/reject", requireAdmin, async (req: AuthRequ
   try {
     const id = parseInt(String(req.params["id"]));
     const { reason } = req.body;
-    const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id));
+    const [txn] = await db.select().from(transactionsTable).where(and(
+      eq(transactionsTable.id, id),
+      eq(transactionsTable.type, "withdrawal"),
+      eq(transactionsTable.status, "pending"),
+    ));
     if (!txn) { res.status(404).json({ error: "Transaction not found" }); return; }
 
     const [updated] = await db.update(transactionsTable).set({ status: "rejected", rejectionReason: reason })
-      .where(eq(transactionsTable.id, id)).returning();
+      .where(and(
+        eq(transactionsTable.id, id),
+        eq(transactionsTable.type, "withdrawal"),
+        eq(transactionsTable.status, "pending"),
+      )).returning();
+    if (!updated) { res.status(409).json({ error: "Withdrawal is no longer pending" }); return; }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, txn.userId));
     if (user) {

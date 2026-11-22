@@ -75,6 +75,8 @@ router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
 
 // ─── POST /kyc/submit — collect personal info + create Didit v3 session ──────
 router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
+  res.status(503).json({ error: "Identity verification is coming soon.", code: "KYC_COMING_SOON" });
+  return;
   try {
     const { fullName, dateOfBirth, country, phoneNumber, nationalId } = req.body;
     if (!fullName || !dateOfBirth || !country || !phoneNumber || !nationalId) {
@@ -129,6 +131,8 @@ router.post("/kyc/submit", requireAuth, async (req: AuthRequest, res) => {
 
 // ─── POST /kyc/upload-documents — manual upload flow (no Didit) ─────────────
 router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) => {
+  res.status(503).json({ error: "Identity verification is coming soon.", code: "KYC_COMING_SOON" });
+  return;
   try {
     const { fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdImage, backIdImage } = req.body;
     if (!fullName || !dateOfBirth || !country || !phoneNumber || !nationalId || !documentType || !frontIdImage) {
@@ -255,6 +259,8 @@ router.put("/kyc/admin/submissions/:id/review", requireAuth, requireAdmin, async
 
 // ─── POST /kyc/session — create session directly (no pre-form) ───────────────
 router.post("/kyc/session", requireAuth, async (req: AuthRequest, res) => {
+  res.status(503).json({ error: "Identity verification is coming soon.", code: "KYC_COMING_SOON" });
+  return;
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "User not found" }); return; }

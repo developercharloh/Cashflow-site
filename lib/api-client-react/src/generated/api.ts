@@ -42,6 +42,7 @@ import type {
   DashboardStats,
   DepositChargeInput,
   DepositChargeResponse,
+  DepositChargeStatusResponse,
   DepositInitInput,
   DepositInitResponse,
   ForgotPasswordInput,
@@ -2341,11 +2342,11 @@ export const getChargeDepositUrl = () => {
 
 
 
-  return `/api/paystack/deposit/charge`
+  return `/api/wallet/deposits/mpesa`
 }
 
 /**
- * @summary Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+ * @summary Start an M-Pesa Express deposit
  */
 export const chargeDeposit = async (depositChargeInput: DepositChargeInput, options?: RequestInit): Promise<DepositChargeResponse> => {
 
@@ -2394,7 +2395,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type ChargeDepositMutationError = ErrorType<void>
 
     /**
- * @summary Directly charge mobile money (M-Pesa/Airtel) — STK push, no redirect
+ * @summary Start an M-Pesa Express deposit
  */
 export const useChargeDeposit = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chargeDeposit>>, TError,{data: BodyType<DepositChargeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2412,11 +2413,11 @@ export const getVerifyPendingDepositsUrl = () => {
 
 
 
-  return `/api/paystack/deposit/verify-pending`
+  return `/api/wallet/deposits/verify-pending`
 }
 
 /**
- * @summary Auto-verify all pending deposits for the logged-in user
+ * @summary Reconcile pending M-Pesa deposits for the logged-in user
  */
 export const verifyPendingDeposits = async ( options?: RequestInit): Promise<VerifyPendingResult> => {
 
@@ -2464,7 +2465,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type VerifyPendingDepositsMutationError = ErrorType<unknown>
 
     /**
- * @summary Auto-verify all pending deposits for the logged-in user
+ * @summary Reconcile pending M-Pesa deposits for the logged-in user
  */
 export const useVerifyPendingDeposits = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyPendingDeposits>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2476,6 +2477,83 @@ export const useVerifyPendingDeposits = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVerifyPendingDepositsMutationOptions(options));
     }
+
+export const getGetDepositChargeStatusUrl = (reference: string,) => {
+
+
+
+
+  return `/api/wallet/deposits/${reference}/status`
+}
+
+/**
+ * @summary Check an M-Pesa deposit status
+ */
+export const getDepositChargeStatus = async (reference: string, options?: RequestInit): Promise<DepositChargeStatusResponse> => {
+
+  return customFetch<DepositChargeStatusResponse>(getGetDepositChargeStatusUrl(reference),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDepositChargeStatusQueryKey = (reference: string,) => {
+    return [
+    `/api/wallet/deposits/${reference}/status`
+    ] as const;
+    }
+
+
+export const getGetDepositChargeStatusQueryOptions = <TData = Awaited<ReturnType<typeof getDepositChargeStatus>>, TError = ErrorType<void>>(reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDepositChargeStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDepositChargeStatusQueryKey(reference);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDepositChargeStatus>>> = ({ signal }) => getDepositChargeStatus(reference, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(reference), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDepositChargeStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDepositChargeStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getDepositChargeStatus>>>
+export type GetDepositChargeStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Check an M-Pesa deposit status
+ */
+
+export function useGetDepositChargeStatus<TData = Awaited<ReturnType<typeof getDepositChargeStatus>>, TError = ErrorType<void>>(
+ reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDepositChargeStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDepositChargeStatusQueryOptions(reference,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getVerifyDepositUrl = (reference: string,) => {
 
@@ -3500,20 +3578,20 @@ export const useKycWebhook = <TError = ErrorType<unknown>,
       return useMutation(getKycWebhookMutationOptions(options));
     }
 
-export const getPaystackWebhookUrl = () => {
+export const getPayheroWebhookUrl = () => {
 
 
 
 
-  return `/api/paystack/webhook`
+  return `/api/payhero/webhook`
 }
 
 /**
- * @summary Paystack webhook receiver
+ * @summary M-Pesa payment callback receiver
  */
-export const paystackWebhook = async ( options?: RequestInit): Promise<void> => {
+export const payheroWebhook = async ( options?: RequestInit): Promise<void> => {
 
-  return customFetch<void>(getPaystackWebhookUrl(),
+  return customFetch<void>(getPayheroWebhookUrl(),
   {
     ...options,
     method: 'POST'
@@ -3525,11 +3603,11 @@ export const paystackWebhook = async ( options?: RequestInit): Promise<void> => 
 
 
 
-export const getPaystackWebhookMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext> => {
+export const getPayheroWebhookMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payheroWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payheroWebhook>>, TError,void, TContext> => {
 
-const mutationKey = ['paystackWebhook'];
+const mutationKey = ['payheroWebhook'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3539,10 +3617,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paystackWebhook>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payheroWebhook>>, void> = () => {
 
 
-          return  paystackWebhook(requestOptions)
+          return  payheroWebhook(requestOptions)
         }
 
 
@@ -3552,22 +3630,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type PaystackWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof paystackWebhook>>>
+    export type PayheroWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof payheroWebhook>>>
 
-    export type PaystackWebhookMutationError = ErrorType<unknown>
+    export type PayheroWebhookMutationError = ErrorType<void>
 
     /**
- * @summary Paystack webhook receiver
+ * @summary M-Pesa payment callback receiver
  */
-export const usePaystackWebhook = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paystackWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+export const usePayheroWebhook = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payheroWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof paystackWebhook>>,
+        Awaited<ReturnType<typeof payheroWebhook>>,
         TError,
         void,
         TContext
       > => {
-      return useMutation(getPaystackWebhookMutationOptions(options));
+      return useMutation(getPayheroWebhookMutationOptions(options));
     }
 
 export const getGetReferralInfoUrl = () => {

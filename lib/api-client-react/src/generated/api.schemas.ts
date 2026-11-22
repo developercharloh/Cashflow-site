@@ -432,6 +432,21 @@ export interface DepositChargeResponse {
   message?: string;
 }
 
+export type DepositChargeStatusResponseStatus = typeof DepositChargeStatusResponseStatus[keyof typeof DepositChargeStatusResponseStatus];
+
+
+export const DepositChargeStatusResponseStatus = {
+  pending: 'pending',
+  completed: 'completed',
+  rejected: 'rejected',
+} as const;
+
+export interface DepositChargeStatusResponse {
+  status: DepositChargeStatusResponseStatus;
+  amount?: number;
+  reason?: string;
+}
+
 export interface DepositInitResponse {
   authorizationUrl: string;
   accessCode: string;

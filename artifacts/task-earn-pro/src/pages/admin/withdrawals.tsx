@@ -27,8 +27,9 @@ export default function AdminWithdrawals() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getAdminGetWithdrawalsQueryKey() });
 
   const handleApprove = (id: number) => {
+    if (!window.confirm("Confirm the payout has been sent before marking it complete.")) return;
     approveMutation.mutate({ id }, {
-      onSuccess: () => { toast({ title: "Withdrawal Approved" }); invalidate(); }
+      onSuccess: () => { toast({ title: "Withdrawal Completed" }); invalidate(); }
     });
   };
 
@@ -49,7 +50,7 @@ export default function AdminWithdrawals() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Withdrawal Approvals</h1>
-        <p className="text-muted-foreground mt-1">Review and process withdrawal requests</p>
+        <p className="text-muted-foreground mt-1">Send the payout outside this app, then mark it complete here.</p>
       </div>
 
       <Tabs value={status} onValueChange={setStatus}>
@@ -96,7 +97,7 @@ export default function AdminWithdrawals() {
                         {w.status === "pending" && (
                           <div className="flex gap-2">
                             <Button size="sm" className="text-xs" onClick={() => handleApprove(w.id)} disabled={approveMutation.isPending} data-testid={`button-approve-${w.id}`}>
-                              <CheckCircle className="w-3 h-3 mr-1" />Approve
+                              <CheckCircle className="w-3 h-3 mr-1" />Mark Paid & Complete
                             </Button>
                             <Button size="sm" variant="outline" className="text-xs text-red-400 border-red-400/30" onClick={() => setRejectId(w.id)} data-testid={`button-reject-${w.id}`}>
                               <XCircle className="w-3 h-3 mr-1" />Reject

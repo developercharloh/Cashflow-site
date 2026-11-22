@@ -19,11 +19,13 @@ description: Durable product decisions for work categories, task rewards, wallet
 **How to apply:** Make the cap and manual review visible to workers and admins; never describe the cap as money already escrowed.
 
 ## Wallet methods and rates
-- Deposit rate is USD 1 = KES 130; withdrawal quote is USD 1 = KES 125. M-Pesa Express is the available deposit method; card deposits are Coming Soon.
+- Deposit rate is USD 1 = KES 130; withdrawal quote is USD 1 = KES 125. M-Pesa Express deposits use PayHero; card deposits are Coming Soon.
+- Withdrawals are manual requests: users choose a method, and the admin sends the payout externally before marking the request complete. The user-facing status stays simply Pending until completion; do not mention admin approval to the user.
+- New KYC submissions are Coming Soon. Keep the existing approved-KYC withdrawal requirement unless the user explicitly changes it.
 
-**Why:** The user explicitly supplied both rates and the active deposit method.
+**Why:** The user supplied the rates and PayHero deposit method, then specified that withdrawals should remain pending until manual admin completion and KYC should show Coming Soon. PayHero's public API docs documented STK payments and status checks but no payout endpoint.
 
-**How to apply:** Keep the displayed estimates consistent with backend conversion and verify actual Paystack settlement before crediting a deposit.
+**How to apply:** Keep displayed rates consistent with backend conversion, verify PayHero transaction status server-to-server before crediting deposits, do not expose the payment provider's brand to users, and do not send withdrawals automatically.
 
 ## Imported project runtime
 - Imported repositories can contain artifact configuration without a registered artifact preview; confirm the registered workflow and actual frontend endpoint before relying on the artifact file alone.

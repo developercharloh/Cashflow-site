@@ -336,6 +336,8 @@ router.get("/paystack/deposit/verify/:reference", requireAuth, async (req: AuthR
 
 // ─── Instant M-Pesa / Airtel Money withdrawal via Paystack Transfers ─────────
 router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, res) => {
+  res.status(410).json({ error: "Use the wallet withdrawal request form." });
+  return;
   try {
     const { amount, phone, provider } = req.body; // amount in USD, provider: "mpesa"|"airtel"
 
@@ -482,6 +484,8 @@ router.post("/paystack/withdraw/mobile", requireAuth, async (req: AuthRequest, r
 
 // ─── Initiate withdrawal via Paystack Transfers ──────────────────────────────
 router.post("/paystack/withdraw", requireAuth, async (req: AuthRequest, res) => {
+  res.status(410).json({ error: "Use the wallet withdrawal request form." });
+  return;
   try {
     const { amount, bankCode, accountNumber, accountName } = req.body;
 
