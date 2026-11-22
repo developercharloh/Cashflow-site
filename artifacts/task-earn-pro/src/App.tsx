@@ -1,5 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
-import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,14 +9,6 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
 import Terms from "@/pages/terms";
-import TradingHome from "@/pages/trading/home";
-import MarketsPage from "@/pages/trading/markets";
-import SignalDetailPage from "@/pages/trading/signal-detail";
-import SignalsPage from "@/pages/trading/signals";
-import AnalyticsPage from "@/pages/trading/analytics";
-import HistoryPage from "@/pages/trading/history";
-import SettingsPage from "@/pages/trading/settings";
-import BinaryTradingPage from "@/pages/binary-trading";
 import ProfilePage from "@/pages/profile";
 import AdminDashboard from "@/pages/admin/index";
 import AdminUsers from "@/pages/admin/users";
@@ -27,31 +18,28 @@ import AdminAnalytics from "@/pages/admin/analytics";
 import AdminKycPage from "@/pages/admin/kyc";
 import CallbackPage from "@/pages/callback";
 import WalletPage from "@/pages/wallet";
+import Landing from "@/pages/landing";
+import Dashboard from "@/pages/dashboard";
+import TasksPage from "@/pages/tasks";
+import QuizPage from "@/pages/quiz";
+import LoansPage from "@/pages/loans";
+import ForexPage from "@/pages/forex";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
-function RedirectToDashboard() {
-  const [, setLocation] = useLocation();
-  useEffect(() => { setLocation("/dashboard"); }, [setLocation]);
-  return null;
-}
-
 function Router() {
   return (
     <AppLayout>
       <Switch>
-        <Route path="/"                    component={RedirectToDashboard} />
-        <Route path="/dashboard"           component={TradingHome} />
-        <Route path="/markets"             component={MarketsPage} />
-        <Route path="/markets/:symbol"     component={SignalDetailPage} />
-        <Route path="/signals"             component={SignalsPage} />
-        <Route path="/analytics"           component={AnalyticsPage} />
-        <Route path="/history"             component={HistoryPage} />
+        <Route path="/"                    component={Landing} />
+        <Route path="/dashboard"           component={Dashboard} />
+        <Route path="/tasks"               component={TasksPage} />
+        <Route path="/quiz"                component={QuizPage} />
         <Route path="/wallet"              component={WalletPage} />
-        <Route path="/settings"            component={SettingsPage} />
-        <Route path="/binary"              component={BinaryTradingPage} />
+        <Route path="/loans"               component={LoansPage} />
+        <Route path="/forex"               component={ForexPage} />
         <Route path="/auth/login"          component={Login} />
         <Route path="/auth/register"       component={Register} />
         <Route path="/auth/forgot-password" component={ForgotPassword} />
