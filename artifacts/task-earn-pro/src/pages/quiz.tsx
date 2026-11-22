@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useGetQuizQuestions, useSubmitQuiz, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useGetQuizQuestions, useSubmitQuiz, getGetMeQueryKey, getGetQuizQuestionsQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,8 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Trophy, Loader2, ChevronRight, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Quiz() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -19,13 +21,45 @@ export default function Quiz() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [result, setResult] = useState<{ score: number; totalQuestions: number; bonusEarned: number; message: string } | null>(null);
 
-  const { data: questions, isLoading } = useGetQuizQuestions();
+  const { data: questions, isLoading, isError, refetch } = useGetQuizQuestions({
+    query: { enabled: !user?.quizCompleted, queryKey: getGetQuizQuestionsQueryKey() },
+  });
   const submitMutation = useSubmitQuiz();
+
+  if (user?.quizCompleted && !result) {
+    return (
+      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
+        <section data-testid="status-quiz-completed" className="w-full max-w-lg rounded-2xl border border-border bg-card p-7 text-center sm:p-9">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-accent text-primary"><CheckCircle className="h-6 w-6" /></div>
+          <h1 className="mt-5 font-serif text-3xl">Simple Quiz completed</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">This one-time platform-funded quiz feature has already been completed on your account. It is separate from client freelance work.</p>
+          <Button data-testid="button-quiz-completed-home" className="mt-6 w-full" onClick={() => setLocation("/dashboard")}>Back to Home</Button>
+        </section>
+      </div>
+    );
+  }
 
   if (isLoading || !questions) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
+        {isError ? (
+          <div role="alert" className="max-w-md rounded-2xl border border-border bg-card p-6 text-center">
+            <p className="font-semibold">Simple Quiz could not load.</p>
+            <button data-testid="button-retry-quiz" onClick={() => void refetch()} className="mt-3 text-sm font-semibold text-primary underline underline-offset-4">Try again</button>
+          </div>
+        ) : <div aria-label="Loading Simple Quiz" className="h-40 w-full max-w-xl animate-pulse rounded-2xl bg-muted" />}
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
+        <section data-testid="empty-simple-quiz" className="max-w-md rounded-2xl border border-border bg-card p-7 text-center">
+          <h1 className="font-serif text-2xl">Simple Quiz is unavailable right now</h1>
+          <p className="mt-3 text-sm text-muted-foreground">Please try again later.</p>
+          <button data-testid="button-retry-empty-quiz" onClick={() => void refetch()} className="mt-4 text-sm font-semibold text-primary underline underline-offset-4">Check again</button>
+        </section>
       </div>
     );
   }
@@ -75,7 +109,7 @@ export default function Quiz() {
             <Trophy className="w-12 h-12 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Quiz Complete!</h1>
+            <h1 data-testid="status-quiz-result" className="text-3xl font-bold">Simple Quiz complete</h1>
             <p className="text-muted-foreground mt-2">{result.message}</p>
           </div>
           <Card className="border-border">
@@ -89,17 +123,17 @@ export default function Quiz() {
                 <span className="text-2xl font-bold text-primary">{pct}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Bonus Earned</span>
+                <span className="text-muted-foreground">Platform-funded quiz reward</span>
                 <span className="text-2xl font-bold text-green-500">${result.bonusEarned.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
           <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
             <Star className="w-4 h-4 text-yellow-500" />
-            Bonus has been credited to your wallet
+            This is a one-time platform-funded quiz reward, not client payment.
           </div>
-          <Button className="w-full" size="lg" onClick={() => setLocation("/dashboard")}>
-            Go to Dashboard <ChevronRight className="w-4 h-4 ml-2" />
+          <Button data-testid="button-quiz-result-home" className="w-full" size="lg" onClick={() => setLocation("/dashboard")}>
+            Back to Home <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </motion.div>
       </div>
@@ -110,8 +144,8 @@ export default function Quiz() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-xl space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Welcome Quiz</h1>
-          <p className="text-muted-foreground mt-1">Answer correctly to earn a bigger bonus</p>
+          <h1 className="text-2xl font-bold">Simple Quiz</h1>
+          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">A separate interactive quiz with a one-time platform-funded reward of $1–$5 based on quiz results. It is not a client freelance job or client payment.</p>
         </div>
 
         <div className="space-y-2">
@@ -137,10 +171,11 @@ export default function Quiz() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {currentQuestion.options.map((opt) => (
+                {currentQuestion.options.map((opt, optionIndex) => (
                   <button
                     key={opt}
-                    data-testid={`option-${opt}`}
+                    data-testid={`quiz-option-${optionIndex + 1}`}
+                    aria-pressed={selectedAnswer === opt}
                     onClick={() => handleSelect(opt)}
                     className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-200 ${
                       selectedAnswer === opt
