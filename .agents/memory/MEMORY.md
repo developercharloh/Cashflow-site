@@ -1,1 +1,1 @@
-- [Elite Signals Pro stack](taskearnpro-stack.md) — full-stack earning platform; key auth, routing, and level-up rules
+- [Lipwa Tasks product scope](taskearnpro-stack.md) — allowed work categories, reviewed platform-funded rewards, wallet rates, and deposit methods

@@ -72,7 +72,7 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
           <div className="flex h-10 items-center rounded-md border border-border bg-muted px-3 text-sm font-semibold text-red-500">Expert only</div>
         </div>
         <div>
-          <Label>Min Level (1-4)</Label>
+          <Label>Min Level (1-7)</Label>
           <Select value={String(form.minLevel)} onValueChange={v => set("minLevel", parseInt(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -123,19 +123,22 @@ export default function AdminTasks() {
 
   const handleCreate = (data: any) => {
     createMutation.mutate({ data }, {
-      onSuccess: () => { toast({ title: "Task Created" }); setShowCreate(false); invalidate(); }
+      onSuccess: () => { toast({ title: "Task Created" }); setShowCreate(false); invalidate(); },
+      onError: (error: any) => toast({ title: "Could not create task", description: error.data?.error ?? error.message ?? "Check the task details and budget.", variant: "destructive" }),
     });
   };
 
   const handleUpdate = (data: any) => {
     updateMutation.mutate({ id: editTask.id, data }, {
-      onSuccess: () => { toast({ title: "Task Updated" }); setEditTask(null); invalidate(); }
+      onSuccess: () => { toast({ title: "Task Updated" }); setEditTask(null); invalidate(); },
+      onError: (error: any) => toast({ title: "Could not update task", description: error.data?.error ?? error.message ?? "Check the task details and budget.", variant: "destructive" }),
     });
   };
 
   const handleDelete = (id: number) => {
     deleteMutation.mutate({ id }, {
-      onSuccess: () => { toast({ title: "Task Deactivated" }); invalidate(); }
+      onSuccess: () => { toast({ title: "Task Deactivated" }); invalidate(); },
+      onError: (error: any) => toast({ title: "Could not deactivate task", description: error.data?.error ?? error.message ?? "Please try again.", variant: "destructive" }),
     });
   };
 

@@ -697,7 +697,7 @@ router.post("/tasks/:id/submit", requireAuth, async (req: AuthRequest, res) => {
     // Validate time limit
     if (task.timeLimitSeconds) {
       const elapsed = (Date.now() - new Date(attempt.startedAt).getTime()) / 1000;
-      if (elapsed > task.timeLimitSeconds + 60) {
+      if (elapsed > (task.timeLimitSeconds ?? 0) + 60) {
         await db.update(taskAttemptsTable).set({ status: "timed_out", completedAt: new Date(), timeSpent: Math.round(elapsed) })
           .where(eq(taskAttemptsTable.id, attemptId));
         res.status(400).json({ error: "Time limit exceeded. Task expired.", timedOut: true }); return;

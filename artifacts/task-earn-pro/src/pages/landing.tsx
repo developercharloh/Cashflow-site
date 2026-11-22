@@ -34,12 +34,12 @@ export default function Landing() {
             <div className="relative z-10 max-w-3xl">
               <p className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.2em] text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> Practical work and useful tools</p>
               <h1 className="font-serif text-[3.5rem] leading-[.98] tracking-[-.045em] sm:text-6xl lg:text-[5.35rem]">Work with clarity.<br /><span className="text-primary">Start with Lipwa.</span></h1>
-              <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Explore academic support, data entry, transcription, and AI training ideas, alongside Simple Quiz and wallet tools. Soft Loans and Forex are coming soon.</p>
+              <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Take on challenging written and file-based tasks in Academic Writing, Data Entry, Transcription, and AI Training. Submit your work for review, then track approved rewards in your wallet.</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/auth/register" data-testid="link-hero-register" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">Join Lipwa Tasks <ArrowRight className="h-4 w-4" /></Link>
                 <a data-testid="link-hero-work" href="#work" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card/70 px-6 font-semibold transition-colors hover:bg-muted">See work areas <ArrowDown className="h-4 w-4" /></a>
               </div>
-              <p className="mt-5 text-xs text-muted-foreground">Work-area examples are ideas only. No client-funded freelance listings are available yet.</p>
+              <p className="mt-5 text-xs text-muted-foreground">Tasks are posted and reviewed by Lipwa Tasks administrators. Listings appear as they are published.</p>
             </div>
             <div className="relative mx-auto w-full max-w-md">
               <div className="absolute -right-5 -top-6 h-40 w-40 rounded-full border border-primary/20" />
@@ -51,7 +51,7 @@ export default function Landing() {
                 </div>
                 <div className="space-y-4 py-6">
                   {[
-                    ["Work", "Four illustrative freelance areas"],
+                    ["Work", "Four expert task categories"],
                     ["Simple Quiz", "A separate platform-funded feature"],
                     ["Wallet", "Your account balance and activity"],
                   ].map(([label, text], i) => <div key={label} className="flex items-center gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-primary/20 font-mono text-xs text-primary">0{i + 1}</span><div><p className="text-sm font-semibold">{label}</p><p className="text-sm text-muted-foreground">{text}</p></div><Check className="ml-auto h-4 w-4 text-primary" /></div>)}
@@ -70,15 +70,15 @@ export default function Landing() {
           <div className="grid gap-8 md:grid-cols-[.7fr_1.3fr]">
             <div><p className="font-mono text-[11px] uppercase tracking-[.2em] text-primary">Work areas</p><h2 className="mt-4 max-w-sm font-serif text-4xl leading-tight tracking-tight md:text-5xl">Four ways to contribute.</h2></div>
             <div>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground">These are illustrative categories, not current client jobs or offers of paid work. Real client listings are not available yet.</p>
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground">Find detailed, expert-level written or file-based tasks. Each listing states the deliverable, reward, time estimate, and review requirements.</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {areas.map((item) => <article key={item.number} data-testid={`category-preview-${item.number}`} className="rounded-2xl border border-border bg-card p-5">
-                  <div className="flex items-start justify-between"><span className="font-mono text-[10px] tracking-widest text-muted-foreground">{item.number} / IDEA</span><item.icon className="h-5 w-5 text-primary" /></div>
+                  <div className="flex items-start justify-between"><span className="font-mono text-[10px] tracking-widest text-muted-foreground">{item.number} / TASK CATEGORY</span><item.icon className="h-5 w-5 text-primary" /></div>
                   <h3 className="mt-6 font-serif text-xl">{item.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
-                  <span className="mt-4 inline-block rounded-full border border-border px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Illustrative task idea</span>
+                  <span className="mt-4 inline-block rounded-full border border-border px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Admin-reviewed work</span>
                 </article>)}
               </div>
-              <Link href="/auth/register" data-testid="link-landing-work" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">Explore work areas <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/auth/register" data-testid="link-landing-work" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">Create an account to see listings <ArrowRight className="h-4 w-4" /></Link>
             </div>
           </div>
         </section>
@@ -97,7 +97,7 @@ export default function Landing() {
 
         <section className="mx-auto max-w-7xl px-5 py-16 md:px-10">
           <div className="grid gap-8 rounded-[1.7rem] bg-[#183b32] px-6 py-10 text-[#f5f3e9] md:grid-cols-[1fr_auto] md:items-center md:px-12 md:py-14">
-            <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[#a6c6b7]">Straight talk</p><h2 className="mt-4 max-w-2xl font-serif text-3xl leading-tight md:text-4xl">No client-funded freelance jobs are listed yet.</h2><p className="mt-4 max-w-2xl text-sm leading-6 text-[#c5d5cd]">The four work areas are previews only. Real paid listings can appear only after a client posts and funds the work.</p></div>
+            <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[#a6c6b7]">Clear task rules</p><h2 className="mt-4 max-w-2xl font-serif text-3xl leading-tight md:text-4xl">Submit work. Get reviewed. Track approved rewards.</h2><p className="mt-4 max-w-2xl text-sm leading-6 text-[#c5d5cd]">Every task has a fixed reward and limited number of submissions. Lipwa Tasks reviews each submission before crediting a reward to the worker’s wallet.</p></div>
             <Link href="/auth/register" data-testid="link-standards-register" className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#d5e3d5] px-5 font-semibold text-[#183b32] transition-transform hover:-translate-y-0.5">Create your account <ArrowRight className="h-4 w-4" /></Link>
           </div>
           <div className="mt-10 flex flex-col justify-between gap-5 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">

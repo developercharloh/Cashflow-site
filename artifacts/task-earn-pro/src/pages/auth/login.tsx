@@ -75,7 +75,7 @@ export default function Login() {
           </div>
 
           <div className="space-y-3">
-            {["Four illustrative freelance work areas", "One separate platform-funded Simple Quiz", "Soft Loans and Forex are coming soon"].map((text) => (
+            {["Expert tasks in four work categories", "Simple Quiz and wallet tools", "Soft Loans and Forex are coming soon"].map((text) => (
               <div key={text} className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-emerald-300">•</span><span className="text-sm text-white/80">{text}</span></div>
             ))}
           </div>

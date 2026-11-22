@@ -18,7 +18,7 @@ import {
   Wallet2, TrendingUp, ArrowUpRight, Loader2,
   DollarSign, Users, Star, CheckCircle, Clock, XCircle,
   Plus, CreditCard, Landmark, RefreshCw,
-  ChevronRight, Smartphone, Banknote, Copy, CheckCheck,
+  ChevronRight, Smartphone, Banknote,
 } from "lucide-react";
 
 const STATUS_STYLE: Record<string, { icon: React.ReactNode; class: string }> = {
@@ -36,9 +36,6 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 };
 
 // ─── Method definitions ───────────────────────────────────────────────────────
-
-// Which methods are crypto (show address + tx hash flow)
-const CRYPTO_IDS = ["usdt-trc20", "usdt-bep20", "usdt-erc20"];
 
 const DEPOSIT_METHODS = [
   {
@@ -93,7 +90,6 @@ type Stage =
   | { view: "deposit_pick" }
   | { view: "withdraw_pick" }
   | { view: "deposit_form"; method: typeof DEPOSIT_METHODS[0] }
-  | { view: "crypto_form"; method: typeof DEPOSIT_METHODS[0] }
   | { view: "withdraw_form"; method: typeof WITHDRAW_METHODS[0] };
 
 export default function WalletPage() {
@@ -115,15 +111,6 @@ export default function WalletPage() {
   // Deposit form state
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPhone, setDepositPhone] = useState("");
-
-  // Crypto / PayPal deposit state
-  const [cryptoAmount, setCryptoAmount] = useState("");
-  const [cryptoTxHash, setCryptoTxHash] = useState("");
-  const [cryptoSubmitting, setCryptoSubmitting] = useState(false);
-  const [copiedAddr, setCopiedAddr] = useState(false);
-  const [cryptoConfig, setCryptoConfig] = useState<{
-    trc20: string; bep20: string; erc20: string; paypalEmail: string;
-  } | null>(null);
 
   // Bank withdrawal state (Paystack)
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -177,7 +164,6 @@ export default function WalletPage() {
   const close = () => {
     setStage({ view: "none" });
     setDepositAmount(""); setDepositPhone("");
-    setCryptoAmount(""); setCryptoTxHash(""); setCopiedAddr(false); setCryptoSubmitting(false);
     setWithdrawAmount(""); setBankCode(""); setAccountNumber(""); setAccountName("");
     setManualAmount(""); setManualAccount("");
     setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardName("");
@@ -282,29 +268,11 @@ export default function WalletPage() {
     });
   };
 
-  // Auto-verify + auto-complete + fetch crypto config on load
+  // Reconcile pending deposits against Paystack on load; never complete by age alone.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reference") || params.get("trxref")) {
       window.history.replaceState({}, "", window.location.pathname);
-    }
-
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Fetch crypto wallet addresses
-      fetch("/api/wallet/crypto-config", { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(setCryptoConfig).catch(() => {});
-
-      // Auto-complete stale pending transactions (>5 min old)
-      fetch("/api/wallet/auto-complete", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()).then(data => {
-        if (data.completed > 0) {
-          toast({ title: "Transactions Updated", description: `${data.completed} pending transaction${data.completed > 1 ? "s" : ""} marked as completed.` });
-          invalidate();
-        }
-      }).catch(() => {});
     }
 
     verifyPendingMutation.mutate(undefined, {
@@ -318,49 +286,6 @@ export default function WalletPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ── Crypto / PayPal deposit submit ────────────────────────────────────────────
-  const handleCryptoDeposit = async (methodId: string) => {
-    const amt = parseFloat(cryptoAmount);
-    if (!amt || amt < 1) { toast({ title: "Minimum deposit is $1.00", variant: "destructive" }); return; }
-    if (!cryptoTxHash.trim()) { toast({ title: "Transaction hash / reference is required", variant: "destructive" }); return; }
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    setCryptoSubmitting(true);
-    try {
-      const res = await fetch("/api/wallet/crypto-deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount: amt, method: methodId, txHash: cryptoTxHash.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Submission failed");
-      toast({ title: "Deposit Submitted ✅", description: "Your deposit is pending review and will be credited shortly." });
-      close(); invalidate();
-    } catch (e: any) {
-      toast({ title: "Submission failed", description: e.message, variant: "destructive" });
-    } finally {
-      setCryptoSubmitting(false);
-    }
-  };
-
-  // ── Copy address to clipboard ─────────────────────────────────────────────────
-  const copyAddress = (addr: string) => {
-    navigator.clipboard.writeText(addr).then(() => {
-      setCopiedAddr(true);
-      setTimeout(() => setCopiedAddr(false), 2000);
-    });
-  };
-
-  // ── Crypto address lookup ─────────────────────────────────────────────────────
-  const getCryptoAddress = (methodId: string): string => {
-    if (!cryptoConfig) return "";
-    if (methodId === "usdt-trc20") return cryptoConfig.trc20;
-    if (methodId === "usdt-bep20") return cryptoConfig.bep20;
-    if (methodId === "usdt-erc20") return cryptoConfig.erc20;
-    if (methodId === "paypal") return cryptoConfig.paypalEmail;
-    return "";
-  };
 
   const handleDeposit = (method: typeof DEPOSIT_METHODS[0]) => {
     const amt = parseFloat(depositAmount);
@@ -583,12 +508,7 @@ export default function WalletPage() {
                 disabled={m.id === "card"}
                 onClick={() => {
                   if (m.id === "card") return;
-                  // Crypto + PayPal → address display flow
-                  if (CRYPTO_IDS.includes(m.id) || m.id === "paypal") {
-                    setStage({ view: "crypto_form", method: m });
-                  } else {
-                    setStage({ view: "deposit_form", method: m });
-                  }
+                  setStage({ view: "deposit_form", method: m });
                 }}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${m.color} ${m.id === "card" ? "cursor-not-allowed opacity-60" : "hover:border-primary/40"}`}
               >
@@ -616,112 +536,6 @@ export default function WalletPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* ── DEPOSIT: Crypto / PayPal address + TX hash form ── */}
-      {stage.view === "crypto_form" && (() => {
-        const addr = getCryptoAddress(stage.method.id);
-        const isPayPal = stage.method.id === "paypal";
-        const addrLabel = isPayPal ? "PayPal Email" : "Wallet Address";
-        return (
-          <Dialog open onOpenChange={(o) => !o && setStage({ view: "deposit_pick" })}>
-            <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stage.method.color}`}>
-                    {stage.method.icon}
-                  </div>
-                  <div>
-                    <DialogTitle>{stage.method.label}</DialogTitle>
-                    <DialogDescription>{stage.method.sub}</DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-              <div className="space-y-4 pt-1">
-
-                {/* Address / email display */}
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Send to this {addrLabel}
-                  </Label>
-                  {addr ? (
-                    <div className="mt-1.5 flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
-                      <p className="flex-1 text-xs font-mono break-all text-white">{addr}</p>
-                      <button
-                        onClick={() => copyAddress(addr)}
-                        className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
-                      >
-                        {copiedAddr ? <CheckCheck size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="mt-1.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
-                      <p className="text-xs text-amber-400">
-                        Wallet address not yet configured — contact support
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Instructions */}
-                <div className="rounded-xl bg-blue-500/5 border border-blue-500/20 p-3 text-xs text-blue-300 space-y-1">
-                  {isPayPal ? (
-                    <>
-                      <p>1. Send your USDT equivalent to the PayPal email above</p>
-                      <p>2. Use the <strong>Friends &amp; Family</strong> option</p>
-                      <p>3. Enter your transaction reference below and submit</p>
-                    </>
-                  ) : (
-                    <>
-                      <p>1. Copy the {stage.method.label} address above</p>
-                      <p>2. Send <strong>USDT only</strong> on the correct network</p>
-                      <p>3. Paste your transaction hash below and submit</p>
-                      <p className="text-amber-300">⚠ Sending on the wrong network will result in permanent loss</p>
-                    </>
-                  )}
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <Label>Amount (USD)</Label>
-                  <Input
-                    type="number" min="1" step="0.01" placeholder="e.g. 10"
-                    value={cryptoAmount}
-                    onChange={e => setCryptoAmount(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum $1.00</p>
-                </div>
-
-                {/* TX hash / reference */}
-                <div>
-                  <Label>{isPayPal ? "PayPal Transaction Reference" : "Transaction Hash (TxID)"}</Label>
-                  <Input
-                    placeholder={isPayPal ? "e.g. 3BK12345678" : "e.g. 0xabc123..."}
-                    value={cryptoTxHash}
-                    onChange={e => setCryptoTxHash(e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={() => handleCryptoDeposit(stage.method.id)}
-                  disabled={cryptoSubmitting || !cryptoAmount || !cryptoTxHash.trim() || !addr}
-                >
-                  {cryptoSubmitting
-                    ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting…</>
-                    : "Submit Deposit for Review"}
-                </Button>
-                <button
-                  className="w-full text-xs text-muted-foreground text-center underline"
-                  onClick={() => setStage({ view: "deposit_pick" })}
-                >
-                  ← Choose a different method
-                </button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
 
       {/* ── DEPOSIT: amount form ───────────────────── */}
       {stage.view === "deposit_form" && (

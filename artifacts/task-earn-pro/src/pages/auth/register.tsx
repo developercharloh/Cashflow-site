@@ -179,7 +179,7 @@ export default function Register() {
             </p>
           </div>
           <div className="space-y-2">
-            {["Work categories are illustrative ideas, not current jobs", "Simple Quiz: one-time platform-funded $1–$5 reward based on results, not client work", "Soft Loans and Forex are not available yet"].map(t => (
+            {["Expert written and file tasks across four categories", "Admin reviews submissions before rewards are credited", "Soft Loans and Forex are coming soon"].map(t => (
               <div key={t} className="flex items-center gap-2 text-sm text-white/70">
                 <span className="text-emerald-400">✓</span> {t}
               </div>

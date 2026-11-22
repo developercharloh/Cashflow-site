@@ -280,27 +280,17 @@ export const GetTaskResponse = zod.object({
 
 
 /**
- * @summary Start a task and receive questions
+ * @deprecated
+ * @summary Deprecated legacy quiz-task endpoint
  */
 export const StartTaskParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const StartTaskResponse = zod.object({
-  "attemptId": zod.number(),
-  "timeLimitSeconds": zod.number().nullish(),
-  "totalQuestions": zod.number(),
-  "questions": zod.array(zod.object({
-  "id": zod.string(),
-  "question": zod.string(),
-  "options": zod.array(zod.string()),
-  "difficulty": zod.string()
-}))
-})
-
 
 /**
- * @summary Submit task answers and earn reward if 100% correct
+ * @deprecated
+ * @summary Deprecated legacy quiz-task submission endpoint
  */
 export const SubmitTaskParams = zod.object({
   "id": zod.coerce.number()
@@ -313,16 +303,6 @@ export const SubmitTaskBody = zod.object({
   "questionId": zod.string(),
   "answer": zod.string()
 }))
-})
-
-export const SubmitTaskResponse = zod.object({
-  "passed": zod.boolean(),
-  "score": zod.number(),
-  "correctAnswers": zod.number(),
-  "totalQuestions": zod.number(),
-  "message": zod.string(),
-  "rewardEarned": zod.number(),
-  "newBalance": zod.number().nullish()
 })
 
 

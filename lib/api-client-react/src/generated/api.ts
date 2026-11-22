@@ -80,9 +80,7 @@ import type {
   TaskFileUpload,
   TaskInput,
   TaskReviewInput,
-  TaskStartResult,
   TaskSubmitInput,
-  TaskSubmitResult,
   TaskUpdate,
   TaskWorkSubmission,
   TaskWorkSubmissionInput,
@@ -1305,11 +1303,12 @@ export const getStartTaskUrl = (id: number,) => {
 }
 
 /**
- * @summary Start a task and receive questions
+ * @deprecated
+ * @summary Deprecated legacy quiz-task endpoint
  */
-export const startTask = async (id: number, options?: RequestInit): Promise<TaskStartResult> => {
+export const startTask = async (id: number, options?: RequestInit): Promise<unknown> => {
 
-  return customFetch<TaskStartResult>(getStartTaskUrl(id),
+  return customFetch<unknown>(getStartTaskUrl(id),
   {
     ...options,
     method: 'POST'
@@ -1321,7 +1320,7 @@ export const startTask = async (id: number, options?: RequestInit): Promise<Task
 
 
 
-export const getStartTaskMutationOptions = <TError = ErrorType<unknown>,
+export const getStartTaskMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof startTask>>, TError,{id: number}, TContext> => {
 
@@ -1350,12 +1349,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type StartTaskMutationResult = NonNullable<Awaited<ReturnType<typeof startTask>>>
 
-    export type StartTaskMutationError = ErrorType<unknown>
+    export type StartTaskMutationError = ErrorType<void>
 
     /**
- * @summary Start a task and receive questions
+ * @deprecated
+ * @summary Deprecated legacy quiz-task endpoint
  */
-export const useStartTask = <TError = ErrorType<unknown>,
+export const useStartTask = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof startTask>>,
@@ -1375,12 +1375,13 @@ export const getSubmitTaskUrl = (id: number,) => {
 }
 
 /**
- * @summary Submit task answers and earn reward if 100% correct
+ * @deprecated
+ * @summary Deprecated legacy quiz-task submission endpoint
  */
 export const submitTask = async (id: number,
-    taskSubmitInput: TaskSubmitInput, options?: RequestInit): Promise<TaskSubmitResult> => {
+    taskSubmitInput: TaskSubmitInput, options?: RequestInit): Promise<unknown> => {
 
-  return customFetch<TaskSubmitResult>(getSubmitTaskUrl(id),
+  return customFetch<unknown>(getSubmitTaskUrl(id),
   {
     ...options,
     method: 'POST',
@@ -1393,7 +1394,7 @@ export const submitTask = async (id: number,
 
 
 
-export const getSubmitTaskMutationOptions = <TError = ErrorType<unknown>,
+export const getSubmitTaskMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext> => {
 
@@ -1422,12 +1423,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type SubmitTaskMutationResult = NonNullable<Awaited<ReturnType<typeof submitTask>>>
     export type SubmitTaskMutationBody = BodyType<TaskSubmitInput>
-    export type SubmitTaskMutationError = ErrorType<unknown>
+    export type SubmitTaskMutationError = ErrorType<void>
 
     /**
- * @summary Submit task answers and earn reward if 100% correct
+ * @deprecated
+ * @summary Deprecated legacy quiz-task submission endpoint
  */
-export const useSubmitTask = <TError = ErrorType<unknown>,
+export const useSubmitTask = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTask>>, TError,{id: number;data: BodyType<TaskSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof submitTask>>,
