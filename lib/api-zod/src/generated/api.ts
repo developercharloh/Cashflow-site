@@ -316,8 +316,10 @@ export const RequestTaskSubmissionUploadBody = zod.object({
 })
 
 export const RequestTaskSubmissionUploadResponse = zod.object({
-  "uploadURL": zod.string(),
-  "objectPath": zod.string()
+  "provider": zod.enum(['replit', 'vercel']),
+  "objectPrefix": zod.string().optional(),
+  "uploadURL": zod.string().optional(),
+  "objectPath": zod.string().optional()
 })
 
 

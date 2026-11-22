@@ -5,8 +5,11 @@
  * TaskEarn Pro API
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskFileUploadProvider } from './taskFileUploadProvider';
 
 export interface TaskFileUpload {
-  uploadURL: string;
-  objectPath: string;
+  provider: TaskFileUploadProvider;
+  objectPrefix?: string;
+  uploadURL?: string;
+  objectPath?: string;
 }

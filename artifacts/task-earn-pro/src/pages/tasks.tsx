@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { upload as uploadBlob } from "@vercel/blob/client";
 import {
   getGetMyWorkSubmissionsQueryKey,
   getGetTasksQueryKey,
@@ -116,14 +117,40 @@ export default function TasksPage() {
       {
         onSuccess: async (upload) => {
           try {
-            const result = await fetch(upload.uploadURL, {
-              method: "PUT",
-              headers: { "Content-Type": selectedFile.type },
-              body: selectedFile,
-            });
-            if (!result.ok) throw new Error("File upload did not complete. Please retry.");
+            let objectPath: string;
+            if (upload.provider === "vercel") {
+              if (!upload.objectPrefix) throw new Error("File storage is not configured.");
+              const safeName = selectedFile.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 140);
+              const blob = await uploadBlob(
+                `${upload.objectPrefix}${crypto.randomUUID()}-${safeName}`,
+                selectedFile,
+                {
+                  access: "private",
+                  contentType: selectedFile.type,
+                  handleUploadUrl: "/api/tasks/work-submissions/upload-url",
+                  clientPayload: JSON.stringify({
+                    name: selectedFile.name,
+                    size: selectedFile.size,
+                    contentType: selectedFile.type,
+                  }),
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+                  },
+                },
+              );
+              objectPath = `/objects/${blob.pathname}`;
+            } else {
+              if (!upload.uploadURL || !upload.objectPath) throw new Error("File storage returned an invalid upload link.");
+              const result = await fetch(upload.uploadURL, {
+                method: "PUT",
+                headers: { "Content-Type": selectedFile.type },
+                body: selectedFile,
+              });
+              if (!result.ok) throw new Error("File upload did not complete. Please retry.");
+              objectPath = upload.objectPath;
+            }
             submitWork(selectedTask, {
-              path: upload.objectPath,
+              path: objectPath,
               name: selectedFile.name,
               contentType: selectedFile.type,
               size: selectedFile.size,

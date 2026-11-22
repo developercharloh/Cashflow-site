@@ -277,9 +277,19 @@ export interface TaskFileInput {
   contentType: string;
 }
 
+export type TaskFileUploadProvider = typeof TaskFileUploadProvider[keyof typeof TaskFileUploadProvider];
+
+
+export const TaskFileUploadProvider = {
+  replit: 'replit',
+  vercel: 'vercel',
+} as const;
+
 export interface TaskFileUpload {
-  uploadURL: string;
-  objectPath: string;
+  provider: TaskFileUploadProvider;
+  objectPrefix?: string;
+  uploadURL?: string;
+  objectPath?: string;
 }
 
 export interface TaskWorkSubmissionInput {

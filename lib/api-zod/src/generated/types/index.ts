@@ -69,6 +69,7 @@ export * from './taskCompletionInput';
 export * from './taskCompletionResult';
 export * from './taskFileInput';
 export * from './taskFileUpload';
+export * from './taskFileUploadProvider';
 export * from './taskInput';
 export * from './taskQuestion';
 export * from './taskReviewInput';

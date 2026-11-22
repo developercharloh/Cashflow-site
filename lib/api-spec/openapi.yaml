@@ -1810,8 +1810,13 @@ components:
 
     TaskFileUpload:
       type: object
-      required: [uploadURL, objectPath]
+      required: [provider]
       properties:
+        provider:
+          type: string
+          enum: [replit, vercel]
+        objectPrefix:
+          type: string
         uploadURL:
           type: string
         objectPath:

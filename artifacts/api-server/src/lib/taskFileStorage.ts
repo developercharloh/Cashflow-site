@@ -1,22 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { Storage } from "@google-cloud/storage";
+import { Readable } from "node:stream";
+import { get, head } from "@vercel/blob";
+import type { Storage as GoogleCloudStorage } from "@google-cloud/storage";
 
 const SIDECAR = "http://127.0.0.1:1106";
 
-const storage = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${SIDECAR}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${SIDECAR}/credential`,
-      format: { type: "json", subject_token_field_name: "access_token" },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+let legacyStorage: GoogleCloudStorage | undefined;
+
+function useVercelBlob() {
+  return process.env.VERCEL === "1" || Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
 
 function parseObjectPath(path: string) {
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -25,7 +18,41 @@ function parseObjectPath(path: string) {
   return { bucketName, objectName: objectParts.join("/") };
 }
 
+async function getLegacyFile(objectPath: string) {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR?.replace(/\/$/, "");
+  if (!privateDir) throw new Error("App Storage is not configured");
+  if (!legacyStorage) {
+    const { Storage } = await import("@google-cloud/storage");
+    legacyStorage = new Storage({
+      credentials: {
+        audience: "replit",
+        subject_token_type: "access_token",
+        token_url: `${SIDECAR}/token`,
+        type: "external_account",
+        credential_source: {
+          url: `${SIDECAR}/credential`,
+          format: { type: "json", subject_token_field_name: "access_token" },
+        },
+        universe_domain: "googleapis.com",
+      },
+      projectId: "",
+    });
+  }
+  const { bucketName, objectName } = parseObjectPath(`${privateDir}${objectPath.slice("/objects".length)}`);
+  return legacyStorage.bucket(bucketName).file(objectName);
+}
+
 export async function createTaskUploadUrl(userId: number) {
+  if (useVercelBlob()) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      throw new Error("Private Vercel Blob storage is not configured");
+    }
+    return {
+      provider: "vercel" as const,
+      objectPrefix: `uploads/task-submissions/${userId}/`,
+    };
+  }
+
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
   if (!privateDir) throw new Error("App Storage is not configured");
   const objectPath = `${privateDir.replace(/\/$/, "")}/uploads/task-submissions/${userId}/${randomUUID()}`;
@@ -50,10 +77,13 @@ export async function createTaskUploadUrl(userId: number) {
 
 export async function getTaskFileMetadata(objectPath: string) {
   if (!objectPath.startsWith("/objects/uploads/task-submissions/")) return null;
-  const privateDir = process.env.PRIVATE_OBJECT_DIR?.replace(/\/$/, "");
-  if (!privateDir) throw new Error("App Storage is not configured");
-  const { bucketName, objectName } = parseObjectPath(`${privateDir}${objectPath.slice("/objects".length)}`);
-  const file = storage.bucket(bucketName).file(objectName);
+  if (useVercelBlob()) {
+    const pathname = objectPath.slice("/objects/".length);
+    const blob = await head(pathname);
+    return { size: blob.size, contentType: blob.contentType };
+  }
+
+  const file = await getLegacyFile(objectPath);
   const [exists] = await file.exists();
   if (!exists) return null;
   const [metadata] = await file.getMetadata();
@@ -62,10 +92,20 @@ export async function getTaskFileMetadata(objectPath: string) {
 
 export async function streamTaskFile(objectPath: string, res: import("express").Response) {
   if (!objectPath.startsWith("/objects/uploads/task-submissions/")) throw new Error("Invalid task file path");
-  const privateDir = process.env.PRIVATE_OBJECT_DIR?.replace(/\/$/, "");
-  if (!privateDir) throw new Error("App Storage is not configured");
-  const { bucketName, objectName } = parseObjectPath(`${privateDir}${objectPath.slice("/objects".length)}`);
-  const file = storage.bucket(bucketName).file(objectName);
+  if (useVercelBlob()) {
+    const pathname = objectPath.slice("/objects/".length);
+    const blob = await get(pathname, { access: "private", useCache: false });
+    if (!blob || blob.statusCode !== 200 || !blob.stream) return false;
+    res.setHeader("Content-Type", blob.blob.contentType ?? "application/octet-stream");
+    if (blob.blob.size !== null) res.setHeader("Content-Length", String(blob.blob.size));
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Disposition", "attachment");
+    Readable.fromWeb(blob.stream).on("error", (error) => res.destroy(error)).pipe(res);
+    return true;
+  }
+
+  const file = await getLegacyFile(objectPath);
   const [exists] = await file.exists();
   if (!exists) return false;
   const [metadata] = await file.getMetadata();

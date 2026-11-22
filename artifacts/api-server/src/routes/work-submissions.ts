@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
   adminAuditLogsTable,
@@ -32,8 +33,50 @@ const ALLOWED_FILE_TYPES = new Set([
   "audio/x-wav",
 ]);
 
-router.post("/tasks/work-submissions/upload-url", requireAuth, async (req: AuthRequest, res) => {
+router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
+  if (req.body?.type === "blob.upload-completed") {
+    next();
+    return;
+  }
+  requireAuth(req as AuthRequest, res, next);
+}, async (req: AuthRequest, res) => {
   try {
+    if (req.body?.type) {
+      if (process.env.VERCEL !== "1" && !process.env.BLOB_READ_WRITE_TOKEN) {
+        res.status(400).json({ error: "Direct file uploads are unavailable in this environment." });
+        return;
+      }
+
+      const result = await handleUpload({
+        body: req.body as HandleUploadBody,
+        request: req,
+        onBeforeGenerateToken: async (pathname, clientPayload) => {
+          const expectedPrefix = `uploads/task-submissions/${req.userId}/`;
+          if (!pathname.startsWith(expectedPrefix) || pathname.includes("..")) {
+            throw new Error("Invalid upload destination.");
+          }
+          const payload = JSON.parse(clientPayload || "{}") as {
+            name?: unknown;
+            contentType?: unknown;
+            size?: unknown;
+          };
+          if (typeof payload.name !== "string" || payload.name.trim().length < 1 ||
+              payload.name.length > 180 || typeof payload.contentType !== "string" ||
+              !ALLOWED_FILE_TYPES.has(payload.contentType) || !Number.isInteger(payload.size) ||
+              Number(payload.size) < 1 || Number(payload.size) > MAX_FILE_SIZE) {
+            throw new Error("The file details are invalid.");
+          }
+          return {
+            allowedContentTypes: [payload.contentType],
+            maximumSizeInBytes: MAX_FILE_SIZE,
+            tokenPayload: JSON.stringify({ userId: req.userId!, uploadedAt: Date.now() }),
+          };
+        },
+      });
+      res.json(result);
+      return;
+    }
+
     const { name, size, contentType } = req.body ?? {};
     if (typeof name !== "string" || name.trim().length < 1 || name.length > 180 ||
         !Number.isInteger(size) || size < 1 || size > MAX_FILE_SIZE ||
@@ -42,7 +85,11 @@ router.post("/tasks/work-submissions/upload-url", requireAuth, async (req: AuthR
       return;
     }
     const upload = await createTaskUploadUrl(req.userId!);
-    res.json(upload);
+    if (upload.provider === "vercel") {
+      res.json(upload);
+      return;
+    }
+    res.json({ provider: "replit", uploadURL: upload.uploadURL, objectPath: upload.objectPath });
   } catch (error) {
     req.log.error({ err: error }, "Could not create task work upload");
     res.status(500).json({ error: "File uploads are unavailable right now." });

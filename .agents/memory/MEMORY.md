@@ -1,1 +1,2 @@
 - [Lipwa Tasks product scope](taskearnpro-stack.md) — allowed work categories, reviewed platform-funded rewards, wallet rates, and deposit methods
+- [Lipwa Tasks hosting](lipwa-production-hosting.md) — production runtime must not depend on Replit; Neon and existing-data transfer were chosen
