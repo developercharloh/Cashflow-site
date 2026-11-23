@@ -14,6 +14,7 @@ import payheroRouter from "./payhero";
 import binaryRouter from "./binary";
 import kycRouter from "./kyc";
 import workSubmissionsRouter from "./work-submissions";
+import taskSourcesRouter from "./task-sources";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(paystackRouter);
 router.use(binaryRouter);
 router.use(kycRouter);
 router.use(workSubmissionsRouter);
+router.use(taskSourcesRouter);
 
 export default router;

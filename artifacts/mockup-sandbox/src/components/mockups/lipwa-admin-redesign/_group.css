@@ -1,0 +1,16 @@
+:root {
+  --admin-bg: #0a0f1e;
+  --admin-surface: #111827;
+  --admin-border: #1f2937;
+  --admin-accent: #3b82f6;
+}
+
+body {
+  background: var(--admin-bg);
+  color: #f1f5f9;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}

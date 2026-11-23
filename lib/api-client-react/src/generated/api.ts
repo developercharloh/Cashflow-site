@@ -27,7 +27,9 @@ import type {
   AdminGetTaskSubmissionsParams,
   AdminGetUsersParams,
   AdminGetWithdrawalsParams,
+  AdminListTaskImportsParams,
   AdminTaskSubmission,
+  AdminUpdateTaskSourceBody,
   AdminUser,
   AdminUserUpdate,
   AdminWithdrawal,
@@ -77,6 +79,12 @@ import type {
   TaskCategory,
   TaskCompletionInput,
   TaskCompletionResult,
+  TaskFeedImport,
+  TaskFeedPublishInput,
+  TaskFeedPublishResult,
+  TaskFeedSource,
+  TaskFeedSourceInput,
+  TaskFeedSync,
   TaskFileInput,
   TaskFileUpload,
   TaskInput,
@@ -5008,6 +5016,522 @@ export const useAdminDeleteTask = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminDeleteTaskMutationOptions(options));
+    }
+
+export const getAdminListTaskSourcesUrl = () => {
+
+
+
+
+  return `/api/admin/task-sources`
+}
+
+/**
+ * @summary Admin — list licensed task feeds
+ */
+export const adminListTaskSources = async ( options?: RequestInit): Promise<TaskFeedSource[]> => {
+
+  return customFetch<TaskFeedSource[]>(getAdminListTaskSourcesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListTaskSourcesQueryKey = () => {
+    return [
+    `/api/admin/task-sources`
+    ] as const;
+    }
+
+
+export const getAdminListTaskSourcesQueryOptions = <TData = Awaited<ReturnType<typeof adminListTaskSources>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListTaskSourcesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListTaskSources>>> = ({ signal }) => adminListTaskSources({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListTaskSources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListTaskSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListTaskSources>>>
+export type AdminListTaskSourcesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin — list licensed task feeds
+ */
+
+export function useAdminListTaskSources<TData = Awaited<ReturnType<typeof adminListTaskSources>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListTaskSourcesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminAddTaskSourceUrl = () => {
+
+
+
+
+  return `/api/admin/task-sources`
+}
+
+/**
+ * @summary Admin — connect a licensed public task feed
+ */
+export const adminAddTaskSource = async (taskFeedSourceInput: TaskFeedSourceInput, options?: RequestInit): Promise<TaskFeedSource> => {
+
+  return customFetch<TaskFeedSource>(getAdminAddTaskSourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskFeedSourceInput,)
+  }
+);}
+
+
+
+
+export const getAdminAddTaskSourceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAddTaskSource>>, TError,{data: BodyType<TaskFeedSourceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminAddTaskSource>>, TError,{data: BodyType<TaskFeedSourceInput>}, TContext> => {
+
+const mutationKey = ['adminAddTaskSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminAddTaskSource>>, {data: BodyType<TaskFeedSourceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminAddTaskSource(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminAddTaskSourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminAddTaskSource>>>
+    export type AdminAddTaskSourceMutationBody = BodyType<TaskFeedSourceInput>
+    export type AdminAddTaskSourceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — connect a licensed public task feed
+ */
+export const useAdminAddTaskSource = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAddTaskSource>>, TError,{data: BodyType<TaskFeedSourceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminAddTaskSource>>,
+        TError,
+        {data: BodyType<TaskFeedSourceInput>},
+        TContext
+      > => {
+      return useMutation(getAdminAddTaskSourceMutationOptions(options));
+    }
+
+export const getAdminUpdateTaskSourceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/task-sources/${id}`
+}
+
+/**
+ * @summary Admin — enable or disable a task feed
+ */
+export const adminUpdateTaskSource = async (id: number,
+    adminUpdateTaskSourceBody: AdminUpdateTaskSourceBody, options?: RequestInit): Promise<TaskFeedSource> => {
+
+  return customFetch<TaskFeedSource>(getAdminUpdateTaskSourceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      adminUpdateTaskSourceBody,)
+  }
+);}
+
+
+
+
+export const getAdminUpdateTaskSourceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateTaskSource>>, TError,{id: number;data: BodyType<AdminUpdateTaskSourceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateTaskSource>>, TError,{id: number;data: BodyType<AdminUpdateTaskSourceBody>}, TContext> => {
+
+const mutationKey = ['adminUpdateTaskSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateTaskSource>>, {id: number;data: BodyType<AdminUpdateTaskSourceBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateTaskSource(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateTaskSourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateTaskSource>>>
+    export type AdminUpdateTaskSourceMutationBody = BodyType<AdminUpdateTaskSourceBody>
+    export type AdminUpdateTaskSourceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — enable or disable a task feed
+ */
+export const useAdminUpdateTaskSource = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateTaskSource>>, TError,{id: number;data: BodyType<AdminUpdateTaskSourceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateTaskSource>>,
+        TError,
+        {id: number;data: BodyType<AdminUpdateTaskSourceBody>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateTaskSourceMutationOptions(options));
+    }
+
+export const getAdminSyncTaskSourceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/task-sources/${id}/sync`
+}
+
+/**
+ * @summary Admin — import new tasks from a licensed feed
+ */
+export const adminSyncTaskSource = async (id: number, options?: RequestInit): Promise<TaskFeedSync> => {
+
+  return customFetch<TaskFeedSync>(getAdminSyncTaskSourceUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminSyncTaskSourceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSyncTaskSource>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSyncTaskSource>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminSyncTaskSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSyncTaskSource>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminSyncTaskSource(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSyncTaskSourceMutationResult = NonNullable<Awaited<ReturnType<typeof adminSyncTaskSource>>>
+
+    export type AdminSyncTaskSourceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — import new tasks from a licensed feed
+ */
+export const useAdminSyncTaskSource = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSyncTaskSource>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSyncTaskSource>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminSyncTaskSourceMutationOptions(options));
+    }
+
+export const getAdminListTaskImportsUrl = (params?: AdminListTaskImportsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/task-imports?${stringifiedParams}` : `/api/admin/task-imports`
+}
+
+/**
+ * @summary Admin — list imported task records
+ */
+export const adminListTaskImports = async (params?: AdminListTaskImportsParams, options?: RequestInit): Promise<TaskFeedImport[]> => {
+
+  return customFetch<TaskFeedImport[]>(getAdminListTaskImportsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListTaskImportsQueryKey = (params?: AdminListTaskImportsParams,) => {
+    return [
+    `/api/admin/task-imports`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListTaskImportsQueryOptions = <TData = Awaited<ReturnType<typeof adminListTaskImports>>, TError = ErrorType<unknown>>(params?: AdminListTaskImportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListTaskImportsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListTaskImports>>> = ({ signal }) => adminListTaskImports(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListTaskImports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListTaskImportsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListTaskImports>>>
+export type AdminListTaskImportsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin — list imported task records
+ */
+
+export function useAdminListTaskImports<TData = Awaited<ReturnType<typeof adminListTaskImports>>, TError = ErrorType<unknown>>(
+ params?: AdminListTaskImportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListTaskImportsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminPublishTaskImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/task-imports/${id}/publish`
+}
+
+/**
+ * @summary Admin — fund and publish an imported task
+ */
+export const adminPublishTaskImport = async (id: number,
+    taskFeedPublishInput: TaskFeedPublishInput, options?: RequestInit): Promise<TaskFeedPublishResult> => {
+
+  return customFetch<TaskFeedPublishResult>(getAdminPublishTaskImportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskFeedPublishInput,)
+  }
+);}
+
+
+
+
+export const getAdminPublishTaskImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskImport>>, TError,{id: number;data: BodyType<TaskFeedPublishInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskImport>>, TError,{id: number;data: BodyType<TaskFeedPublishInput>}, TContext> => {
+
+const mutationKey = ['adminPublishTaskImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminPublishTaskImport>>, {id: number;data: BodyType<TaskFeedPublishInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminPublishTaskImport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminPublishTaskImportMutationResult = NonNullable<Awaited<ReturnType<typeof adminPublishTaskImport>>>
+    export type AdminPublishTaskImportMutationBody = BodyType<TaskFeedPublishInput>
+    export type AdminPublishTaskImportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — fund and publish an imported task
+ */
+export const useAdminPublishTaskImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskImport>>, TError,{id: number;data: BodyType<TaskFeedPublishInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminPublishTaskImport>>,
+        TError,
+        {id: number;data: BodyType<TaskFeedPublishInput>},
+        TContext
+      > => {
+      return useMutation(getAdminPublishTaskImportMutationOptions(options));
+    }
+
+export const getAdminSkipTaskImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/task-imports/${id}/skip`
+}
+
+/**
+ * @summary Admin — dismiss an imported task
+ */
+export const adminSkipTaskImport = async (id: number, options?: RequestInit): Promise<TaskFeedImport> => {
+
+  return customFetch<TaskFeedImport>(getAdminSkipTaskImportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminSkipTaskImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSkipTaskImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSkipTaskImport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminSkipTaskImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSkipTaskImport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminSkipTaskImport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSkipTaskImportMutationResult = NonNullable<Awaited<ReturnType<typeof adminSkipTaskImport>>>
+
+    export type AdminSkipTaskImportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — dismiss an imported task
+ */
+export const useAdminSkipTaskImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSkipTaskImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSkipTaskImport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminSkipTaskImportMutationOptions(options));
     }
 
 export const getAdminGetWithdrawalsUrl = (params?: AdminGetWithdrawalsParams,) => {

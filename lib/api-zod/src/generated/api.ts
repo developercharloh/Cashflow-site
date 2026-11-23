@@ -1144,6 +1144,193 @@ export const AdminDeleteTaskResponse = zod.object({
 
 
 /**
+ * @summary Admin — list licensed task feeds
+ */
+export const AdminListTaskSourcesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "feedUrl": zod.string().url(),
+  "licenseName": zod.string(),
+  "licenseUrl": zod.string().url(),
+  "allowedCategories": zod.array(zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training'])),
+  "isActive": zod.boolean(),
+  "lastSyncedAt": zod.coerce.date().nullish(),
+  "lastSyncStatus": zod.enum(['never', 'success', 'warning', 'failed']),
+  "lastSyncMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListTaskSourcesResponse = zod.array(AdminListTaskSourcesResponseItem)
+
+
+/**
+ * @summary Admin — connect a licensed public task feed
+ */
+export const adminAddTaskSourceBodyNameMin = 2;
+export const adminAddTaskSourceBodyNameMax = 100;
+
+export const adminAddTaskSourceBodyFeedUrlMax = 2048;
+
+export const adminAddTaskSourceBodyLicenseNameMin = 3;
+export const adminAddTaskSourceBodyLicenseNameMax = 120;
+
+export const adminAddTaskSourceBodyLicenseUrlMax = 2048;
+
+export const adminAddTaskSourceBodyAllowedCategoriesMax = 4;
+
+
+
+export const AdminAddTaskSourceBody = zod.object({
+  "name": zod.string().min(adminAddTaskSourceBodyNameMin).max(adminAddTaskSourceBodyNameMax),
+  "feedUrl": zod.string().url().max(adminAddTaskSourceBodyFeedUrlMax),
+  "licenseName": zod.string().min(adminAddTaskSourceBodyLicenseNameMin).max(adminAddTaskSourceBodyLicenseNameMax),
+  "licenseUrl": zod.string().url().max(adminAddTaskSourceBodyLicenseUrlMax),
+  "allowedCategories": zod.array(zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training'])).min(1).max(adminAddTaskSourceBodyAllowedCategoriesMax),
+  "reuseRightsConfirmed": zod.boolean()
+})
+
+
+/**
+ * @summary Admin — enable or disable a task feed
+ */
+export const AdminUpdateTaskSourceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminUpdateTaskSourceBody = zod.object({
+  "isActive": zod.boolean()
+})
+
+export const AdminUpdateTaskSourceResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "feedUrl": zod.string().url(),
+  "licenseName": zod.string(),
+  "licenseUrl": zod.string().url(),
+  "allowedCategories": zod.array(zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training'])),
+  "isActive": zod.boolean(),
+  "lastSyncedAt": zod.coerce.date().nullish(),
+  "lastSyncStatus": zod.enum(['never', 'success', 'warning', 'failed']),
+  "lastSyncMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Admin — import new tasks from a licensed feed
+ */
+export const AdminSyncTaskSourceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminSyncTaskSourceResponse = zod.object({
+  "source": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "feedUrl": zod.string().url(),
+  "licenseName": zod.string(),
+  "licenseUrl": zod.string().url(),
+  "allowedCategories": zod.array(zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training'])),
+  "isActive": zod.boolean(),
+  "lastSyncedAt": zod.coerce.date().nullish(),
+  "lastSyncStatus": zod.enum(['never', 'success', 'warning', 'failed']),
+  "lastSyncMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "imported": zod.number(),
+  "duplicates": zod.number(),
+  "skippedUnsupported": zod.number(),
+  "skippedInvalid": zod.number()
+})
+
+
+/**
+ * @summary Admin — list imported task records
+ */
+export const AdminListTaskImportsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'published', 'skipped']).optional()
+})
+
+export const AdminListTaskImportsResponseItem = zod.object({
+  "id": zod.number(),
+  "sourceId": zod.number(),
+  "externalId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "category": zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training']),
+  "estimatedMinutes": zod.number(),
+  "sourceUrl": zod.string().url(),
+  "sourceNameSnapshot": zod.string(),
+  "licenseNameSnapshot": zod.string(),
+  "licenseUrlSnapshot": zod.string().url(),
+  "status": zod.enum(['pending', 'published', 'skipped']),
+  "publishedTaskId": zod.number().nullish(),
+  "sourceActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListTaskImportsResponse = zod.array(AdminListTaskImportsResponseItem)
+
+
+/**
+ * @summary Admin — fund and publish an imported task
+ */
+export const AdminPublishTaskImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminPublishTaskImportBodyRewardExclusiveMin = 0;
+export const adminPublishTaskImportBodyRewardMax = 1000;
+
+export const adminPublishTaskImportBodyFundingBudgetExclusiveMin = 0;
+export const adminPublishTaskImportBodyFundingBudgetMax = 10000;
+
+export const adminPublishTaskImportBodyMaxCompletionsMax = 500;
+
+export const adminPublishTaskImportBodyMinLevelMax = 7;
+
+
+
+export const AdminPublishTaskImportBody = zod.object({
+  "reward": zod.number().gt(adminPublishTaskImportBodyRewardExclusiveMin).max(adminPublishTaskImportBodyRewardMax),
+  "fundingBudget": zod.number().gt(adminPublishTaskImportBodyFundingBudgetExclusiveMin).max(adminPublishTaskImportBodyFundingBudgetMax),
+  "maxCompletions": zod.number().min(1).max(adminPublishTaskImportBodyMaxCompletionsMax),
+  "minLevel": zod.number().min(1).max(adminPublishTaskImportBodyMinLevelMax)
+})
+
+
+/**
+ * @summary Admin — dismiss an imported task
+ */
+export const AdminSkipTaskImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminSkipTaskImportResponse = zod.object({
+  "id": zod.number(),
+  "sourceId": zod.number(),
+  "externalId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "category": zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training']),
+  "estimatedMinutes": zod.number(),
+  "sourceUrl": zod.string().url(),
+  "sourceNameSnapshot": zod.string(),
+  "licenseNameSnapshot": zod.string(),
+  "licenseUrlSnapshot": zod.string().url(),
+  "status": zod.enum(['pending', 'published', 'skipped']),
+  "publishedTaskId": zod.number().nullish(),
+  "sourceActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Admin — list withdrawal requests
  */
 export const AdminGetWithdrawalsQueryParams = zod.object({

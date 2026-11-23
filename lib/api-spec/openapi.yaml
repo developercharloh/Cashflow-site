@@ -1248,6 +1248,152 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /admin/task-sources:
+    get:
+      operationId: adminListTaskSources
+      tags: [admin]
+      summary: Admin — list licensed task feeds
+      responses:
+        "200":
+          description: Task feed sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskFeedSource"
+    post:
+      operationId: adminAddTaskSource
+      tags: [admin]
+      summary: Admin — connect a licensed public task feed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskFeedSourceInput"
+      responses:
+        "201":
+          description: Task feed connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFeedSource"
+
+  /admin/task-sources/{id}:
+    patch:
+      operationId: adminUpdateTaskSource
+      tags: [admin]
+      summary: Admin — enable or disable a task feed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        "200":
+          description: Task feed updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFeedSource"
+
+  /admin/task-sources/{id}/sync:
+    post:
+      operationId: adminSyncTaskSource
+      tags: [admin]
+      summary: Admin — import new tasks from a licensed feed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Feed sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFeedSync"
+
+  /admin/task-imports:
+    get:
+      operationId: adminListTaskImports
+      tags: [admin]
+      summary: Admin — list imported task records
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, published, skipped]
+      responses:
+        "200":
+          description: Imported task records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskFeedImport"
+
+  /admin/task-imports/{id}/publish:
+    post:
+      operationId: adminPublishTaskImport
+      tags: [admin]
+      summary: Admin — fund and publish an imported task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskFeedPublishInput"
+      responses:
+        "201":
+          description: User-facing task published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFeedPublishResult"
+
+  /admin/task-imports/{id}/skip:
+    post:
+      operationId: adminSkipTaskImport
+      tags: [admin]
+      summary: Admin — dismiss an imported task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Imported task dismissed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskFeedImport"
+
   /admin/withdrawals:
     get:
       operationId: adminGetWithdrawals
@@ -1819,6 +1965,168 @@ components:
           type: string
         taskType:
           type: string
+
+    TaskFeedSourceInput:
+      type: object
+      required: [name, feedUrl, licenseName, licenseUrl, allowedCategories, reuseRightsConfirmed]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        feedUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+        licenseName:
+          type: string
+          minLength: 3
+          maxLength: 120
+        licenseUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+        allowedCategories:
+          type: array
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
+          items:
+            type: string
+            enum: [Academic Writing, Data Entry, Transcription, AI Training]
+        reuseRightsConfirmed:
+          type: boolean
+
+    TaskFeedSource:
+      type: object
+      required: [id, name, feedUrl, licenseName, licenseUrl, allowedCategories, isActive, lastSyncStatus, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        feedUrl:
+          type: string
+          format: uri
+        licenseName:
+          type: string
+        licenseUrl:
+          type: string
+          format: uri
+        allowedCategories:
+          type: array
+          items:
+            type: string
+            enum: [Academic Writing, Data Entry, Transcription, AI Training]
+        isActive:
+          type: boolean
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastSyncStatus:
+          type: string
+          enum: [never, success, warning, failed]
+        lastSyncMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TaskFeedImport:
+      type: object
+      required: [id, sourceId, externalId, title, description, instructions, category, estimatedMinutes, sourceUrl, sourceNameSnapshot, licenseNameSnapshot, licenseUrlSnapshot, status, createdAt, updatedAt, sourceActive]
+      properties:
+        id:
+          type: integer
+        sourceId:
+          type: integer
+        externalId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        category:
+          type: string
+          enum: [Academic Writing, Data Entry, Transcription, AI Training]
+        estimatedMinutes:
+          type: integer
+        sourceUrl:
+          type: string
+          format: uri
+        sourceNameSnapshot:
+          type: string
+        licenseNameSnapshot:
+          type: string
+        licenseUrlSnapshot:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [pending, published, skipped]
+        publishedTaskId:
+          type: integer
+          nullable: true
+        sourceActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TaskFeedSync:
+      type: object
+      required: [source, imported, duplicates, skippedUnsupported, skippedInvalid]
+      properties:
+        source:
+          $ref: "#/components/schemas/TaskFeedSource"
+        imported:
+          type: integer
+        duplicates:
+          type: integer
+        skippedUnsupported:
+          type: integer
+        skippedInvalid:
+          type: integer
+
+    TaskFeedPublishInput:
+      type: object
+      required: [reward, fundingBudget, maxCompletions, minLevel]
+      properties:
+        reward:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1000
+        fundingBudget:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10000
+        maxCompletions:
+          type: integer
+          minimum: 1
+          maximum: 500
+        minLevel:
+          type: integer
+          minimum: 1
+          maximum: 7
+
+    TaskFeedPublishResult:
+      type: object
+      required: [task, import]
+      properties:
+        task:
+          $ref: "#/components/schemas/Task"
+        import:
+          $ref: "#/components/schemas/TaskFeedImport"
 
     TaskFileInput:
       type: object

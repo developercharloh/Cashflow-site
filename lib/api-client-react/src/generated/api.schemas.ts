@@ -271,6 +271,149 @@ export interface TaskUpdate {
   taskType?: string;
 }
 
+export type TaskFeedSourceInputAllowedCategoriesItem = typeof TaskFeedSourceInputAllowedCategoriesItem[keyof typeof TaskFeedSourceInputAllowedCategoriesItem];
+
+
+export const TaskFeedSourceInputAllowedCategoriesItem = {
+  Academic_Writing: 'Academic Writing',
+  Data_Entry: 'Data Entry',
+  Transcription: 'Transcription',
+  AI_Training: 'AI Training',
+} as const;
+
+export interface TaskFeedSourceInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 2048 */
+  feedUrl: string;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  licenseName: string;
+  /** @maxLength 2048 */
+  licenseUrl: string;
+  /**
+     * @minItems 1
+     * @maxItems 4
+     */
+  allowedCategories: TaskFeedSourceInputAllowedCategoriesItem[];
+  reuseRightsConfirmed: boolean;
+}
+
+export type TaskFeedSourceAllowedCategoriesItem = typeof TaskFeedSourceAllowedCategoriesItem[keyof typeof TaskFeedSourceAllowedCategoriesItem];
+
+
+export const TaskFeedSourceAllowedCategoriesItem = {
+  Academic_Writing: 'Academic Writing',
+  Data_Entry: 'Data Entry',
+  Transcription: 'Transcription',
+  AI_Training: 'AI Training',
+} as const;
+
+export type TaskFeedSourceLastSyncStatus = typeof TaskFeedSourceLastSyncStatus[keyof typeof TaskFeedSourceLastSyncStatus];
+
+
+export const TaskFeedSourceLastSyncStatus = {
+  never: 'never',
+  success: 'success',
+  warning: 'warning',
+  failed: 'failed',
+} as const;
+
+export interface TaskFeedSource {
+  id: number;
+  name: string;
+  feedUrl: string;
+  licenseName: string;
+  licenseUrl: string;
+  allowedCategories: TaskFeedSourceAllowedCategoriesItem[];
+  isActive: boolean;
+  lastSyncedAt?: string | null;
+  lastSyncStatus: TaskFeedSourceLastSyncStatus;
+  lastSyncMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TaskFeedImportCategory = typeof TaskFeedImportCategory[keyof typeof TaskFeedImportCategory];
+
+
+export const TaskFeedImportCategory = {
+  Academic_Writing: 'Academic Writing',
+  Data_Entry: 'Data Entry',
+  Transcription: 'Transcription',
+  AI_Training: 'AI Training',
+} as const;
+
+export type TaskFeedImportStatus = typeof TaskFeedImportStatus[keyof typeof TaskFeedImportStatus];
+
+
+export const TaskFeedImportStatus = {
+  pending: 'pending',
+  published: 'published',
+  skipped: 'skipped',
+} as const;
+
+export interface TaskFeedImport {
+  id: number;
+  sourceId: number;
+  externalId: string;
+  title: string;
+  description: string;
+  instructions: string;
+  category: TaskFeedImportCategory;
+  estimatedMinutes: number;
+  sourceUrl: string;
+  sourceNameSnapshot: string;
+  licenseNameSnapshot: string;
+  licenseUrlSnapshot: string;
+  status: TaskFeedImportStatus;
+  publishedTaskId?: number | null;
+  sourceActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskFeedSync {
+  source: TaskFeedSource;
+  imported: number;
+  duplicates: number;
+  skippedUnsupported: number;
+  skippedInvalid: number;
+}
+
+export interface TaskFeedPublishInput {
+  /**
+     * @maximum 1000
+     * @exclusiveMinimum 0
+     */
+  reward: number;
+  /**
+     * @maximum 10000
+     * @exclusiveMinimum 0
+     */
+  fundingBudget: number;
+  /**
+     * @minimum 1
+     * @maximum 500
+     */
+  maxCompletions: number;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  minLevel: number;
+}
+
+export interface TaskFeedPublishResult {
+  task: Task;
+  import: TaskFeedImport;
+}
+
 export interface TaskFileInput {
   name: string;
   size: number;
@@ -709,6 +852,23 @@ export type AdminGetAuditLogParams = {
  */
 limit?: number;
 };
+
+export type AdminUpdateTaskSourceBody = {
+  isActive: boolean;
+};
+
+export type AdminListTaskImportsParams = {
+status?: AdminListTaskImportsStatus;
+};
+
+export type AdminListTaskImportsStatus = typeof AdminListTaskImportsStatus[keyof typeof AdminListTaskImportsStatus];
+
+
+export const AdminListTaskImportsStatus = {
+  pending: 'pending',
+  published: 'published',
+  skipped: 'skipped',
+} as const;
 
 export type AdminGetWithdrawalsParams = {
 status?: string;
