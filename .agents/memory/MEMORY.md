@@ -1,2 +1,3 @@
 - [Lipwa Tasks product scope](taskearnpro-stack.md) — allowed work categories, reviewed platform-funded rewards, wallet rates, and deposit methods
 - [Lipwa Tasks hosting](lipwa-production-hosting.md) — production must run outside Replit; Vercel shared secrets require team-level verification
+- [Vercel Vite API routing](vercel-vite-api-routing.md) — a READY static deployment can still omit API functions and serve the SPA fallback for API paths
