@@ -46,7 +46,7 @@ jobs:
             'routes': [
               {
                 'src': '/api/(.*)',
-                'dest': 'https://github-importer-jakejamesgu.replit.app/api/\$1',
+                'dest': 'https://taskearn-admin.vercel.app/api/\$1',
                 'headers': {'X-Forwarded-Host': 'lipwatasks.site'}
               },
               {'handle': 'filesystem'},
