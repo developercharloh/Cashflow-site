@@ -1152,6 +1152,52 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminTaskSubmission"
 
+  /admin/task-library:
+    get:
+      operationId: adminListTaskLibrary
+      tags: [admin]
+      summary: Admin — list original ready-to-publish task templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [Academic Writing, Data Entry, Transcription, AI Training]
+      responses:
+        "200":
+          description: Original task templates available for admin review
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskLibraryItem"
+
+  /admin/task-library/{id}/publish:
+    post:
+      operationId: adminPublishTaskLibraryItem
+      tags: [admin]
+      summary: Admin — publish a reviewed original task template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskLibraryPublishInput"
+      responses:
+        "201":
+          description: Platform-funded task created and made available to workers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
   /admin/audit-log:
     get:
       operationId: adminGetAuditLog
@@ -1715,6 +1761,8 @@ components:
           type: string
         description:
           type: string
+        assetUrl:
+          type: ["string", "null"]
         category:
           type: string
         taskType:
@@ -2128,6 +2176,57 @@ components:
         import:
           $ref: "#/components/schemas/TaskFeedImport"
 
+    TaskLibraryItem:
+      type: object
+      required: [id, title, category, description, instructions, reviewGuide, estimatedMinutes, assetUrl, difficulty, defaultMinLevel]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+          enum: [Academic Writing, Data Entry, Transcription, AI Training]
+        description:
+          type: string
+        instructions:
+          type: string
+        reviewGuide:
+          type: string
+          description: Admin-only answer key and review rubric
+        estimatedMinutes:
+          type: integer
+        assetUrl:
+          type: ["string", "null"]
+        difficulty:
+          type: string
+          enum: [hard]
+        defaultMinLevel:
+          type: integer
+          minimum: 1
+          maximum: 7
+
+    TaskLibraryPublishInput:
+      type: object
+      required: [reward, fundingBudget, maxCompletions]
+      properties:
+        reward:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1000
+        fundingBudget:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10000
+        maxCompletions:
+          type: integer
+          minimum: 1
+          maximum: 500
+        minLevel:
+          type: integer
+          minimum: 1
+          maximum: 7
+
     TaskFileInput:
       type: object
       required: [name, size, contentType]
@@ -2196,7 +2295,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/TaskWorkSubmission"
         - type: object
-          required: [userId, userName, userEmail]
+          required: [userId, userName, userEmail, taskDescription, taskInstructions, taskAssetUrl, reviewGuide]
           properties:
             userId:
               type: integer
@@ -2204,6 +2303,14 @@ components:
               type: string
             userEmail:
               type: string
+            taskDescription:
+              type: string
+            taskInstructions:
+              type: ["string", "null"]
+            taskAssetUrl:
+              type: ["string", "null"]
+            reviewGuide:
+              type: ["string", "null"]
 
     TaskReviewInput:
       type: object

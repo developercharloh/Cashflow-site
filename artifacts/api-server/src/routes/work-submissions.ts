@@ -236,6 +236,10 @@ router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res
       submission: taskSubmissionsTable,
       taskTitle: tasksTable.title,
       reward: tasksTable.reward,
+      taskDescription: tasksTable.description,
+      taskInstructions: tasksTable.instructions,
+      taskAssetUrl: tasksTable.assetUrl,
+      reviewGuide: tasksTable.reviewGuide,
       userName: usersTable.name,
       userEmail: usersTable.email,
     }).from(taskSubmissionsTable)
@@ -245,11 +249,15 @@ router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res
       .limit(200);
     res.json(rows
       .filter(({ submission }) => !status || status === "all" || submission.status === status)
-      .map(({ submission, taskTitle, reward, userName, userEmail }) => ({
+      .map(({ submission, taskTitle, reward, taskDescription, taskInstructions, taskAssetUrl, reviewGuide, userName, userEmail }) => ({
         id: submission.id,
         taskId: submission.taskId,
         taskTitle,
         reward,
+        taskDescription,
+        taskInstructions,
+        taskAssetUrl,
+        reviewGuide,
         status: submission.status,
         textSubmission: submission.textSubmission,
         attachmentName: submission.attachmentName,

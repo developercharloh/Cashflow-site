@@ -492,6 +492,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
         title: t.title,
         description: t.description,
         instructions: t.instructions,
+        assetUrl: t.assetUrl,
         category: t.category,
         reward: t.reward,
         fundingBudget: t.fundingBudget,

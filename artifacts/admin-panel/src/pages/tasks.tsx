@@ -6,10 +6,12 @@ import {
   ListFilter, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, Sparkles,
   Wallet2, X,
 } from "lucide-react";
+import { TaskLibraryPanel, type TaskLibraryTemplate } from "@/components/task-library-panel";
+import { TaskWorkReviewPanel, type TaskWorkSubmission } from "@/components/task-work-review-panel";
 
 const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"] as const;
 type Category = (typeof CATEGORIES)[number];
-type Tab = "queue" | "listings" | "completions" | "sources";
+type Tab = "library" | "queue" | "listings" | "review" | "sources";
 
 interface Task {
   id: number;
@@ -26,19 +28,6 @@ interface Task {
   isActive: boolean;
   completionCount: number;
   createdAt: string;
-}
-
-interface Completion {
-  id: number;
-  userId: number;
-  taskId: number;
-  status: string;
-  userName: string;
-  userEmail: string;
-  taskTitle: string;
-  reward: number;
-  completedAt: string | null;
-  startedAt: string;
 }
 
 interface TaskFeedSource {
@@ -164,7 +153,8 @@ function Modal({ children, onClose, title, wide = false }: {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [completions, setCompletions] = useState<Completion[]>([]);
+  const [workSubmissions, setWorkSubmissions] = useState<TaskWorkSubmission[]>([]);
+  const [libraryTemplates, setLibraryTemplates] = useState<TaskLibraryTemplate[]>([]);
   const [sources, setSources] = useState<TaskFeedSource[]>([]);
   const [pendingImports, setPendingImports] = useState<TaskImport[]>([]);
   const [publishedImports, setPublishedImports] = useState<TaskImport[]>([]);
@@ -172,7 +162,7 @@ export default function Tasks() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [modalError, setModalError] = useState("");
-  const [tab, setTab] = useState<Tab>("queue");
+  const [tab, setTab] = useState<Tab>("library");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
   const [sourceModal, setSourceModal] = useState(false);
@@ -198,15 +188,17 @@ export default function Tasks() {
     setLoading(true);
     setError("");
     try {
-      const [taskRows, completionRows, sourceRows, pendingRows, publishedRows] = await Promise.all([
+      const [taskRows, submissionRows, templateRows, sourceRows, pendingRows, publishedRows] = await Promise.all([
         get<Task[]>("/admin/tasks"),
-        get<Completion[]>("/admin/completions"),
+        get<TaskWorkSubmission[]>("/admin/task-submissions?status=all"),
+        get<TaskLibraryTemplate[]>("/admin/task-library"),
         get<TaskFeedSource[]>("/admin/task-sources"),
         get<TaskImport[]>("/admin/task-imports?status=pending"),
         get<TaskImport[]>("/admin/task-imports?status=published"),
       ]);
       setTasks(taskRows);
-      setCompletions(completionRows);
+      setWorkSubmissions(submissionRows);
+      setLibraryTemplates(templateRows);
       setSources(sourceRows);
       setPendingImports(pendingRows);
       setPublishedImports(publishedRows);
@@ -220,7 +212,8 @@ export default function Tasks() {
   useEffect(() => { void load(); }, []);
 
   const activeTasks = tasks.filter((task) => task.isActive);
-  const approvedCompletions = completions.filter((item) => item.status === "completed" || item.status === "approved").length;
+  const pendingWork = workSubmissions.filter((item) => item.status === "submitted").length;
+  const approvedWork = workSubmissions.filter((item) => item.status === "approved").length;
   const fundedTotal = activeTasks.reduce((sum, task) => sum + n(task.fundingBudget), 0);
   const visibleTasks = useMemo(() => tasks.filter((task) =>
     (categoryFilter === "All categories" || task.category === categoryFilter) &&
