@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { AudioLines, BookOpenCheck, FileSpreadsheet, FileText, Loader2, Upload, Wallet } from "lucide-react";
+import { AudioLines, BookOpenCheck, Check, ChevronRight, Clock3, FileCheck2, FileSpreadsheet, FileText, Loader2, ShieldCheck, Upload, UsersRound, Wallet } from "lucide-react";
 
 const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"] as const;
 const CATEGORY_ICONS = {
@@ -51,7 +51,7 @@ export default function TasksPage() {
   const [uploading, setUploading] = useState(false);
 
   const { data: tasks, isLoading, isError, refetch } = useGetTasks();
-  const { data: submissions } = useGetMyWorkSubmissions();
+  const { data: submissions, isLoading: submissionsLoading, isError: submissionsError } = useGetMyWorkSubmissions();
   const uploadMutation = useRequestTaskSubmissionUpload();
   const submitMutation = useSubmitWrittenTask();
 
@@ -179,112 +179,147 @@ export default function TasksPage() {
     status === "approved" ? "Approved · reward credited" : status === "submitted" ? "Under review" : status === "rejected" ? "Not approved" : status;
 
   return (
-    <div className="px-4 pb-10 pt-8 sm:px-7 sm:pt-12">
-      <header className="max-w-3xl">
-        <p className="font-mono text-[10px] uppercase tracking-[.2em] text-primary">Expert freelance work</p>
-        <h1 className="mt-3 font-serif text-4xl tracking-tight sm:text-5xl">Choose a task. Submit real work.</h1>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          Only Academic Writing, Data Entry, Transcription, and AI Training listings appear here. Every listing has a fixed reward and capped platform-funded payout. An admin reviews work before approving a wallet reward; the budget cap is not an escrow transfer.
-        </p>
-      </header>
-
-      <nav aria-label="Filter task category" className="mt-7 flex flex-wrap gap-2">
-        {(["All", ...CATEGORIES] as const).map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setCategory(item)}
-            aria-pressed={category === item}
-            className={`rounded-full border px-3 py-2 text-xs font-medium transition-colors ${category === item ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}
-          >
-            {item}
-          </button>
-        ))}
-      </nav>
-      {category === "Academic Writing" && (
-        <p className="mt-4 rounded-xl border border-border bg-card px-4 py-3 text-xs leading-5 text-muted-foreground">
-          Academic writing work is limited to ethical support such as proofreading, citation formatting, and research organization—not completing graded work.
-        </p>
-      )}
-
-      {isLoading ? (
-        <div className="mt-8 flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
-      ) : isError ? (
-        <section role="alert" className="mt-8 rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="font-semibold">Work listings could not be loaded.</p>
-          <Button variant="outline" className="mt-4" onClick={() => void refetch()}>Try again</Button>
-        </section>
-      ) : visibleTasks.length === 0 ? (
-        <section className="mt-8 rounded-2xl border border-dashed border-border bg-card/50 p-7 text-center">
-          <h2 className="font-semibold">No open tasks in this category yet</h2>
-          <p className="mt-2 text-sm text-muted-foreground">New listings appear here after an admin publishes them with a reward budget and a completion limit.</p>
-        </section>
-      ) : (
-        <section aria-label="Open freelance tasks" className="mt-6 grid gap-3 md:grid-cols-2">
-          {visibleTasks.map((task) => {
-            const Icon = CATEGORY_ICONS[task.category as keyof typeof CATEGORY_ICONS] ?? FileText;
-            const existingSubmission = activeSubmissionByTask.get(task.id);
-            return (
-              <Card key={task.id} className="overflow-hidden border-border transition-colors hover:border-primary/35" data-testid={`task-card-${task.id}`}>
-                <CardContent className="p-5 sm:p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-primary"><Icon className="h-5 w-5" /></div>
-                    <Badge variant="outline" className="capitalize text-[10px]">{task.difficulty} · Level {task.minLevel}+</Badge>
-                  </div>
-                  <p className="mt-5 font-mono text-[9px] uppercase tracking-[.16em] text-primary">{task.category}</p>
-                  <h2 className="mt-2 font-serif text-2xl leading-tight">{task.title}</h2>
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{task.description}</p>
-                  <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-green-600"><Wallet className="h-3.5 w-3.5" />${task.reward.toFixed(2)} on approval</span>
-                    <span>{task.estimatedMinutes} min estimate</span>
-                    <span>Up to {task.maxCompletions} workers</span>
-                  </div>
-                  {existingSubmission ? (
-                    <div className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs font-medium">
-                      {submissionStatus(existingSubmission.status)}
-                    </div>
-                  ) : (
-                    <Button className="mt-4 w-full" onClick={() => setSelectedTask(task)} data-testid={`button-open-task-${task.id}`}>
-                      View instructions and submit
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </section>
-      )}
-
-      <section className="mt-9">
-        <h2 className="font-serif text-2xl">Your submissions</h2>
-        {(submissions?.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Submitted work and review decisions will show here.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {submissions?.map((submission) => (
-              <div key={submission.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-                <div>
-                  <p className="text-sm font-semibold">{submission.taskTitle}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Submitted {new Date(submission.submittedAt).toLocaleString()}</p>
-                  {submission.reviewNote && <p className="mt-2 max-w-2xl text-xs text-muted-foreground">Review note: {submission.reviewNote}</p>}
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">${submission.reward.toFixed(2)}</p>
-                  <Badge variant="outline" className="mt-1">{submissionStatus(submission.status)}</Badge>
-                </div>
-              </div>
-            ))}
+    <div className="px-4 pb-10 pt-6 sm:px-7 sm:pt-9">
+      <div className="mx-auto max-w-5xl">
+        <header className="relative overflow-hidden rounded-[1.5rem] border border-border bg-card px-5 py-6 sm:px-8 sm:py-8">
+          <div className="absolute right-0 top-0 h-36 w-36 translate-x-1/3 -translate-y-1/3 rounded-full border-[20px] border-accent/60 sm:h-52 sm:w-52 sm:border-[28px]" aria-hidden="true" />
+          <div className="relative max-w-2xl">
+            <p className="font-mono text-[10px] uppercase tracking-[.19em] text-primary">Lipwa Tasks / Work board</p>
+            <h1 className="mt-3 max-w-xl font-serif text-[2.35rem] leading-[.98] tracking-tight sm:text-5xl">Good work, clearly rewarded.</h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
+              Find focused freelance work in writing, data, transcription, and AI training. Each listing shows its reward up front; your wallet is credited when your work is approved.
+            </p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-2 text-xs font-medium text-primary">
+              <ShieldCheck className="h-4 w-4" /> Every submission is reviewed before payment
+            </div>
           </div>
-        )}
-      </section>
+        </header>
+
+        <section className="mt-7" aria-label="Task discovery">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Browse opportunities</p>
+              <h2 className="mt-1 font-serif text-2xl sm:text-3xl">Available work</h2>
+            </div>
+            {!isLoading && !isError && <p className="text-xs text-muted-foreground">{visibleTasks.length} {visibleTasks.length === 1 ? "listing" : "listings"}{category !== "All" ? ` · ${category}` : ""}</p>}
+          </div>
+          <nav aria-label="Filter task category" className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
+            {(["All", ...CATEGORIES] as const).map((item) => (
+              <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={category === item}
+                className={`min-h-10 shrink-0 rounded-full border px-4 text-xs font-semibold transition-colors ${category === item ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
+                {item}
+              </button>
+            ))}
+          </nav>
+          {category === "Academic Writing" && (
+            <p className="mt-3 rounded-xl border border-border bg-accent/35 px-4 py-3 text-xs leading-5 text-muted-foreground">
+              Academic writing tasks support ethical work such as proofreading, citation formatting, and research organization—not completing graded work.
+            </p>
+          )}
+
+          {isLoading ? (
+            <div className="mt-5 space-y-3" aria-label="Loading task listings">
+              {[0, 1, 2].map((item) => <div key={item} className="h-40 animate-pulse rounded-2xl border border-border bg-card/70" />)}
+            </div>
+          ) : isError ? (
+            <section role="alert" className="mt-5 rounded-2xl border border-border bg-card px-5 py-8 text-center">
+              <p className="font-semibold">Work listings could not be loaded.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Your work is safe. Please try the board again.</p>
+              <Button variant="outline" className="mt-4" onClick={() => void refetch()}>Try again</Button>
+            </section>
+          ) : visibleTasks.length === 0 ? (
+            <section className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-9 text-center">
+              <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-accent text-primary"><FileCheck2 className="h-5 w-5" /></div>
+              <h3 className="mt-3 font-semibold">No open tasks in this category yet</h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm leading-5 text-muted-foreground">Try another category or check back soon. New work appears here when it is ready to accept.</p>
+            </section>
+          ) : (
+            <section aria-label="Open freelance tasks" className="mt-4 space-y-3">
+              {visibleTasks.map((task) => {
+                const Icon = CATEGORY_ICONS[task.category as keyof typeof CATEGORY_ICONS] ?? FileText;
+                const existingSubmission = activeSubmissionByTask.get(task.id);
+                return (
+                  <Card key={task.id} className="overflow-hidden border-border bg-card transition-colors hover:border-primary/35" data-testid={`task-card-${task.id}`}>
+                    <CardContent className="p-4 sm:px-5 sm:py-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/70 text-primary"><Icon className="h-[18px] w-[18px]" /></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p className="font-mono text-[9px] uppercase tracking-[.14em] text-primary">{task.category}</p>
+                            <span className="text-border">/</span>
+                            <span className="text-[10px] text-muted-foreground">{task.difficulty} · Level {task.minLevel}+</span>
+                          </div>
+                          <h3 className="mt-1 font-serif text-xl leading-tight sm:text-[1.4rem]">{task.title}</h3>
+                          <p className="mt-1.5 line-clamp-2 max-w-3xl text-[13px] leading-5 text-muted-foreground">{task.description}</p>
+                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/80 pt-3 text-[11px] text-muted-foreground sm:gap-x-5">
+                            <span className="inline-flex items-center gap-1.5 font-semibold text-primary"><Wallet className="h-3.5 w-3.5" />${task.reward.toFixed(2)} on approval</span>
+                            <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{task.estimatedMinutes} min</span>
+                            <span className="inline-flex items-center gap-1.5"><UsersRound className="h-3.5 w-3.5" />Up to {task.maxCompletions}</span>
+                            {task.assetUrl && <span className="inline-flex items-center gap-1.5"><AudioLines className="h-3.5 w-3.5" />Audio included</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end sm:mt-2">
+                        {existingSubmission ? (
+                          <div className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-3 text-xs font-semibold sm:w-auto ${existingSubmission.status === "approved" ? "bg-primary/8 text-primary" : "bg-muted text-foreground"}`}>
+                            {existingSubmission.status === "approved" ? <Check className="h-4 w-4" /> : <FileCheck2 className="h-4 w-4" />}
+                            {submissionStatus(existingSubmission.status)}
+                          </div>
+                        ) : (
+                          <Button className="h-9 w-full gap-1.5 rounded-lg px-3 text-xs sm:w-auto" onClick={() => setSelectedTask(task)} data-testid={`button-open-task-${task.id}`}>
+                            Read instructions <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+          )}
+        </section>
+
+        <section className="mt-9 border-t border-border pt-6">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div><p className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Your activity</p><h2 className="mt-1 font-serif text-2xl">Submission history</h2></div>
+            <p className="text-xs text-muted-foreground">Review decisions and reward status</p>
+          </div>
+          {submissionsLoading ? (
+            <div className="mt-4 space-y-2" aria-label="Loading submissions">{[0, 1].map((item) => <div key={item} className="h-20 animate-pulse rounded-xl border border-border bg-card" />)}</div>
+          ) : submissionsError ? (
+            <p role="alert" className="mt-4 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">Your submissions could not be loaded just now.</p>
+          ) : (submissions?.length ?? 0) === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-border bg-card/60 p-5">
+              <p className="text-sm font-medium">Nothing submitted yet</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Once you send work for review, its status and reward will be recorded here.</p>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {submissions?.map((submission) => (
+                <div key={submission.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5" data-testid={`submission-${submission.id}`}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-5">{submission.taskTitle}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Submitted {new Date(submission.submittedAt).toLocaleString()}{submission.attachmentName ? ` · ${submission.attachmentName}` : ""}</p>
+                    {submission.reviewNote && <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">Review note: {submission.reviewNote}</p>}
+                  </div>
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+                    <p className="text-sm font-semibold">${submission.reward.toFixed(2)}</p>
+                    <Badge variant="outline" className={`whitespace-nowrap text-[10px] ${submission.status === "approved" ? "border-primary/25 bg-primary/5 text-primary" : submission.status === "rejected" ? "border-destructive/25 bg-destructive/5 text-destructive" : ""}`}>{submissionStatus(submission.status)}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
 
       <Dialog open={!!selectedTask} onOpenChange={(open) => !open && resetDialog()}>
-        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto rounded-2xl">
           {selectedTask && (
             <>
               <DialogHeader>
                 <p className="font-mono text-[9px] uppercase tracking-[.16em] text-primary">{selectedTask.category} · {selectedTask.difficulty} · Level {selectedTask.minLevel}+</p>
-                <DialogTitle className="font-serif text-2xl">{selectedTask.title}</DialogTitle>
+                <DialogTitle className="font-serif text-2xl leading-tight">{selectedTask.title}</DialogTitle>
                 <DialogDescription>{selectedTask.description}</DialogDescription>
               </DialogHeader>
               <div className="rounded-xl border border-border bg-muted/40 p-4">
@@ -301,8 +336,8 @@ export default function TasksPage() {
                 </div>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/5 px-4 py-3 text-sm">
-                <span>Reward after admin approval</span>
-                <strong className="text-green-600">${selectedTask.reward.toFixed(2)}</strong>
+                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />Wallet reward after approval</span>
+                <strong className="text-primary">${selectedTask.reward.toFixed(2)}</strong>
               </div>
               <div>
                 <label htmlFor="written-work" className="text-sm font-medium">Written response</label>
@@ -330,7 +365,7 @@ export default function TasksPage() {
                 </div>
                 {selectedFile && <p className="mt-2 text-xs text-muted-foreground">{selectedFile.name} · {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>}
               </div>
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
                 <Button variant="outline" onClick={resetDialog} disabled={pending}>Cancel</Button>
                 <Button onClick={handleSubmit} disabled={pending || (!writtenWork.trim() && !selectedFile)}>
                   {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading and submitting…</> : "Submit for review"}

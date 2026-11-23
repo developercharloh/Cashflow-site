@@ -1,0 +1,43 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap");
+
+:root {
+  --background: 42 32% 96%;
+  --foreground: 205 29% 17%;
+  --card: 42 38% 99%;
+  --card-foreground: 205 29% 17%;
+  --popover: 42 38% 99%;
+  --popover-foreground: 205 29% 17%;
+  --primary: 157 44% 31%;
+  --primary-foreground: 42 32% 98%;
+  --secondary: 38 29% 89%;
+  --secondary-foreground: 205 29% 17%;
+  --muted: 40 25% 91%;
+  --muted-foreground: 205 12% 44%;
+  --accent: 37 54% 88%;
+  --accent-foreground: 205 29% 17%;
+  --destructive: 4 58% 43%;
+  --destructive-foreground: 42 32% 98%;
+  --border: 39 19% 84%;
+  --input: 39 19% 84%;
+  --ring: 157 44% 31%;
+  --radius: 0.75rem;
+  --app-font-sans: "DM Sans", system-ui, sans-serif;
+  --app-font-serif: "Newsreader", Georgia, serif;
+  --app-font-mono: "DM Mono", monospace;
+}
+
+@theme inline {
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
