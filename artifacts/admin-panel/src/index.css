@@ -1,32 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f3f6f2;
-  --surface: #fbfcfa;
-  --border: #e2e9e1;
-  --accent: #1e5545;
-  --accent-hover: #17493b;
-  --danger: #b84e4a;
+  --bg: #f8f6ef;
+  --surface: #fdfcf8;
+  --border: #e4dece;
+  --accent: #2c745e;
+  --accent-hover: #245e4b;
+  --danger: #ad4b46;
   --success: #4d805a;
-  --warning: #a17d43;
+  --warning: #95723e;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: #2d4036; font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif; }
+body { background: var(--bg); color: #213a34; font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif; }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd7cc; border-radius: 8px; }
 
 .admin-theme {
-  --admin-ink: #293c33;
-  --admin-muted: #738078;
-  --admin-border: #e2e9e1;
-  --admin-surface: #fbfcfa;
-  --admin-accent: #1e5545;
+  --admin-ink: #213a34;
+  --admin-muted: #748079;
+  --admin-border: #e4dece;
+  --admin-surface: #fdfcf8;
+  --admin-accent: #2c745e;
   min-height: 100dvh;
   color: var(--admin-ink);
-  background: #f3f6f2;
+  background: var(--bg);
 }
 
 .admin-theme .text-white { color: var(--admin-ink) !important; }
@@ -102,6 +102,42 @@ body { background: var(--bg); color: #2d4036; font-family: "DM Sans", ui-sans-se
 .admin-theme table th { color: #89958c; font-weight: 700; }
 .admin-theme table td { color: #4e6055; }
 .admin-theme .overflow-hidden:has(> table) { overflow-x: auto !important; }
+
+.admin-login {
+  background:
+    radial-gradient(circle at 8% 7%, rgba(44, 116, 94, .08), transparent 28rem),
+    var(--bg);
+}
+.admin-login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 22px 60px rgba(35, 58, 49, .09);
+}
+.admin-login-field {
+  background: #fffefa;
+  border: 1px solid var(--border);
+  transition: border-color .18s, box-shadow .18s, background .18s;
+}
+.admin-login-field:focus-within {
+  border-color: #76a48c;
+  background: #fffefa;
+  box-shadow: 0 0 0 3px rgba(44, 116, 94, .11);
+}
+.admin-login-input { color: #213a34; }
+.admin-login-input::placeholder { color: #98a29a; }
+.admin-login-primary {
+  background: var(--accent);
+  box-shadow: 0 8px 20px rgba(44, 116, 94, .18);
+  transition: background .18s, transform .18s, box-shadow .18s;
+}
+.admin-login-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 10px 24px rgba(44, 116, 94, .22);
+  transform: translateY(-1px);
+}
+.admin-login-primary:disabled { opacity: .65; cursor: wait; }
+.admin-login-primary.is-loading { background: #82a995; box-shadow: none; }
+.admin-login :focus-visible { outline: 2px solid #2c745e; outline-offset: 3px; }
 
 @media (max-width: 640px) {
   .admin-theme table { min-width: 680px; }

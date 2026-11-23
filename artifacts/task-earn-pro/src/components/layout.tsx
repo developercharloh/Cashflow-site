@@ -91,7 +91,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </span>
             <span className="font-semibold tracking-tight">Lipwa Tasks</span>
           </Link>
-          {user.isAdmin && <Link href="/admin" className="rounded-lg border border-primary/25 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10">Admin panel</Link>}
         </div>
       </header>
       {user.isAdmin && location.startsWith("/admin") && (

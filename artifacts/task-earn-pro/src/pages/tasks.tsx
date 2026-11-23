@@ -86,7 +86,7 @@ export default function TasksPage() {
       {
         onSuccess: () => {
           setUploading(false);
-          toast({ title: "Work submitted", description: "Your submission is now waiting for admin review. Rewards are paid only after approval." });
+          toast({ title: "Submitted for approval", description: "Rewards are credited after approval." });
           void queryClient.invalidateQueries({ queryKey: getGetMyWorkSubmissionsQueryKey() });
           void queryClient.invalidateQueries({ queryKey: getGetTasksQueryKey() });
           resetDialog();
