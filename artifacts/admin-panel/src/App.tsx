@@ -51,6 +51,17 @@ function AppRoutes() {
 }
 
 export default function App() {
+  if (
+    window.location.hostname.endsWith(".vercel.app") &&
+    window.location.hostname !== "taskearn-admin.vercel.app"
+  ) {
+    const adminUrl = new URL(window.location.href);
+    window.location.replace(
+      `https://taskearn-admin.vercel.app${adminUrl.pathname}${adminUrl.search}${adminUrl.hash}`,
+    );
+    return null;
+  }
+
   return (
     <AuthProvider>
       <AppRoutes />
