@@ -271,12 +271,33 @@ export interface TaskUpdate {
   taskType?: string;
 }
 
+export interface TaskFileInput {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export type TaskFileUploadProvider = typeof TaskFileUploadProvider[keyof typeof TaskFileUploadProvider];
+
+
+export const TaskFileUploadProvider = {
+  replit: 'replit',
+  vercel: 'vercel',
+} as const;
+
+export interface TaskFileUpload {
+  provider: TaskFileUploadProvider;
+  objectPrefix?: string;
+  uploadURL?: string;
+  objectPath?: string;
+}
+
 export interface TaskWorkSubmissionInput {
-  /**
-     * @minLength 50
-     * @maxLength 50000
-     */
-  textSubmission: string;
+  textSubmission?: string;
+  attachmentPath?: string;
+  attachmentName?: string;
+  attachmentContentType?: string;
+  attachmentSize?: number;
 }
 
 export interface TaskWorkSubmission {

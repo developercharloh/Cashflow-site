@@ -7,9 +7,9 @@
  */
 
 export interface TaskWorkSubmissionInput {
-  /**
-     * @minLength 50
-     * @maxLength 50000
-     */
-  textSubmission: string;
+  textSubmission?: string;
+  attachmentPath?: string;
+  attachmentName?: string;
+  attachmentContentType?: string;
+  attachmentSize?: number;
 }

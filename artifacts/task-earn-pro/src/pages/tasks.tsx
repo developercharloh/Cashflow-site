@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
+import { upload as uploadBlob } from "@vercel/blob/client";
 import {
   getGetMyWorkSubmissionsQueryKey,
   getGetTasksQueryKey,
   useGetMyWorkSubmissions,
   useGetTasks,
+  useRequestTaskSubmissionUpload,
   useSubmitWrittenTask,
 } from "@workspace/api-client-react";
 import type { Task } from "@workspace/api-client-react";
@@ -14,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { AudioLines, BookOpenCheck, FileSpreadsheet, FileText, Loader2, Wallet } from "lucide-react";
+import { AudioLines, BookOpenCheck, FileSpreadsheet, FileText, Loader2, Upload, Wallet } from "lucide-react";
 
 const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"] as const;
 const CATEGORY_ICONS = {
@@ -23,6 +25,8 @@ const CATEGORY_ICONS = {
   Transcription: AudioLines,
   "AI Training": FileText,
 };
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 function errorMessage(error: unknown) {
   const maybeApiError = error as { data?: { error?: string }; message?: string };
   return maybeApiError.data?.error ?? maybeApiError.message ?? "Please try again.";
@@ -37,9 +41,12 @@ export default function TasksPage() {
   });
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [writtenWork, setWrittenWork] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: tasks, isLoading, isError, refetch } = useGetTasks();
   const { data: submissions } = useGetMyWorkSubmissions();
+  const uploadMutation = useRequestTaskSubmissionUpload();
   const submitMutation = useSubmitWrittenTask();
 
   const visibleTasks = useMemo(
@@ -55,24 +62,31 @@ export default function TasksPage() {
   const resetDialog = () => {
     setSelectedTask(null);
     setWrittenWork("");
+    setSelectedFile(null);
   };
 
-  const submitWork = (task: Task) => {
+  const submitWork = (task: Task, attachment?: { path: string; name: string; contentType: string; size: number }) => {
     submitMutation.mutate(
       {
         id: task.id,
         data: {
-          textSubmission: writtenWork.trim(),
+          textSubmission: writtenWork.trim() || undefined,
+          attachmentPath: attachment?.path,
+          attachmentName: attachment?.name,
+          attachmentContentType: attachment?.contentType,
+          attachmentSize: attachment?.size,
         },
       },
       {
         onSuccess: () => {
+          setUploading(false);
           toast({ title: "Work submitted", description: "Your submission is now waiting for admin review. Rewards are paid only after approval." });
           void queryClient.invalidateQueries({ queryKey: getGetMyWorkSubmissionsQueryKey() });
           void queryClient.invalidateQueries({ queryKey: getGetTasksQueryKey() });
           resetDialog();
         },
         onError: (error) => {
+          setUploading(false);
           toast({ title: "Submission failed", description: errorMessage(error), variant: "destructive" });
         },
       },
@@ -81,14 +95,80 @@ export default function TasksPage() {
 
   const handleSubmit = () => {
     if (!selectedTask) return;
-    if (writtenWork.trim().length < 50) {
-      toast({ title: "Add more detail", description: "Written submissions must be at least 50 characters.", variant: "destructive" });
+    if (!writtenWork.trim() && !selectedFile) {
+      toast({ title: "Add your work", description: "Write a response or attach a file before submitting.", variant: "destructive" });
       return;
     }
-    submitWork(selectedTask);
+    if (!selectedFile) {
+      submitWork(selectedTask);
+      return;
+    }
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      toast({ title: "File is too large", description: "Attachments must be 10 MB or smaller.", variant: "destructive" });
+      return;
+    }
+    if (!selectedFile.type) {
+      toast({ title: "Unsupported file", description: "Choose a PDF, Office document, image, CSV, text, or audio file.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    uploadMutation.mutate(
+      { data: { name: selectedFile.name, size: selectedFile.size, contentType: selectedFile.type } },
+      {
+        onSuccess: async (upload) => {
+          try {
+            let objectPath: string;
+            if (upload.provider === "vercel") {
+              if (!upload.objectPrefix) throw new Error("File storage is not configured.");
+              const safeName = selectedFile.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 140);
+              const blob = await uploadBlob(
+                `${upload.objectPrefix}${crypto.randomUUID()}-${safeName}`,
+                selectedFile,
+                {
+                  access: "private",
+                  contentType: selectedFile.type,
+                  handleUploadUrl: "/api/tasks/work-submissions/upload-url",
+                  clientPayload: JSON.stringify({
+                    name: selectedFile.name,
+                    size: selectedFile.size,
+                    contentType: selectedFile.type,
+                  }),
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
+                  },
+                },
+              );
+              objectPath = `/objects/${blob.pathname}`;
+            } else {
+              if (!upload.uploadURL || !upload.objectPath) throw new Error("File storage returned an invalid upload link.");
+              const result = await fetch(upload.uploadURL, {
+                method: "PUT",
+                headers: { "Content-Type": selectedFile.type },
+                body: selectedFile,
+              });
+              if (!result.ok) throw new Error("File upload did not complete. Please retry.");
+              objectPath = upload.objectPath;
+            }
+            submitWork(selectedTask, {
+              path: objectPath,
+              name: selectedFile.name,
+              contentType: selectedFile.type,
+              size: selectedFile.size,
+            });
+          } catch (error) {
+            setUploading(false);
+            toast({ title: "File upload failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+          }
+        },
+        onError: (error) => {
+          setUploading(false);
+          toast({ title: "File upload failed", description: errorMessage(error), variant: "destructive" });
+        },
+      },
+    );
   };
 
-  const pending = submitMutation.isPending;
+  const pending = uploading || uploadMutation.isPending || submitMutation.isPending;
   const submissionStatus = (status: string) =>
     status === "approved" ? "Approved · reward credited" : status === "submitted" ? "Under review" : status === "rejected" ? "Not approved" : status;
 
@@ -98,7 +178,7 @@ export default function TasksPage() {
         <p className="font-mono text-[10px] uppercase tracking-[.2em] text-primary">Expert freelance work</p>
         <h1 className="mt-3 font-serif text-4xl tracking-tight sm:text-5xl">Choose a task. Submit real work.</h1>
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          Only Academic Writing, Data Entry, Transcription, and AI Training listings appear here. Submit written responses only for now. Every listing has a fixed reward and capped platform-funded payout. An admin reviews work before approving a wallet reward; the budget cap is not an escrow transfer.
+          Only Academic Writing, Data Entry, Transcription, and AI Training listings appear here. Every listing has a fixed reward and capped platform-funded payout. An admin reviews work before approving a wallet reward; the budget cap is not an escrow transfer.
         </p>
       </header>
 
@@ -217,14 +297,28 @@ export default function TasksPage() {
                   maxLength={50_000}
                   value={writtenWork}
                   onChange={(event) => setWrittenWork(event.target.value)}
-                  placeholder="Explain your work, include the requested analysis, and address each quality check. At least 50 characters."
+                  placeholder="Explain your work, include the requested analysis, and address each quality check. At least 50 characters when no file is attached."
                 />
-                <p className="mt-1 text-right text-[11px] text-muted-foreground">{writtenWork.length.toLocaleString()} / 50,000 · minimum 50</p>
+                <p className="mt-1 text-right text-[11px] text-muted-foreground">{writtenWork.length.toLocaleString()} / 50,000</p>
+              </div>
+              <div>
+                <label htmlFor="work-attachment" className="text-sm font-medium">Optional work file · 10 MB maximum</label>
+                <div className="mt-2 flex items-center gap-3 rounded-xl border border-dashed border-border p-3">
+                  <Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <input
+                    id="work-attachment"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.jpg,.jpeg,.png,.mp3,.wav"
+                    className="min-w-0 flex-1 text-xs"
+                    onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                  />
+                </div>
+                {selectedFile && <p className="mt-2 text-xs text-muted-foreground">{selectedFile.name} · {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>}
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button variant="outline" onClick={resetDialog} disabled={pending}>Cancel</Button>
-                <Button onClick={handleSubmit} disabled={pending || writtenWork.trim().length < 50}>
-                  {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : "Submit for review"}
+                <Button onClick={handleSubmit} disabled={pending || (!writtenWork.trim() && !selectedFile)}>
+                  {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading and submitting…</> : "Submit for review"}
                 </Button>
               </div>
             </>
