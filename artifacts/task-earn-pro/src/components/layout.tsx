@@ -50,9 +50,9 @@ function RedirectToLogin() {
   return null;
 }
 
-function RedirectToAdminLogin() {
+function RedirectToHome() {
   const [, setLocation] = useLocation();
-  useEffect(() => { setLocation("/admin/login"); }, [setLocation]);
+  useEffect(() => { setLocation("/"); }, [setLocation]);
   return null;
 }
 
@@ -73,17 +73,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAuthPage   = location.startsWith("/auth");
-  const isAdminLoginPage = location === "/admin/login";
   const isAdminRoute = location === "/admin" || location.startsWith("/admin/");
-  const isPublicPage = isAuthPage || isAdminLoginPage || location === "/terms" || location === "/";
+  if (isAdminRoute) return <RedirectToHome />;
+
+  const isAuthPage   = location.startsWith("/auth");
+  const isPublicPage = isAuthPage || location === "/terms" || location === "/";
 
   if (isPublicPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  if (!user) return isAdminRoute ? <RedirectToAdminLogin /> : <RedirectToLogin />;
-  if (isAdminRoute && !user.isAdmin) return <RedirectToAdminLogin />;
+  if (!user) return <RedirectToLogin />;
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,24 +102,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </header>
-      {user.isAdmin && location.startsWith("/admin") && (
-        <nav aria-label="Admin navigation" className="border-b border-border bg-card/80">
-          <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-7">
-            {[
-              ["/admin", "Overview"],
-              ["/admin/users", "Users"],
-              ["/admin/tasks", "Tasks"],
-              ["/admin/task-submissions", "Work review"],
-              ["/admin/audit-log", "Audit log"],
-              ["/admin/withdrawals", "Withdrawals"],
-              ["/admin/kyc", "KYC"],
-              ["/admin/analytics", "Analytics"],
-            ].map(([href, label]) => (
-              <Link key={href} href={href} className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium ${location === href ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>{label}</Link>
-            ))}
-          </div>
-        </nav>
-      )}
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
       <BottomNav />
     </div>
