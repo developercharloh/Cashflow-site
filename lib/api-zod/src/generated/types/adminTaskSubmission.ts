@@ -7,8 +7,15 @@
  */
 import type { TaskWorkSubmission } from './taskWorkSubmission';
 
-export type AdminTaskSubmission = TaskWorkSubmission & {
+export type AdminTaskSubmission = TaskWorkSubmission & ({
   userId: number;
   userName: string;
   userEmail: string;
-};
+  taskDescription: string;
+  /** @nullable */
+  taskInstructions: string | null;
+  /** @nullable */
+  taskAssetUrl: string | null;
+  /** @nullable */
+  reviewGuide: string | null;
+});

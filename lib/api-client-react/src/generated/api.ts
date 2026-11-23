@@ -28,6 +28,7 @@ import type {
   AdminGetUsersParams,
   AdminGetWithdrawalsParams,
   AdminListTaskImportsParams,
+  AdminListTaskLibraryParams,
   AdminTaskSubmission,
   AdminUpdateTaskSourceBody,
   AdminUser,
@@ -88,6 +89,8 @@ import type {
   TaskFileInput,
   TaskFileUpload,
   TaskInput,
+  TaskLibraryItem,
+  TaskLibraryPublishInput,
   TaskReviewInput,
   TaskSubmitInput,
   TaskUpdate,
@@ -4642,6 +4645,162 @@ export const useAdminReviewTaskSubmission = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminReviewTaskSubmissionMutationOptions(options));
+    }
+
+export const getAdminListTaskLibraryUrl = (params?: AdminListTaskLibraryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/task-library?${stringifiedParams}` : `/api/admin/task-library`
+}
+
+/**
+ * @summary Admin — list original ready-to-publish task templates
+ */
+export const adminListTaskLibrary = async (params?: AdminListTaskLibraryParams, options?: RequestInit): Promise<TaskLibraryItem[]> => {
+
+  return customFetch<TaskLibraryItem[]>(getAdminListTaskLibraryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListTaskLibraryQueryKey = (params?: AdminListTaskLibraryParams,) => {
+    return [
+    `/api/admin/task-library`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListTaskLibraryQueryOptions = <TData = Awaited<ReturnType<typeof adminListTaskLibrary>>, TError = ErrorType<unknown>>(params?: AdminListTaskLibraryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListTaskLibraryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListTaskLibrary>>> = ({ signal }) => adminListTaskLibrary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListTaskLibrary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListTaskLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof adminListTaskLibrary>>>
+export type AdminListTaskLibraryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin — list original ready-to-publish task templates
+ */
+
+export function useAdminListTaskLibrary<TData = Awaited<ReturnType<typeof adminListTaskLibrary>>, TError = ErrorType<unknown>>(
+ params?: AdminListTaskLibraryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListTaskLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListTaskLibraryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminPublishTaskLibraryItemUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/task-library/${id}/publish`
+}
+
+/**
+ * @summary Admin — publish a reviewed original task template
+ */
+export const adminPublishTaskLibraryItem = async (id: string,
+    taskLibraryPublishInput: TaskLibraryPublishInput, options?: RequestInit): Promise<Task> => {
+
+  return customFetch<Task>(getAdminPublishTaskLibraryItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskLibraryPublishInput,)
+  }
+);}
+
+
+
+
+export const getAdminPublishTaskLibraryItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>, TError,{id: string;data: BodyType<TaskLibraryPublishInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>, TError,{id: string;data: BodyType<TaskLibraryPublishInput>}, TContext> => {
+
+const mutationKey = ['adminPublishTaskLibraryItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>, {id: string;data: BodyType<TaskLibraryPublishInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminPublishTaskLibraryItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminPublishTaskLibraryItemMutationResult = NonNullable<Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>>
+    export type AdminPublishTaskLibraryItemMutationBody = BodyType<TaskLibraryPublishInput>
+    export type AdminPublishTaskLibraryItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Admin — publish a reviewed original task template
+ */
+export const useAdminPublishTaskLibraryItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>, TError,{id: string;data: BodyType<TaskLibraryPublishInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminPublishTaskLibraryItem>>,
+        TError,
+        {id: string;data: BodyType<TaskLibraryPublishInput>},
+        TContext
+      > => {
+      return useMutation(getAdminPublishTaskLibraryItemMutationOptions(options));
     }
 
 export const getAdminGetAuditLogUrl = (params?: AdminGetAuditLogParams,) => {

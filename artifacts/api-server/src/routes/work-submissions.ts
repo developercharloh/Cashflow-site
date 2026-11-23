@@ -10,6 +10,13 @@ import {
   transactionsTable,
   usersTable,
 } from "@workspace/db";
+import {
+  AdminGetTaskSubmissionsQueryParams,
+  AdminGetTaskSubmissionsResponse,
+  AdminReviewTaskSubmissionBody,
+  AdminReviewTaskSubmissionParams,
+  AdminReviewTaskSubmissionResponse,
+} from "@workspace/api-zod";
 import { requireAdmin, requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { createTaskUploadUrl, getTaskFileMetadata, streamTaskFile } from "../lib/taskFileStorage";
 import { getLevelName } from "./auth";
@@ -226,7 +233,12 @@ router.get("/tasks/work-submissions/mine", requireAuth, async (req: AuthRequest,
 
 router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    const query = AdminGetTaskSubmissionsQueryParams.safeParse(req.query);
+    if (!query.success) {
+      res.status(400).json({ error: query.error.message });
+      return;
+    }
+    const status = query.data.status;
     const allowedStatuses = new Set(["submitted", "approved", "rejected"]);
     if (status && status !== "all" && !allowedStatuses.has(status)) {
       res.status(400).json({ error: "Invalid submission status." });
@@ -247,7 +259,7 @@ router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res
       .innerJoin(usersTable, eq(taskSubmissionsTable.userId, usersTable.id))
       .orderBy(desc(taskSubmissionsTable.submittedAt))
       .limit(200);
-    res.json(rows
+    res.json(AdminGetTaskSubmissionsResponse.parse(rows
       .filter(({ submission }) => !status || status === "all" || submission.status === status)
       .map(({ submission, taskTitle, reward, taskDescription, taskInstructions, taskAssetUrl, reviewGuide, userName, userEmail }) => ({
         id: submission.id,
@@ -267,7 +279,7 @@ router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res
         userId: submission.userId,
         userName,
         userEmail,
-      })));
+      }))));
   } catch (error) {
     req.log.error({ err: error }, "Could not load admin review queue");
     res.status(500).json({ error: "Could not load work submissions." });
@@ -275,11 +287,15 @@ router.get("/admin/task-submissions", requireAdmin, async (req: AuthRequest, res
 });
 
 router.patch("/admin/task-submissions/:id/review", requireAdmin, async (req: AuthRequest, res) => {
-  const submissionId = Number(req.params["id"]);
-  const { decision, note } = req.body ?? {};
-  if (!Number.isSafeInteger(submissionId) || submissionId < 1 ||
-      !["approved", "rejected"].includes(decision) ||
-      typeof note !== "string" || note.trim().length < 3 || note.length > 1000) {
+  const params = AdminReviewTaskSubmissionParams.safeParse(req.params);
+  const input = AdminReviewTaskSubmissionBody.safeParse(req.body);
+  if (!params.success || !input.success) {
+    res.status(400).json({ error: "Choose approve or reject and enter a review note." });
+    return;
+  }
+  const submissionId = params.data.id;
+  const { decision, note } = input.data;
+  if (!Number.isSafeInteger(submissionId) || submissionId < 1 || note.trim().length < 3 || note.length > 1000) {
     res.status(400).json({ error: "Choose approve or reject and enter a review note." });
     return;
   }
@@ -365,11 +381,15 @@ router.patch("/admin/task-submissions/:id/review", requireAdmin, async (req: Aut
       res.status(result.status ?? 400).json({ error: result.error });
       return;
     }
-    res.json({
+    res.json(AdminReviewTaskSubmissionResponse.parse({
       id: result.submission.id,
       taskId: result.task.id,
       taskTitle: result.task.title,
       reward: result.task.reward,
+      taskDescription: result.task.description,
+      taskInstructions: result.task.instructions,
+      taskAssetUrl: result.task.assetUrl,
+      reviewGuide: result.task.reviewGuide,
       status: result.submission.status,
       textSubmission: result.submission.textSubmission,
       attachmentName: result.submission.attachmentName,
@@ -379,7 +399,7 @@ router.patch("/admin/task-submissions/:id/review", requireAdmin, async (req: Aut
       userId: result.user.id,
       userName: result.user.name,
       userEmail: result.user.email,
-    });
+    }));
   } catch (error) {
     req.log.error({ err: error }, "Could not review task work");
     res.status(500).json({ error: "Could not save the review." });

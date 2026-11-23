@@ -125,6 +125,8 @@ export interface Task {
   id: number;
   title: string;
   description: string;
+  /** @nullable */
+  assetUrl?: string | null;
   category: string;
   taskType: string;
   reward: number;
@@ -414,6 +416,65 @@ export interface TaskFeedPublishResult {
   import: TaskFeedImport;
 }
 
+export type TaskLibraryItemCategory = typeof TaskLibraryItemCategory[keyof typeof TaskLibraryItemCategory];
+
+
+export const TaskLibraryItemCategory = {
+  Academic_Writing: 'Academic Writing',
+  Data_Entry: 'Data Entry',
+  Transcription: 'Transcription',
+  AI_Training: 'AI Training',
+} as const;
+
+export type TaskLibraryItemDifficulty = typeof TaskLibraryItemDifficulty[keyof typeof TaskLibraryItemDifficulty];
+
+
+export const TaskLibraryItemDifficulty = {
+  hard: 'hard',
+} as const;
+
+export interface TaskLibraryItem {
+  id: string;
+  title: string;
+  category: TaskLibraryItemCategory;
+  description: string;
+  instructions: string;
+  /** Admin-only answer key and review rubric */
+  reviewGuide: string;
+  estimatedMinutes: number;
+  /** @nullable */
+  assetUrl: string | null;
+  difficulty: TaskLibraryItemDifficulty;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  defaultMinLevel: number;
+}
+
+export interface TaskLibraryPublishInput {
+  /**
+     * @maximum 1000
+     * @exclusiveMinimum 0
+     */
+  reward: number;
+  /**
+     * @maximum 10000
+     * @exclusiveMinimum 0
+     */
+  fundingBudget: number;
+  /**
+     * @minimum 1
+     * @maximum 500
+     */
+  maxCompletions: number;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  minLevel?: number;
+}
+
 export interface TaskFileInput {
   name: string;
   size: number;
@@ -460,11 +521,18 @@ export interface TaskWorkSubmission {
   submittedAt: string;
 }
 
-export type AdminTaskSubmission = TaskWorkSubmission & {
+export type AdminTaskSubmission = TaskWorkSubmission & ({
   userId: number;
   userName: string;
   userEmail: string;
-};
+  taskDescription: string;
+  /** @nullable */
+  taskInstructions: string | null;
+  /** @nullable */
+  taskAssetUrl: string | null;
+  /** @nullable */
+  reviewGuide: string | null;
+});
 
 export type TaskReviewInputDecision = typeof TaskReviewInputDecision[keyof typeof TaskReviewInputDecision];
 
@@ -844,6 +912,20 @@ search?: string;
 export type AdminGetTaskSubmissionsParams = {
 status?: string;
 };
+
+export type AdminListTaskLibraryParams = {
+category?: AdminListTaskLibraryCategory;
+};
+
+export type AdminListTaskLibraryCategory = typeof AdminListTaskLibraryCategory[keyof typeof AdminListTaskLibraryCategory];
+
+
+export const AdminListTaskLibraryCategory = {
+  Academic_Writing: 'Academic Writing',
+  Data_Entry: 'Data Entry',
+  Transcription: 'Transcription',
+  AI_Training: 'AI Training',
+} as const;
 
 export type AdminGetAuditLogParams = {
 /**

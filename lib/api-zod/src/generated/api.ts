@@ -227,6 +227,7 @@ export const GetTasksResponseItem = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string(),
+  "assetUrl": zod.string().nullish(),
   "category": zod.string(),
   "taskType": zod.string(),
   "reward": zod.number(),
@@ -259,6 +260,7 @@ export const GetTaskResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string(),
+  "assetUrl": zod.string().nullish(),
   "category": zod.string(),
   "taskType": zod.string(),
   "reward": zod.number(),
@@ -979,7 +981,11 @@ export const AdminGetTaskSubmissionsResponseItem = zod.object({
 }).and(zod.object({
   "userId": zod.number(),
   "userName": zod.string(),
-  "userEmail": zod.string()
+  "userEmail": zod.string(),
+  "taskDescription": zod.string(),
+  "taskInstructions": zod.string().nullable(),
+  "taskAssetUrl": zod.string().nullable(),
+  "reviewGuide": zod.string().nullable()
 }))
 export const AdminGetTaskSubmissionsResponse = zod.array(AdminGetTaskSubmissionsResponseItem)
 
@@ -1010,8 +1016,65 @@ export const AdminReviewTaskSubmissionResponse = zod.object({
 }).and(zod.object({
   "userId": zod.number(),
   "userName": zod.string(),
-  "userEmail": zod.string()
+  "userEmail": zod.string(),
+  "taskDescription": zod.string(),
+  "taskInstructions": zod.string().nullable(),
+  "taskAssetUrl": zod.string().nullable(),
+  "reviewGuide": zod.string().nullable()
 }))
+
+
+/**
+ * @summary Admin — list original ready-to-publish task templates
+ */
+export const AdminListTaskLibraryQueryParams = zod.object({
+  "category": zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training']).optional()
+})
+
+export const adminListTaskLibraryResponseDefaultMinLevelMax = 7;
+
+
+
+export const AdminListTaskLibraryResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "category": zod.enum(['Academic Writing', 'Data Entry', 'Transcription', 'AI Training']),
+  "description": zod.string(),
+  "instructions": zod.string(),
+  "reviewGuide": zod.string().describe('Admin-only answer key and review rubric'),
+  "estimatedMinutes": zod.number(),
+  "assetUrl": zod.string().nullable(),
+  "difficulty": zod.enum(['hard']),
+  "defaultMinLevel": zod.number().min(1).max(adminListTaskLibraryResponseDefaultMinLevelMax)
+})
+export const AdminListTaskLibraryResponse = zod.array(AdminListTaskLibraryResponseItem)
+
+
+/**
+ * @summary Admin — publish a reviewed original task template
+ */
+export const AdminPublishTaskLibraryItemParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const adminPublishTaskLibraryItemBodyRewardExclusiveMin = 0;
+export const adminPublishTaskLibraryItemBodyRewardMax = 1000;
+
+export const adminPublishTaskLibraryItemBodyFundingBudgetExclusiveMin = 0;
+export const adminPublishTaskLibraryItemBodyFundingBudgetMax = 10000;
+
+export const adminPublishTaskLibraryItemBodyMaxCompletionsMax = 500;
+
+export const adminPublishTaskLibraryItemBodyMinLevelMax = 7;
+
+
+
+export const AdminPublishTaskLibraryItemBody = zod.object({
+  "reward": zod.number().gt(adminPublishTaskLibraryItemBodyRewardExclusiveMin).max(adminPublishTaskLibraryItemBodyRewardMax),
+  "fundingBudget": zod.number().gt(adminPublishTaskLibraryItemBodyFundingBudgetExclusiveMin).max(adminPublishTaskLibraryItemBodyFundingBudgetMax),
+  "maxCompletions": zod.number().min(1).max(adminPublishTaskLibraryItemBodyMaxCompletionsMax),
+  "minLevel": zod.number().min(1).max(adminPublishTaskLibraryItemBodyMinLevelMax).optional()
+})
 
 
 /**
@@ -1045,6 +1108,7 @@ export const AdminGetTasksResponseItem = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string(),
+  "assetUrl": zod.string().nullish(),
   "category": zod.string(),
   "taskType": zod.string(),
   "reward": zod.number(),
@@ -1111,6 +1175,7 @@ export const AdminUpdateTaskResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
   "description": zod.string(),
+  "assetUrl": zod.string().nullish(),
   "category": zod.string(),
   "taskType": zod.string(),
   "reward": zod.number(),

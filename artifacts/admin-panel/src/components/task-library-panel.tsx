@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  AudioLines, BadgeCheck, BookOpen, CheckCircle2, ChevronRight,
+  AudioLines, BadgeCheck, BookOpen, CheckCircle2, ChevronRight, Clock3,
   FileSpreadsheet, FileText, LoaderCircle, Search, ShieldCheck,
   Sparkles, X,
 } from "lucide-react";
@@ -122,34 +122,39 @@ export function TaskLibraryPanel({
 
   return (
     <>
-      <div className="space-y-4 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-white">Original task library</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
-              Ready-to-review tasks written for Lipwa. They need no outside provider account or worker qualification.
-              Every task is challenging, but starts at Level 1 by default.
+      <div className="space-y-5 p-4 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-green-700">
+              <BookOpen className="h-3.5 w-3.5" /> Lipwa originals <span className="h-px w-8 bg-green-200" />
+              <span className="font-medium tracking-normal text-slate-500">{templates.length} ready to publish</span>
+            </p>
+            <h2 className="text-lg font-extrabold tracking-tight text-white sm:text-xl">Original task library</h2>
+            <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-400">
+              Platform-authored work, ready for your review. Set the reward and completion cap before it appears in the worker app.
             </p>
           </div>
-          <label className="flex w-full items-center gap-2 rounded-xl border border-slate-700 bg-white px-3 py-2 lg:max-w-xs">
-            <Search className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+          <label className="flex w-full items-center gap-2.5 rounded-xl border border-slate-700 bg-white px-3.5 py-3 transition focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-100 xl:max-w-sm">
+            <Search className="h-4 w-4 shrink-0 text-slate-500" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full min-w-0 bg-transparent text-xs text-slate-300 outline-none"
-              placeholder="Search original tasks"
+              placeholder="Find a task by title or category"
+              aria-label="Search original tasks"
             />
+            {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search" className="rounded-md p-1 text-slate-500 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button>}
           </label>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filter task library">
+        <div className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-3" aria-label="Filter task library">
           {(["All", ...CATEGORIES] as const).map((item) => (
             <button
               key={item}
               type="button"
               aria-pressed={category === item}
               onClick={() => setCategory(item)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-[11px] font-semibold transition ${category === item ? "border-green-300 bg-green-50 text-green-800" : "border-slate-700 bg-white text-slate-400 hover:bg-slate-800"}`}
+              className={`shrink-0 rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${category === item ? "border-green-300 bg-green-50 text-green-800 shadow-sm" : "border-transparent bg-transparent text-slate-500 hover:border-slate-700 hover:bg-white hover:text-slate-300"}`}
             >
               {item}
             </button>
@@ -157,68 +162,72 @@ export function TaskLibraryPanel({
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-xs text-slate-400">
-            <LoaderCircle className="h-4 w-4 animate-spin" />Loading the task library…
+          <div className="grid gap-3 sm:grid-cols-2" aria-label="Loading task library">
+            {[0, 1, 2, 3].map((item) => <div key={item} className="animate-pulse rounded-2xl border border-slate-800 bg-white p-5">
+              <div className="h-3 w-1/3 rounded bg-slate-100" /><div className="mt-4 h-3 w-4/5 rounded bg-slate-100" />
+              <div className="mt-2 h-3 w-full rounded bg-slate-100" /><div className="mt-6 h-8 w-28 rounded-lg bg-slate-100" />
+            </div>)}
           </div>
         ) : visible.length ? (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 xl:grid-cols-2">
             {visible.map((template) => {
               const Icon = CATEGORY_ICON[template.category];
               return (
-                <article key={template.id} className="rounded-2xl border border-slate-800 bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-900/40 text-green-400">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-bold text-white">{template.title}</h3>
-                        <span className="rounded-md bg-green-900/40 px-2 py-1 text-[10px] font-semibold text-green-400">{template.category}</span>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-400">{template.description}</p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">Hard task</span>
-                        <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">Level {template.defaultMinLevel}+</span>
-                        <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">~{template.estimatedMinutes} min</span>
-                        {template.assetUrl && <span className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">Audio included</span>}
+                <article key={template.id} className="group overflow-hidden rounded-2xl border border-slate-800 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex min-h-full flex-col p-4 sm:p-5">
+                    <div className="flex items-start gap-3.5">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-green-200 bg-green-50 text-green-700 transition group-hover:bg-green-100">
+                        <Icon className="h-[19px] w-[19px]" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-bold leading-5 text-white">{template.title}</h3>
+                          <span className="rounded-md bg-green-900/40 px-2 py-1 text-[10px] font-semibold text-green-400">{template.category}</span>
+                        </div>
+                        <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-400">{template.description}</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-4 flex flex-col-reverse gap-2 border-t border-slate-800 pt-3 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => open(template)}
-                      className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700"
-                    >
-                      Review, budget &amp; post <ChevronRight className="ml-1 inline h-3.5 w-3.5" />
-                    </button>
+                    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400"><ShieldCheck className="h-3 w-3 text-green-600" /> Hard task</span>
+                      <span className="rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400">Level {template.defaultMinLevel}+</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400"><Clock3 className="h-3 w-3" />{template.estimatedMinutes} min</span>
+                      {template.assetUrl && <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[10px] font-semibold text-blue-700"><AudioLines className="h-3 w-3" />Audio source</span>}
+                      <button
+                        type="button"
+                        onClick={() => open(template)}
+                        className="ml-auto inline-flex items-center justify-center rounded-lg bg-blue-600 px-3.5 py-2.5 text-[11px] font-bold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
+                      >
+                        Review &amp; configure <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-800/60 px-5 py-10 text-center">
-            <FileText className="mx-auto h-5 w-5 text-green-400" />
+          <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-800/60 px-5 py-12 text-center">
+            <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-green-50"><FileText className="h-5 w-5 text-green-700" /></span>
             <h3 className="mt-3 text-sm font-bold text-white">No matching task templates</h3>
-            <p className="mt-1.5 text-xs text-slate-400">Try another category or search term.</p>
+            <p className="mt-1.5 text-xs text-slate-400">Try a broader search or choose another category.</p>
+            {(search || category !== "All") && <button type="button" onClick={() => { setSearch(""); setCategory("All"); }} className="mt-4 rounded-lg border border-slate-700 bg-white px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Clear filters</button>}
           </div>
         )}
 
-        <p className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-800/60 p-3 text-[11px] leading-5 text-slate-400">
-          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
-          Rewards are platform-funded caps, not an escrow transfer. Workers submit original work and are paid only after admin approval.
+        <p className="flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-[11px] leading-5 text-slate-500">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-700" />
+          <span><strong className="text-green-900">Platform-funded, admin-approved.</strong> The listed budget is a cap, not an escrow transfer. Wallet credit happens only after you approve a worker’s submission.</span>
         </p>
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`Review ${selected.title}`}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`Review ${selected.title}`}>
           <button type="button" className="absolute inset-0" aria-label="Close dialog" onClick={close} />
           <section className="relative flex max-h-[95dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-slate-800 bg-white shadow-2xl sm:rounded-2xl">
             <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-4 sm:px-6">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.14em] text-green-400">{confirm ? "Final confirmation" : "Original Lipwa task"}</p>
-                <h2 className="mt-1 text-lg font-extrabold text-white">{confirm ? "Post this task to workers?" : "Review and set task budget"}</h2>
+                <p className="text-[10px] font-bold uppercase tracking-[.14em] text-green-700">{confirm ? "Final confirmation" : "Original Lipwa task"}</p>
+                <h2 className="mt-1 text-lg font-extrabold tracking-tight text-white">{confirm ? "Post this task to workers?" : "Review and set task budget"}</h2>
                 <p className="mt-1 text-xs text-slate-400">{selected.title}</p>
               </div>
               <button type="button" onClick={close} aria-label="Close dialog" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800"><X className="h-4 w-4" /></button>
@@ -226,7 +235,7 @@ export function TaskLibraryPanel({
 
             <div className="lipwa-scroll space-y-4 overflow-y-auto p-5 sm:p-6">
               {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">{error}</p>}
-              <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-4 sm:p-5">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-md bg-green-900/40 px-2 py-1 text-[10px] font-bold text-green-400">{selected.category}</span>
                   <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">Hard · Level {selected.defaultMinLevel}+</span>
@@ -242,7 +251,7 @@ export function TaskLibraryPanel({
                   </div>
                 )}
                 <details className="mt-4">
-                  <summary className="cursor-pointer text-xs font-bold text-green-400">Review worker instructions</summary>
+                  <summary className="cursor-pointer text-xs font-bold text-green-700">Review worker instructions</summary>
                   <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-300">{selected.instructions}</p>
                 </details>
                 <details className="mt-3 rounded-lg border border-amber-300/30 bg-amber-50/5 p-3">
@@ -290,7 +299,7 @@ export function TaskLibraryPanel({
                   </div>
                   <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${budgetValue >= requiredFunding ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
                     <div>
-                      <p className="text-xs font-bold text-slate-300">Maximum funded commitment</p>
+                       <p className="text-xs font-bold text-slate-300">Maximum funded commitment</p>
                       <p className="mt-1 text-[11px] text-slate-500">{capValue || 0} approved workers × {currency(rewardValue)} each</p>
                     </div>
                     <div className="text-right">

@@ -4,12 +4,12 @@ description: Durable product decisions for work categories, task rewards, wallet
 ---
 
 ## Product scope
-- Work listings are limited to Academic Writing, Data Entry, Transcription, and AI Training. Written/file submissions are expert-level and reviewed by an administrator before rewards are credited.
+- Work listings are limited to Academic Writing, Data Entry, Transcription, and AI Training. Keep first-party tasks challenging and self-contained, but make them open to Level 1 workers by default; do not require an outside provider account. Academic tasks must not be graded assignments. Written/file work is reviewed by an administrator before rewards are credited.
 - Simple Quiz and Soft Loans remain separate product areas; Forex is Coming Soon, not an active trading feature.
 
-**Why:** The user explicitly chose these as the site's content and asked not to retain the old trading product.
+**Why:** The user explicitly chose these as the site's content, asked not to retain the old trading product, and requested professional hard work that ordinary new workers can access.
 
-**How to apply:** Keep work listings inside those four categories, keep quiz separate, and do not restore trading dashboards or unrelated gig categories.
+**How to apply:** Keep work listings inside those four categories; build original tasks when no licensed source is available; let the admin review, set the reward and completion budget, and post them. Keep quiz separate and do not restore trading dashboards or unrelated gig categories.
 
 ## Platform-funded task rewards
 - Task rewards are platform-funded; an administrator sets a per-task payout ceiling and completion cap. Approval credits the worker's in-app balance. The ceiling is not an escrow transfer or proof of external funds.

@@ -1,46 +1,52 @@
 import { Router } from "express";
 import { adminAuditLogsTable, db, tasksTable } from "@workspace/db";
-import { TASK_FEED_CATEGORIES, type TaskFeedCategory } from "../lib/task-feed";
+import {
+  AdminGetTasksResponseItem,
+  AdminListTaskLibraryQueryParams,
+  AdminListTaskLibraryResponse,
+  AdminPublishTaskLibraryItemBody,
+  AdminPublishTaskLibraryItemParams,
+} from "@workspace/api-zod";
+import type { TaskFeedCategory } from "../lib/task-feed";
 import { getTaskLibraryTemplate, TASK_LIBRARY } from "../data/task-library";
 import { requireAdmin, type AuthRequest } from "../middlewares/requireAuth";
 
 const router = Router();
-const categorySet = new Set<string>(TASK_FEED_CATEGORIES);
-
-function taskId(value: unknown): string | null {
-  return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)
-    ? value
-    : null;
-}
 
 router.get("/admin/task-library", requireAdmin, (req: AuthRequest, res) => {
-  const category = typeof req.query.category === "string" ? req.query.category : undefined;
-  if (category && !categorySet.has(category)) {
-    res.status(400).json({ error: "Unsupported task category." });
+  const query = AdminListTaskLibraryQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
     return;
   }
 
-  res.json(
-    TASK_LIBRARY.filter((template) => !category || template.category === category)
-      .map((template) => ({ ...template, difficulty: "hard", defaultMinLevel: 1 })),
-  );
+  const category = query.data.category;
+  const filtered = TASK_LIBRARY
+    .filter((template) => !category || template.category === category)
+    .map((template) => ({ ...template, difficulty: "hard" as const, defaultMinLevel: 1 }));
+  res.json(AdminListTaskLibraryResponse.parse(filtered));
 });
 
 router.post("/admin/task-library/:id/publish", requireAdmin, async (req: AuthRequest, res) => {
-  const id = taskId(req.params["id"]);
-  const template = id ? getTaskLibraryTemplate(id) : undefined;
-  const reward = Number(req.body?.reward);
-  const fundingBudget = Number(req.body?.fundingBudget);
-  const maxCompletions = Number(req.body?.maxCompletions);
-  const minLevel = Number(req.body?.minLevel ?? 1);
+  const params = AdminPublishTaskLibraryItemParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const input = AdminPublishTaskLibraryItemBody.safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: input.error.message });
+    return;
+  }
+  const { reward, fundingBudget, maxCompletions } = input.data;
+  const minLevel = input.data.minLevel ?? 1;
+  const template = getTaskLibraryTemplate(params.data.id);
 
   if (!template) {
     res.status(404).json({ error: "Task template not found." });
     return;
   }
   if (
-    !Number.isFinite(reward) || reward <= 0 || reward > 1_000 ||
-    !Number.isFinite(fundingBudget) || fundingBudget <= 0 || fundingBudget > 10_000 ||
     !Number.isInteger(maxCompletions) || maxCompletions < 1 || maxCompletions > 500 ||
     !Number.isInteger(minLevel) || minLevel < 1 || minLevel > 7 ||
     Math.round(fundingBudget * 100) < Math.round(reward * 100) * maxCompletions
@@ -66,7 +72,7 @@ router.post("/admin/task-library/:id/publish", requireAdmin, async (req: AuthReq
         timeLimitSeconds: template.estimatedMinutes * 60,
         difficulty: "hard",
         minLevel,
-        questionCount: 5,
+        questionCount: 0,
         cooldownHours: 24,
         isActive: true,
         completionCount: 0,
@@ -87,12 +93,12 @@ router.post("/admin/task-library/:id/publish", requireAdmin, async (req: AuthReq
         },
       });
 
-      return task!;
+      return AdminGetTasksResponseItem.parse(task);
     });
 
     res.status(201).json(result);
   } catch (error) {
-    req.log.error(error);
+    req.log.error({ err: error }, "Could not publish task library template");
     res.status(500).json({ error: "Could not publish this task template." });
   }
 });

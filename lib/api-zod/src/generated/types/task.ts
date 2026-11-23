@@ -10,6 +10,8 @@ export interface Task {
   id: number;
   title: string;
   description: string;
+  /** @nullable */
+  assetUrl?: string | null;
   category: string;
   taskType: string;
   reward: number;

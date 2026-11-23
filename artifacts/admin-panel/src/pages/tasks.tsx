@@ -18,6 +18,7 @@ interface Task {
   title: string;
   description: string;
   instructions: string;
+  taskType: string;
   category: Category;
   reward: number;
   fundingBudget: number;
@@ -196,7 +197,9 @@ export default function Tasks() {
         get<TaskImport[]>("/admin/task-imports?status=pending"),
         get<TaskImport[]>("/admin/task-imports?status=published"),
       ]);
-      setTasks(taskRows);
+      setTasks(taskRows.filter((task) =>
+        task.taskType === "written" && CATEGORIES.includes(task.category as Category),
+      ));
       setWorkSubmissions(submissionRows);
       setLibraryTemplates(templateRows);
       setSources(sourceRows);
@@ -403,9 +406,10 @@ export default function Tasks() {
     Number(editBudget) >= editRequiredBudget;
 
   const tabs: Array<{ id: Tab; label: string; count: number }> = [
+    { id: "library", label: "Task library", count: libraryTemplates.length },
     { id: "queue", label: "Review queue", count: pendingImports.length },
-    { id: "listings", label: "Live tasks", count: tasks.length },
-    { id: "completions", label: "Completions", count: completions.length },
+    { id: "listings", label: "Live tasks", count: activeTasks.length },
+    { id: "review", label: "Review work", count: pendingWork },
     { id: "sources", label: "Licensed feeds", count: sources.length },
   ];
 
@@ -417,14 +421,14 @@ export default function Tasks() {
             <ShieldCheck className="h-3 w-3" /> Admin workspace
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Tasks &amp; work</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Review licensed listings, set platform-funded budgets, and publish approved tasks to the worker app.</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Choose an original task, review it, set its platform-funded budget, and post it. Approve worker submissions here to credit rewards.</p>
         </div>
         <div className="flex w-full gap-2 sm:w-auto">
           <button onClick={() => void load()} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-white px-4 py-2.5 text-xs font-semibold text-slate-400 shadow-sm transition hover:bg-slate-800 disabled:opacity-60 sm:flex-none">
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
-          <button onClick={() => { setModalError(""); setSourceForm(EMPTY_SOURCE); setSourceModal(true); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 sm:flex-none">
-            <Plus className="h-4 w-4" /> Connect feed
+          <button onClick={() => setTab("library")} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 sm:flex-none">
+            <BookOpen className="h-4 w-4" /> Task library
           </button>
         </div>
       </div>
@@ -437,9 +441,9 @@ export default function Tasks() {
       </div>}
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Metric label="Live listings" value={activeTasks.length.toLocaleString()} detail="Visible in the worker app" icon={FileText} tone="green" />
-        <Metric label="Awaiting review" value={pendingImports.length.toLocaleString()} detail="Imported from licensed feeds" icon={Clock3} tone="amber" />
-        <Metric label="Completed work" value={approvedCompletions.toLocaleString()} detail="Approved worker submissions" icon={CheckCircle2} tone="blue" />
+        <Metric label="Original task templates" value={libraryTemplates.length.toLocaleString()} detail={`${activeTasks.length} tasks currently live`} icon={BookOpen} tone="green" />
+        <Metric label="Work awaiting review" value={pendingWork.toLocaleString()} detail="Worker submissions needing a decision" icon={Clock3} tone="amber" />
+        <Metric label="Approved submissions" value={approvedWork.toLocaleString()} detail="Rewards credited after review" icon={CheckCircle2} tone="blue" />
         <Metric label="Active task budgets" value={money(fundedTotal)} detail="Configured platform-funded caps" icon={Coins} tone="rose" />
       </section>
 
@@ -452,6 +456,13 @@ export default function Tasks() {
             </button>
           ))}
         </div>
+
+        {tab === "library" && <TaskLibraryPanel
+          templates={libraryTemplates}
+          loading={loading}
+          onRefresh={load}
+          onPublished={(title) => setNotice(`“${title}” is live in the worker app.`)}
+        />}
 
         {tab === "queue" && <div className="p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -494,21 +505,15 @@ export default function Tasks() {
           </div>
           {loading ? <LoadingState /> : visibleTasks.length ? <div className="grid gap-3 lg:grid-cols-2">
             {visibleTasks.map((task) => <TaskCard key={task.id} task={task} acting={acting === task.id} onEdit={() => openEdit(task)} onToggle={() => void toggleTask(task)} onPause={() => void deactivateTask(task)} />)}
-          </div> : <EmptyState icon={FileText} title="No worker listings found" detail="Publish an approved task feed item to make the first listing." actionLabel="Review queue" onAction={() => setTab("queue")} />}
+          </div> : <EmptyState icon={FileText} title="No worker listings found" detail="Review and publish an original task from the library to create the first listing." actionLabel="Open task library" onAction={() => setTab("library")} />}
         </div>}
 
-        {tab === "completions" && <div className="p-4 sm:p-5">
-          <div className="mb-4"><h2 className="text-sm font-bold text-white">Worker submissions</h2><p className="mt-1 text-xs text-slate-400">Track work sent in by users. Review and approve completed submissions in Activity.</p></div>
-          {loading ? <LoadingState /> : completions.length ? <div className="space-y-2">
-            {completions.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-800 bg-white p-3.5 sm:p-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-900/40 text-xs font-bold text-green-400">{item.userName?.charAt(0)?.toUpperCase() ?? "U"}</div>
-              <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">{item.taskTitle}</p><p className="mt-1 truncate text-[11px] text-slate-400">{item.userName} · {item.userEmail}</p></div>
-              <span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${item.status === "completed" || item.status === "approved" ? "border-green-200 bg-green-50 text-green-700" : "border-yellow-200 bg-yellow-50 text-yellow-700"}`}>{item.status}</span>
-              <span className="text-xs font-bold text-green-400">{money(item.reward)}</span>
-              <span className="w-full text-[10px] text-slate-500 sm:w-auto">Started {when(item.startedAt)}{item.completedAt ? ` · Submitted ${when(item.completedAt)}` : ""}</span>
-            </div>)}
-          </div> : <EmptyState icon={CheckCircle2} title="No task submissions yet" detail="Worker submissions will appear here as people complete published listings." />}
-        </div>}
+        {tab === "review" && <TaskWorkReviewPanel
+          submissions={workSubmissions}
+          loading={loading}
+          onRefresh={load}
+          onReviewed={setNotice}
+        />}
 
         {tab === "sources" && <div className="p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

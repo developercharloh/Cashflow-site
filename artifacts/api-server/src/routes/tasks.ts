@@ -4,8 +4,10 @@ import { eq, and, gte, desc, or } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
 import { getRandomQuestions, CATEGORY_DESCRIPTIONS, QUESTION_BANK } from "../lib/questionBank";
+import { TASK_FEED_CATEGORIES } from "../lib/task-feed";
 
 const router = Router();
+const writtenTaskCategories = new Set<string>(TASK_FEED_CATEGORIES);
 
 // ─── Task generation (34 topics × 3 tiers × 9 categories = 918 tasks) ─────────
 
@@ -390,7 +392,7 @@ async function seedTasksIfNeeded() {
 router.get("/tasks/categories", requireAuth, async (req: AuthRequest, res) => {
   try {
     const tasks = (await db.select().from(tasksTable).where(eq(tasksTable.isActive, true)))
-      .filter((task) => task.taskType === "written");
+      .filter((task) => task.taskType === "written" && writtenTaskCategories.has(task.category));
     const map: Record<string, { count: number; totalReward: number; maxReward: number }> = {};
     for (const t of tasks) {
       if (!map[t.category]) map[t.category] = { count: 0, totalReward: 0, maxReward: 0 };
@@ -446,6 +448,7 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
     const allTasks = (await db.select().from(tasksTable).where(eq(tasksTable.isActive, true)))
       .filter((task) =>
         task.taskType === "written" &&
+        writtenTaskCategories.has(task.category) &&
         (reservedByTask.get(task.id) ?? 0) < task.maxCompletions &&
         task.reward * ((reservedByTask.get(task.id) ?? 0) + 1) <= task.fundingBudget + 0.000001
       );

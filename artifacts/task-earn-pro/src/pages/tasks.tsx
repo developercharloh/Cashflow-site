@@ -32,6 +32,12 @@ function errorMessage(error: unknown) {
   return maybeApiError.data?.error ?? maybeApiError.message ?? "Please try again.";
 }
 
+function publicAssetUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+  return `${base}${path.replace(/^\/+/, "")}`;
+}
+
 export default function TasksPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -277,7 +283,7 @@ export default function TasksPage() {
           {selectedTask && (
             <>
               <DialogHeader>
-                <p className="font-mono text-[9px] uppercase tracking-[.16em] text-primary">{selectedTask.category} · Expert level</p>
+                <p className="font-mono text-[9px] uppercase tracking-[.16em] text-primary">{selectedTask.category} · {selectedTask.difficulty} · Level {selectedTask.minLevel}+</p>
                 <DialogTitle className="font-serif text-2xl">{selectedTask.title}</DialogTitle>
                 <DialogDescription>{selectedTask.description}</DialogDescription>
               </DialogHeader>
@@ -285,6 +291,15 @@ export default function TasksPage() {
                 <h3 className="text-sm font-semibold">Instructions and quality checks</h3>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedTask.instructions || selectedTask.description}</p>
               </div>
+              {selectedTask.assetUrl && (
+                <div className="rounded-xl border border-border bg-muted/40 p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold"><AudioLines className="h-4 w-4 text-primary" />Task audio</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Listen to the full clip and transcribe it using the task instructions.</p>
+                  <audio controls preload="none" src={publicAssetUrl(selectedTask.assetUrl)} className="mt-3 w-full" aria-label={`Audio for ${selectedTask.title}`}>
+                    Your browser does not support audio playback.
+                  </audio>
+                </div>
+              )}
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/5 px-4 py-3 text-sm">
                 <span>Reward after admin approval</span>
                 <strong className="text-green-600">${selectedTask.reward.toFixed(2)}</strong>
