@@ -8,6 +8,8 @@ export const tasksTable = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   instructions: text("instructions"),
+  assetUrl: text("asset_url"),
+  reviewGuide: text("review_guide"),
   category: text("category").notNull(),
   taskType: text("task_type").notNull().default("standard"),
   reward: real("reward").notNull(),
