@@ -11,6 +11,7 @@ import ForgotPassword from "@/pages/auth/forgot-password";
 import Terms from "@/pages/terms";
 import ProfilePage from "@/pages/profile";
 import AdminDashboard from "@/pages/admin/index";
+import AdminLoginPage from "@/pages/admin/login";
 import AdminUsers from "@/pages/admin/users";
 import AdminTasks from "@/pages/admin/tasks";
 import AdminTaskSubmissions from "@/pages/admin/task-submissions";
@@ -47,6 +48,7 @@ function Router() {
         <Route path="/auth/forgot-password" component={ForgotPassword} />
         <Route path="/terms"               component={Terms} />
         <Route path="/profile"             component={ProfilePage} />
+        <Route path="/admin/login"         component={AdminLoginPage} />
         <Route path="/admin"               component={AdminDashboard} />
         <Route path="/admin/users"         component={AdminUsers} />
         <Route path="/admin/tasks"         component={AdminTasks} />

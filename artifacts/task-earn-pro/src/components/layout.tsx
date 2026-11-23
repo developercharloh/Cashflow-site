@@ -50,6 +50,12 @@ function RedirectToLogin() {
   return null;
 }
 
+function RedirectToAdminLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/admin/login"); }, [setLocation]);
+  return null;
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -68,13 +74,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const isAuthPage   = location.startsWith("/auth");
-  const isPublicPage = isAuthPage || location === "/terms" || location === "/";
+  const isAdminLoginPage = location === "/admin/login";
+  const isAdminRoute = location === "/admin" || location.startsWith("/admin/");
+  const isPublicPage = isAuthPage || isAdminLoginPage || location === "/terms" || location === "/";
 
   if (isPublicPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  if (!user) return <RedirectToLogin />;
+  if (!user) return isAdminRoute ? <RedirectToAdminLogin /> : <RedirectToLogin />;
+  if (isAdminRoute && !user.isAdmin) return <RedirectToAdminLogin />;
 
   return (
     <div className="min-h-screen bg-background">
