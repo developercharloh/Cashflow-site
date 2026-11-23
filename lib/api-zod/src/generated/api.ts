@@ -307,35 +307,19 @@ export const SubmitTaskBody = zod.object({
 
 
 /**
- * @summary Request a private upload URL for task work
- */
-export const RequestTaskSubmissionUploadBody = zod.object({
-  "name": zod.string(),
-  "size": zod.number(),
-  "contentType": zod.string()
-})
-
-export const RequestTaskSubmissionUploadResponse = zod.object({
-  "provider": zod.enum(['replit', 'vercel']),
-  "objectPrefix": zod.string().optional(),
-  "uploadURL": zod.string().optional(),
-  "objectPath": zod.string().optional()
-})
-
-
-/**
- * @summary Submit written or attached task work for review
+ * @summary Submit written task work for review
  */
 export const SubmitWrittenTaskParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const submitWrittenTaskBodyTextSubmissionMin = 50;
+export const submitWrittenTaskBodyTextSubmissionMax = 50000;
+
+
+
 export const SubmitWrittenTaskBody = zod.object({
-  "textSubmission": zod.string().optional(),
-  "attachmentPath": zod.string().optional(),
-  "attachmentName": zod.string().optional(),
-  "attachmentContentType": zod.string().optional(),
-  "attachmentSize": zod.number().optional()
+  "textSubmission": zod.string().min(submitWrittenTaskBodyTextSubmissionMin).max(submitWrittenTaskBodyTextSubmissionMax)
 })
 
 

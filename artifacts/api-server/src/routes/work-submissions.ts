@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
   adminAuditLogsTable,
@@ -11,97 +10,26 @@ import {
   usersTable,
 } from "@workspace/db";
 import { requireAdmin, requireAuth, type AuthRequest } from "../middlewares/requireAuth";
-import { createTaskUploadUrl, getTaskFileMetadata, streamTaskFile } from "../lib/taskFileStorage";
+import { streamTaskFile } from "../lib/taskFileStorage";
 import { getLevelName } from "./auth";
 
 const router = Router();
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = new Set([
-  "application/pdf",
-  "text/plain",
-  "text/csv",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/msword",
-  "application/vnd.ms-excel",
-  "application/vnd.ms-powerpoint",
-  "image/jpeg",
-  "image/png",
-  "audio/mpeg",
-  "audio/wav",
-  "audio/x-wav",
-]);
 
-router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
-  if (req.body?.type === "blob.upload-completed") {
-    next();
-    return;
-  }
-  requireAuth(req as AuthRequest, res, next);
-}, async (req: AuthRequest, res) => {
-  try {
-    if (req.body?.type) {
-      if (process.env.VERCEL !== "1" && !process.env.BLOB_READ_WRITE_TOKEN) {
-        res.status(400).json({ error: "Direct file uploads are unavailable in this environment." });
-        return;
-      }
-
-      const result = await handleUpload({
-        body: req.body as HandleUploadBody,
-        request: req,
-        onBeforeGenerateToken: async (pathname, clientPayload) => {
-          const expectedPrefix = `uploads/task-submissions/${req.userId}/`;
-          if (!pathname.startsWith(expectedPrefix) || pathname.includes("..")) {
-            throw new Error("Invalid upload destination.");
-          }
-          const payload = JSON.parse(clientPayload || "{}") as {
-            name?: unknown;
-            contentType?: unknown;
-            size?: unknown;
-          };
-          if (typeof payload.name !== "string" || payload.name.trim().length < 1 ||
-              payload.name.length > 180 || typeof payload.contentType !== "string" ||
-              !ALLOWED_FILE_TYPES.has(payload.contentType) || !Number.isInteger(payload.size) ||
-              Number(payload.size) < 1 || Number(payload.size) > MAX_FILE_SIZE) {
-            throw new Error("The file details are invalid.");
-          }
-          return {
-            allowedContentTypes: [payload.contentType],
-            maximumSizeInBytes: MAX_FILE_SIZE,
-            tokenPayload: JSON.stringify({ userId: req.userId!, uploadedAt: Date.now() }),
-          };
-        },
-      });
-      res.json(result);
-      return;
-    }
-
-    const { name, size, contentType } = req.body ?? {};
-    if (typeof name !== "string" || name.trim().length < 1 || name.length > 180 ||
-        !Number.isInteger(size) || size < 1 || size > MAX_FILE_SIZE ||
-        typeof contentType !== "string" || !ALLOWED_FILE_TYPES.has(contentType)) {
-      res.status(400).json({ error: "File must be up to 10 MB and use a supported document, image, CSV, text, or audio format." });
-      return;
-    }
-    const upload = await createTaskUploadUrl(req.userId!);
-    if (upload.provider === "vercel") {
-      res.json(upload);
-      return;
-    }
-    res.json({ provider: "replit", uploadURL: upload.uploadURL, objectPath: upload.objectPath });
-  } catch (error) {
-    req.log.error({ err: error }, "Could not create task work upload");
-    res.status(500).json({ error: "File uploads are unavailable right now." });
-  }
+router.post("/tasks/work-submissions/upload-url", requireAuth, (_req, res): void => {
+  res.status(410).json({ error: "File submissions are temporarily unavailable. Submit your work as text." });
 });
 
 router.post("/tasks/:id/work-submissions", requireAuth, async (req: AuthRequest, res) => {
   const taskId = Number(req.params["id"]);
   const userId = req.userId!;
-  const { textSubmission, attachmentPath, attachmentName, attachmentContentType, attachmentSize } = req.body ?? {};
+  const { textSubmission } = req.body ?? {};
   if (!Number.isSafeInteger(taskId) || taskId < 1) {
     res.status(400).json({ error: "Invalid task." });
+    return;
+  }
+  if (["attachmentPath", "attachmentName", "attachmentContentType", "attachmentSize"]
+    .some((field) => req.body && Object.hasOwn(req.body, field) && req.body[field] != null)) {
+    res.status(400).json({ error: "File submissions are temporarily unavailable. Submit your work as text." });
     return;
   }
   if (typeof textSubmission !== "undefined" &&
@@ -110,32 +38,12 @@ router.post("/tasks/:id/work-submissions", requireAuth, async (req: AuthRequest,
     return;
   }
   const text = typeof textSubmission === "string" ? textSubmission.trim() : "";
-  const hasAttachment = typeof attachmentPath === "string";
-  if (text.length < 50 && !hasAttachment) {
-    res.status(400).json({ error: "Write at least 50 characters or attach a work file." });
+  if (text.length < 50) {
+    res.status(400).json({ error: "Write at least 50 characters to submit your work." });
     return;
-  }
-  if (hasAttachment) {
-    const prefix = `/objects/uploads/task-submissions/${userId}/`;
-    if (!attachmentPath.startsWith(prefix) || typeof attachmentName !== "string" ||
-        attachmentName.length < 1 || attachmentName.length > 180 ||
-        typeof attachmentContentType !== "string" || !ALLOWED_FILE_TYPES.has(attachmentContentType) ||
-        !Number.isInteger(attachmentSize) || attachmentSize < 1 || attachmentSize > MAX_FILE_SIZE) {
-      res.status(400).json({ error: "The uploaded file details are invalid. Upload it again and retry." });
-      return;
-    }
   }
 
   try {
-    let verifiedFile: { size: number; contentType: string } | null = null;
-    if (hasAttachment) {
-      verifiedFile = await getTaskFileMetadata(attachmentPath);
-      if (!verifiedFile || verifiedFile.size < 1 || verifiedFile.size > MAX_FILE_SIZE ||
-          !ALLOWED_FILE_TYPES.has(verifiedFile.contentType)) {
-        res.status(400).json({ error: "Uploaded file is missing, too large, or not a supported type. Upload a valid file and retry." });
-        return;
-      }
-    }
     const result = await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(${taskId})`);
       const [task] = await tx.select().from(tasksTable).where(eq(tasksTable.id, taskId));
@@ -164,11 +72,11 @@ router.post("/tasks/:id/work-submissions", requireAuth, async (req: AuthRequest,
         taskId,
         userId,
         status: "submitted",
-        textSubmission: text || null,
-        attachmentPath: hasAttachment ? attachmentPath : null,
-        attachmentName: hasAttachment ? attachmentName.trim().replace(/[\\/]/g, "_") : null,
-        attachmentContentType: verifiedFile?.contentType ?? null,
-        attachmentSize: verifiedFile?.size ?? null,
+        textSubmission: text,
+        attachmentPath: null,
+        attachmentName: null,
+        attachmentContentType: null,
+        attachmentSize: null,
       }).returning();
       return { submission, task };
     });
@@ -393,6 +301,10 @@ router.get("/storage/task-submissions/:id/file", requireAuth, async (req: AuthRe
     }
     if (submission.userId !== req.userId && !req.isAdmin) {
       res.status(403).json({ error: "You do not have access to this file." });
+      return;
+    }
+    if (process.env.VERCEL === "1" && !process.env.BLOB_READ_WRITE_TOKEN) {
+      res.status(503).json({ error: "File access is temporarily unavailable." });
       return;
     }
     const found = await streamTaskFile(submission.attachmentPath, res);

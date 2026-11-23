@@ -34,7 +34,7 @@ export default function Landing() {
             <div className="relative z-10 max-w-3xl">
               <p className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.2em] text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> Practical work and useful tools</p>
               <h1 className="font-serif text-[3.5rem] leading-[.98] tracking-[-.045em] sm:text-6xl lg:text-[5.35rem]">Work with clarity.<br /><span className="text-primary">Start with Lipwa.</span></h1>
-              <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Take on challenging written and file-based tasks in Academic Writing, Data Entry, Transcription, and AI Training. Submit your work for review, then track approved rewards in your wallet.</p>
+              <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">Take on challenging written tasks in Academic Writing, Data Entry, Transcription, and AI Training. Submit your work for review, then track approved rewards in your wallet.</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/auth/register" data-testid="link-hero-register" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">Join Lipwa Tasks <ArrowRight className="h-4 w-4" /></Link>
                 <a data-testid="link-hero-work" href="#work" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card/70 px-6 font-semibold transition-colors hover:bg-muted">See work areas <ArrowDown className="h-4 w-4" /></a>
@@ -70,7 +70,7 @@ export default function Landing() {
           <div className="grid gap-8 md:grid-cols-[.7fr_1.3fr]">
             <div><p className="font-mono text-[11px] uppercase tracking-[.2em] text-primary">Work areas</p><h2 className="mt-4 max-w-sm font-serif text-4xl leading-tight tracking-tight md:text-5xl">Four ways to contribute.</h2></div>
             <div>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground">Find detailed, expert-level written or file-based tasks. Each listing states the deliverable, reward, time estimate, and review requirements.</p>
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground">Find detailed, expert-level written tasks. Each listing states the deliverable, reward, time estimate, and review requirements.</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {areas.map((item) => <article key={item.number} data-testid={`category-preview-${item.number}`} className="rounded-2xl border border-border bg-card p-5">
                   <div className="flex items-start justify-between"><span className="font-mono text-[10px] tracking-widest text-muted-foreground">{item.number} / TASK CATEGORY</span><item.icon className="h-5 w-5 text-primary" /></div>

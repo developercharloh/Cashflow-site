@@ -343,30 +343,11 @@ paths:
         "404":
           description: Task not found
 
-  /tasks/work-submissions/upload-url:
-    post:
-      operationId: requestTaskSubmissionUpload
-      tags: [tasks]
-      summary: Request a private upload URL for task work
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TaskFileInput"
-      responses:
-        "200":
-          description: Private upload URL and object path
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TaskFileUpload"
-
   /tasks/{id}/work-submissions:
     post:
       operationId: submitWrittenTask
       tags: [tasks]
-      summary: Submit written or attached task work for review
+      summary: Submit written task work for review
       parameters:
         - name: id
           in: path
@@ -1820,44 +1801,14 @@ components:
         taskType:
           type: string
 
-    TaskFileInput:
-      type: object
-      required: [name, size, contentType]
-      properties:
-        name:
-          type: string
-        size:
-          type: integer
-        contentType:
-          type: string
-
-    TaskFileUpload:
-      type: object
-      required: [provider]
-      properties:
-        provider:
-          type: string
-          enum: [replit, vercel]
-        objectPrefix:
-          type: string
-        uploadURL:
-          type: string
-        objectPath:
-          type: string
-
     TaskWorkSubmissionInput:
       type: object
+      required: [textSubmission]
       properties:
         textSubmission:
           type: string
-        attachmentPath:
-          type: string
-        attachmentName:
-          type: string
-        attachmentContentType:
-          type: string
-        attachmentSize:
-          type: integer
+          minLength: 50
+          maxLength: 50000
 
     TaskWorkSubmission:
       type: object

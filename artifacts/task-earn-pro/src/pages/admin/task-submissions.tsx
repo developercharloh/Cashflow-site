@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine, CheckCircle, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, XCircle } from "lucide-react";
 
 const STATUSES = ["submitted", "approved", "rejected", "all"] as const;
 
@@ -57,37 +57,11 @@ export default function AdminTaskSubmissions() {
     );
   };
 
-  const downloadAttachment = async (submission: AdminTaskSubmission) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast({ title: "Session expired", description: "Sign in again to download this work.", variant: "destructive" });
-      return;
-    }
-    try {
-      const response = await fetch(`/api/storage/task-submissions/${submission.id}/file`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({}));
-        throw new Error(result.error ?? "The file could not be downloaded.");
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = submission.attachmentName || `task-work-${submission.id}`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast({ title: "Download failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
-    }
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Work review</h1>
-        <p className="mt-1 text-muted-foreground">Check written responses and attached files before paying the platform-funded reward.</p>
+        <p className="mt-1 text-muted-foreground">Review written responses before paying the platform-funded reward.</p>
       </header>
 
       <nav aria-label="Filter submissions" className="flex flex-wrap gap-2">
@@ -115,45 +89,54 @@ export default function AdminTaskSubmissions() {
         <div className="rounded-2xl border border-dashed border-border bg-card/50 p-7 text-center text-sm text-muted-foreground">No submissions in this view.</div>
       ) : (
         <div className="space-y-3">
-          {submissions.map((submission) => (
-            <Card key={submission.id} data-testid={`submission-${submission.id}`}>
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-serif text-xl">{submission.taskTitle}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{submission.userName} · {submission.userEmail} · {new Date(submission.submittedAt).toLocaleString()}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="capitalize">{submission.status}</Badge>
-                    <strong className="text-green-600">${submission.reward.toFixed(2)}</strong>
-                  </div>
-                </div>
-                {submission.textSubmission && (
-                  <div className="mt-4 max-h-52 overflow-y-auto rounded-xl border border-border bg-muted/30 p-4 text-sm leading-6 whitespace-pre-wrap">{submission.textSubmission}</div>
-                )}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {submission.attachmentName && (
-                      <Button variant="outline" size="sm" onClick={() => void downloadAttachment(submission)}>
-                        <ArrowDownToLine className="mr-2 h-4 w-4" />Download {submission.attachmentName}
-                      </Button>
-                    )}
-                    {submission.reviewNote && <p className="text-xs text-muted-foreground">Review: {submission.reviewNote}</p>}
-                  </div>
-                  {submission.status === "submitted" && (
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => { setSelected(submission); setDecision("approved"); setNote(""); }}>
-                        <CheckCircle className="mr-1.5 h-4 w-4" />Approve and pay
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-red-500" onClick={() => { setSelected(submission); setDecision("rejected"); setNote(""); }}>
-                        <XCircle className="mr-1.5 h-4 w-4" />Reject
-                      </Button>
+          {submissions.map((submission) => {
+            const hasUnavailableAttachment = Boolean(submission.attachmentName);
+            return (
+              <Card key={submission.id} data-testid={`submission-${submission.id}`}>
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-serif text-xl">{submission.taskTitle}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{submission.userName} · {submission.userEmail} · {new Date(submission.submittedAt).toLocaleString()}</p>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="capitalize">{submission.status}</Badge>
+                      <strong className="text-green-600">${submission.reward.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                  {submission.textSubmission && (
+                    <div className="mt-4 max-h-52 overflow-y-auto rounded-xl border border-border bg-muted/30 p-4 text-sm leading-6 whitespace-pre-wrap">{submission.textSubmission}</div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {submission.attachmentName && (
+                        <p className="text-xs text-muted-foreground">
+                          Previous attachment retained in the record: {submission.attachmentName} · file access is paused
+                        </p>
+                      )}
+                      {submission.reviewNote && <p className="text-xs text-muted-foreground">Review: {submission.reviewNote}</p>}
+                    </div>
+                    {submission.status === "submitted" && (
+                      <div className="flex gap-2">
+                        {hasUnavailableAttachment ? (
+                          <p className="text-xs text-amber-700">Review is paused until this attachment is accessible.</p>
+                        ) : (
+                          <>
+                            <Button size="sm" onClick={() => { setSelected(submission); setDecision("approved"); setNote(""); }}>
+                              <CheckCircle className="mr-1.5 h-4 w-4" />Approve and pay
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-red-500" onClick={() => { setSelected(submission); setDecision("rejected"); setNote(""); }}>
+                              <XCircle className="mr-1.5 h-4 w-4" />Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

@@ -77,8 +77,6 @@ import type {
   TaskCategory,
   TaskCompletionInput,
   TaskCompletionResult,
-  TaskFileInput,
-  TaskFileUpload,
   TaskInput,
   TaskReviewInput,
   TaskSubmitInput,
@@ -1441,77 +1439,6 @@ export const useSubmitTask = <TError = ErrorType<void>,
       return useMutation(getSubmitTaskMutationOptions(options));
     }
 
-export const getRequestTaskSubmissionUploadUrl = () => {
-
-
-
-
-  return `/api/tasks/work-submissions/upload-url`
-}
-
-/**
- * @summary Request a private upload URL for task work
- */
-export const requestTaskSubmissionUpload = async (taskFileInput: TaskFileInput, options?: RequestInit): Promise<TaskFileUpload> => {
-
-  return customFetch<TaskFileUpload>(getRequestTaskSubmissionUploadUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      taskFileInput,)
-  }
-);}
-
-
-
-
-export const getRequestTaskSubmissionUploadMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestTaskSubmissionUpload>>, TError,{data: BodyType<TaskFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof requestTaskSubmissionUpload>>, TError,{data: BodyType<TaskFileInput>}, TContext> => {
-
-const mutationKey = ['requestTaskSubmissionUpload'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestTaskSubmissionUpload>>, {data: BodyType<TaskFileInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  requestTaskSubmissionUpload(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RequestTaskSubmissionUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestTaskSubmissionUpload>>>
-    export type RequestTaskSubmissionUploadMutationBody = BodyType<TaskFileInput>
-    export type RequestTaskSubmissionUploadMutationError = ErrorType<unknown>
-
-    /**
- * @summary Request a private upload URL for task work
- */
-export const useRequestTaskSubmissionUpload = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestTaskSubmissionUpload>>, TError,{data: BodyType<TaskFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof requestTaskSubmissionUpload>>,
-        TError,
-        {data: BodyType<TaskFileInput>},
-        TContext
-      > => {
-      return useMutation(getRequestTaskSubmissionUploadMutationOptions(options));
-    }
-
 export const getSubmitWrittenTaskUrl = (id: number,) => {
 
 
@@ -1521,7 +1448,7 @@ export const getSubmitWrittenTaskUrl = (id: number,) => {
 }
 
 /**
- * @summary Submit written or attached task work for review
+ * @summary Submit written task work for review
  */
 export const submitWrittenTask = async (id: number,
     taskWorkSubmissionInput: TaskWorkSubmissionInput, options?: RequestInit): Promise<TaskWorkSubmission> => {
@@ -1571,7 +1498,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SubmitWrittenTaskMutationError = ErrorType<unknown>
 
     /**
- * @summary Submit written or attached task work for review
+ * @summary Submit written task work for review
  */
 export const useSubmitWrittenTask = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitWrittenTask>>, TError,{id: number;data: BodyType<TaskWorkSubmissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
