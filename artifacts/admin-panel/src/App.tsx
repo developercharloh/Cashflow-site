@@ -1,52 +1,46 @@
-import { Route, Switch, Redirect } from "wouter";
-import { AuthProvider, useAuth } from "@/contexts/auth";
-import Layout from "@/components/layout";
-import Login from "@/pages/login";
-import Dashboard from "@/pages/dashboard";
-import Users from "@/pages/users";
-import Tasks from "@/pages/tasks";
-import Withdrawals from "@/pages/withdrawals";
-import KYC from "@/pages/kyc";
-import Activity from "@/pages/activity";
+import { Route, Switch, Redirect, Router as WouterRouter } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { AppLayout } from "@/components/layout";
+import AdminDashboard from "@/pages/admin/index";
+import AdminLoginPage from "@/pages/admin/login";
+import AdminUsers from "@/pages/admin/users";
+import AdminTasks from "@/pages/admin/tasks";
+import AdminTaskSubmissions from "@/pages/admin/task-submissions";
+import AdminAuditLog from "@/pages/admin/audit-log";
+import AdminWithdrawals from "@/pages/admin/withdrawals";
+import AdminAnalytics from "@/pages/admin/analytics";
+import AdminKycPage from "@/pages/admin/kyc";
 
-function Protected({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-screen items-center justify-center text-slate-400 text-sm">Loading…</div>;
-  if (!user) return <Redirect to="/login" />;
-  return <Layout>{children}</Layout>;
-}
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
+});
 
-function AppRoutes() {
-  const { user, loading } = useAuth();
-  if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#050d1f" }}>
-      <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid rgba(139,92,246,0.2)", borderTopColor: "#a78bfa", animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+function AdminRoutes() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div className="min-h-screen animate-pulse bg-background" aria-label="Loading admin workspace" />;
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/">
-        {user ? <Protected><Dashboard /></Protected> : <Redirect to="/login" />}
-      </Route>
-      <Route path="/users">
-        <Protected><Users /></Protected>
-      </Route>
-      <Route path="/tasks">
-        <Protected><Tasks /></Protected>
-      </Route>
-      <Route path="/withdrawals">
-        <Protected><Withdrawals /></Protected>
-      </Route>
-      <Route path="/kyc">
-        <Protected><KYC /></Protected>
-      </Route>
-      <Route path="/activity">
-        <Protected><Activity /></Protected>
-      </Route>
-      <Route><Redirect to="/" /></Route>
-    </Switch>
+    <AppLayout>
+      <Switch>
+        <Route path="/">
+          {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
+        </Route>
+        <Route path="/admin/login" component={AdminLoginPage} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/tasks" component={AdminTasks} />
+        <Route path="/admin/task-submissions" component={AdminTaskSubmissions} />
+        <Route path="/admin/audit-log" component={AdminAuditLog} />
+        <Route path="/admin/withdrawals" component={AdminWithdrawals} />
+        <Route path="/admin/analytics" component={AdminAnalytics} />
+        <Route path="/admin/kyc" component={AdminKycPage} />
+        <Route>
+          {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
+        </Route>
+      </Switch>
+    </AppLayout>
   );
 }
 
@@ -63,8 +57,15 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <AdminRoutes />
+          </WouterRouter>
+          <Toaster />
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }

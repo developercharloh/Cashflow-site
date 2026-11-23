@@ -56,9 +56,18 @@ function RedirectToHome() {
   return null;
 }
 
+function RedirectToAdminLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/admin/login"); }, [setLocation]);
+  return null;
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
+  const host = window.location.hostname.toLowerCase();
+  const adminHost = host === "taskearn-admin.vercel.app" ||
+    (import.meta.env.DEV && (host === "localhost" || host === "127.0.0.1") && window.location.port === "5174");
 
   if (isLoading) {
     return (
@@ -74,10 +83,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const isAdminRoute = location === "/admin" || location.startsWith("/admin/");
-  if (isAdminRoute) return <RedirectToHome />;
+  const isAdminLoginPage = location === "/admin/login";
+  if (isAdminRoute && !adminHost) return <RedirectToHome />;
+  if (isAdminRoute && !isAdminLoginPage && (!user || !user.isAdmin)) return <RedirectToAdminLogin />;
 
   const isAuthPage   = location.startsWith("/auth");
-  const isPublicPage = isAuthPage || location === "/terms" || location === "/";
+  const isPublicPage = isAuthPage || isAdminLoginPage || location === "/terms" || location === "/";
 
   if (isPublicPage) {
     return <div className="min-h-screen bg-background">{children}</div>;
@@ -90,7 +101,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-7">
           <Link
-            href="/dashboard"
+            href={isAdminRoute ? "/admin" : "/dashboard"}
             data-testid="link-app-brand"
             aria-label="Lipwa Tasks home"
             className="flex items-center gap-2.5"
@@ -102,8 +113,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </header>
+      {user.isAdmin && isAdminRoute && (
+        <nav aria-label="Admin navigation" className="border-b border-border bg-card/80">
+          <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-7">
+            {[
+              ["/admin", "Overview"],
+              ["/admin/users", "Users"],
+              ["/admin/tasks", "Tasks"],
+              ["/admin/task-submissions", "Work review"],
+              ["/admin/audit-log", "Audit log"],
+              ["/admin/withdrawals", "Withdrawals"],
+              ["/admin/kyc", "KYC"],
+              ["/admin/analytics", "Analytics"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium ${location === href ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>{label}</Link>
+            ))}
+          </div>
+        </nav>
+      )}
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
-      <BottomNav />
+      {!isAdminRoute && <BottomNav />}
     </div>
   );
 }

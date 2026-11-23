@@ -1,4 +1,4 @@
-import "./index.css";
+import "./admin-entry.css";
 import { StrictMode, Component, type ReactNode, type ErrorInfo } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";

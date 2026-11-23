@@ -8,7 +8,8 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "paths": { "@/*": ["./src/*"] }
+    "types": ["vite/client"],
+    "paths": { "@/*": ["../task-earn-pro/src/*"] }
   },
-  "include": ["src"]
+  "include": ["src/App.tsx", "src/main.tsx"]
 }
