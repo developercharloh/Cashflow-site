@@ -183,22 +183,18 @@ paths:
     get:
       operationId: getQuizQuestions
       tags: [quiz]
-      summary: Get welcome quiz questions (10 random)
+      deprecated: true
+      summary: Simple Quiz is coming soon
       responses:
-        "200":
-          description: Quiz questions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/QuizQuestion"
+        "503":
+          description: Simple Quiz is not available yet
 
   /quiz/submit:
     post:
       operationId: submitQuiz
       tags: [quiz]
-      summary: Submit welcome quiz answers
+      deprecated: true
+      summary: Simple Quiz is coming soon
       requestBody:
         required: true
         content:
@@ -206,12 +202,8 @@ paths:
             schema:
               $ref: "#/components/schemas/QuizSubmission"
       responses:
-        "200":
-          description: Quiz result with bonus credited
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/QuizResult"
+        "503":
+          description: Simple Quiz is not available yet
 
   # ─── DASHBOARD ───────────────────────────────────────────────────────────────
   /dashboard/stats:
