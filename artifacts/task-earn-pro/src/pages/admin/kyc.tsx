@@ -36,12 +36,13 @@ export default function AdminKycPage() {
 
   const reviewMutation = useReviewKycSubmission();
 
-  const openDocument = async (id: number, side: "front" | "back") => {
+  const openDocument = async (id: number, side: "front" | "back" | "selfie") => {
     const key = `${id}:${side}`;
     setLoadingDocument(key);
     try {
       const file = await getKycSubmissionDocument(id, side);
-      setPreview({ url: URL.createObjectURL(file), label: `${side === "front" ? "Front" : "Back"} identity document` });
+      const sideLabel = side === "selfie" ? "Selfie" : side === "front" ? "Front" : "Back";
+      setPreview({ url: URL.createObjectURL(file), label: `${sideLabel} identity image` });
     } catch (error) {
       const detail = (error as { data?: { error?: string }; message?: string }).data?.error
         ?? (error as { message?: string }).message
@@ -59,7 +60,7 @@ export default function AdminKycPage() {
     return matchSearch && matchStatus;
   });
 
-  const handleReview = (id: number, action: string, reason?: string) => {
+  const handleReview = (id: number, action: "approve" | "reject" | "resubmit", reason?: string) => {
     setActionId(id);
     reviewMutation.mutate({ id, data: { action, rejectionReason: reason } }, {
       onSuccess: () => {
@@ -137,7 +138,7 @@ export default function AdminKycPage() {
               <div key={sub.id} className="bg-card border border-border rounded-2xl overflow-hidden">
                 <button
                   className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
-                  onClick={() => setExpanded(isExpanded ? null : sub.id)}
+                  onClick={() => { setExpanded(isExpanded ? null : sub.id); setRejectReason(""); }}
                 >
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
                     {sub.userName?.charAt(0)?.toUpperCase() ?? "?"}
@@ -161,12 +162,18 @@ export default function AdminKycPage() {
                       {[
                         ["Full Name", sub.fullName],
                         ["Date of Birth", sub.dateOfBirth],
-                        ["Country", sub.country],
+                        ["Issuing Country", sub.country],
+                        ["Nationality", sub.nationality ?? "—"],
                         ["Phone", sub.phoneNumber],
-                        ["National ID", sub.nationalId],
+                        ["Document Number", sub.nationalId],
                         ["Face Match", sub.faceMatchScore != null ? `${(sub.faceMatchScore * 100).toFixed(1)}%` : "—"],
                         ["Submitted", sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : "—"],
-                         ["Document Type", sub.documentType ?? "—"],
+                        ["Document Type", ({
+                          alien_id: "Alien ID card",
+                          national_id: "National ID",
+                          passport: "Passport",
+                          driving_license: "Driving License",
+                        } as Record<string, string>)[sub.documentType ?? ""] ?? sub.documentType ?? "—"],
                       ].map(([label, value]) => (
                         <div key={label}>
                           <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -175,7 +182,7 @@ export default function AdminKycPage() {
                       ))}
                     </div>
 
-                    {(sub.frontIdPath || sub.backIdPath) && (
+                    {(sub.frontIdPath || sub.backIdPath || sub.selfieImagePath) && (
                       <div className="rounded-xl border border-border bg-muted/20 p-3">
                         <p className="mb-2 text-xs font-semibold">Private identity documents</p>
                         <div className="flex flex-wrap gap-2">
@@ -189,6 +196,12 @@ export default function AdminKycPage() {
                             <Button type="button" variant="outline" size="sm" disabled={loadingDocument === `${sub.id}:back`} onClick={() => openDocument(sub.id, "back")}>
                               {loadingDocument === `${sub.id}:back` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileImage className="mr-2 h-4 w-4" />}
                               View back image
+                            </Button>
+                          )}
+                          {sub.selfieImagePath && (
+                            <Button type="button" variant="outline" size="sm" disabled={loadingDocument === `${sub.id}:selfie`} onClick={() => openDocument(sub.id, "selfie")}>
+                              {loadingDocument === `${sub.id}:selfie` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileImage className="mr-2 h-4 w-4" />}
+                              View selfie
                             </Button>
                           )}
                         </div>
@@ -221,16 +234,17 @@ export default function AdminKycPage() {
                             size="sm"
                             variant="outline"
                             className="flex-1"
-                            disabled={reviewMutation.isPending && actionId === sub.id}
-                            onClick={() => handleReview(sub.id, "resubmit")}
+                            disabled={!rejectReason.trim() || (reviewMutation.isPending && actionId === sub.id)}
+                            onClick={() => handleReview(sub.id, "resubmit", rejectReason)}
                           >
-                            <RefreshCw className="w-3.5 h-3.5 mr-1" />Request Resubmit
+                            <RefreshCw className="w-3.5 h-3.5 mr-1" />Request Update
                           </Button>
                         </div>
                         <div className="flex gap-2">
                           <Input
-                            placeholder="Rejection reason (required to reject)"
+                            placeholder="Reason (required for rejection or update request)"
                             value={expanded === sub.id ? rejectReason : ""}
+                            maxLength={500}
                             onChange={e => setRejectReason(e.target.value)}
                             className="flex-1 h-8 text-sm"
                           />

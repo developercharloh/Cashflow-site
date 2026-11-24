@@ -872,7 +872,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [front, back]
+            enum: [front, back, selfie]
       responses:
         "200":
           description: Private identity image
@@ -914,6 +914,10 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycReviewResponse"
 
   /kyc/webhook:
     post:
@@ -3054,7 +3058,7 @@ components:
 
     KycUploadInput:
       type: object
-      required: [fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdPath]
+      required: [fullName, dateOfBirth, country, nationality, phoneNumber, nationalId, documentType, frontIdPath, selfieImagePath]
       properties:
         fullName:
           type: string
@@ -3062,17 +3066,23 @@ components:
           type: string
         country:
           type: string
+        nationality:
+          type: string
+          minLength: 1
+          maxLength: 80
         phoneNumber:
           type: string
         nationalId:
           type: string
         documentType:
           type: string
-          enum: [national_id, passport, other]
+          enum: [alien_id, national_id, passport, driving_license]
         frontIdPath:
           type: string
         backIdPath:
           type: ["string", "null"]
+        selfieImagePath:
+          type: string
 
     KycUploadResponse:
       type: object
@@ -3122,6 +3132,8 @@ components:
           type: string
         country:
           type: string
+        nationality:
+          type: ["string", "null"]
         phoneNumber:
           type: string
         nationalId:
@@ -3133,6 +3145,8 @@ components:
         frontIdPath:
           type: ["string", "null"]
         backIdPath:
+          type: ["string", "null"]
+        selfieImagePath:
           type: ["string", "null"]
         faceMatchScore:
           type: ["number", "null"]
@@ -3155,8 +3169,22 @@ components:
       properties:
         action:
           type: string
+          enum: [approve, reject, resubmit]
         rejectionReason:
           type: string
+          maxLength: 500
+
+    KycReviewResponse:
+      type: object
+      required: [ok, kycStatus, rejectionReason]
+      properties:
+        ok:
+          type: boolean
+        kycStatus:
+          type: string
+          enum: [approved, rejected, none]
+        rejectionReason:
+          type: ["string", "null"]
 
     KycStatusResponse:
       type: object
@@ -3175,6 +3203,10 @@ components:
               type: string
             country:
               type: string
+            nationality:
+              type: ["string", "null"]
+            documentType:
+              type: ["string", "null"]
             kycStatus:
               type: string
             submittedAt:

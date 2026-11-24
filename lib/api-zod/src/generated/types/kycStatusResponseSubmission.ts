@@ -13,6 +13,10 @@ export type KycStatusResponseSubmission = {
   id?: number;
   fullName?: string;
   country?: string;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  documentType?: string | null;
   kycStatus?: string;
   submittedAt?: string;
   /** @nullable */

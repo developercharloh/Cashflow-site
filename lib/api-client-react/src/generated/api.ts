@@ -57,6 +57,7 @@ import type {
   GetTransactionsParams,
   HealthStatus,
   KycReviewInput,
+  KycReviewResponse,
   KycStatusResponse,
   KycSubmission,
   KycSubmitInput,
@@ -3532,7 +3533,7 @@ export function useGetKycSubmissions<TData = Awaited<ReturnType<typeof getKycSub
 
 
 export const getGetKycSubmissionDocumentUrl = (id: number,
-    side: 'front' | 'back',) => {
+    side: 'front' | 'back' | 'selfie',) => {
 
 
 
@@ -3544,7 +3545,7 @@ export const getGetKycSubmissionDocumentUrl = (id: number,
  * @summary Admin-only download of a private identity document
  */
 export const getKycSubmissionDocument = async (id: number,
-    side: 'front' | 'back', options?: RequestInit): Promise<Blob> => {
+    side: 'front' | 'back' | 'selfie', options?: RequestInit): Promise<Blob> => {
 
   return customFetch<Blob>(getGetKycSubmissionDocumentUrl(id,side),
   {
@@ -3560,7 +3561,7 @@ export const getKycSubmissionDocument = async (id: number,
 
 
 export const getGetKycSubmissionDocumentQueryKey = (id: number,
-    side: 'front' | 'back',) => {
+    side: 'front' | 'back' | 'selfie',) => {
     return [
     `/api/kyc/admin/submissions/${id}/document/${side}`
     ] as const;
@@ -3568,7 +3569,7 @@ export const getGetKycSubmissionDocumentQueryKey = (id: number,
 
 
 export const getGetKycSubmissionDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError = ErrorType<void>>(id: number,
-    side: 'front' | 'back', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+    side: 'front' | 'back' | 'selfie', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -3596,7 +3597,7 @@ export type GetKycSubmissionDocumentQueryError = ErrorType<void>
 
 export function useGetKycSubmissionDocument<TData = Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError = ErrorType<void>>(
  id: number,
-    side: 'front' | 'back', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+    side: 'front' | 'back' | 'selfie', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissionDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
@@ -3625,9 +3626,9 @@ export const getReviewKycSubmissionUrl = (id: number,) => {
  * @summary Admin — approve, reject, or request resubmission
  */
 export const reviewKycSubmission = async (id: number,
-    kycReviewInput: KycReviewInput, options?: RequestInit): Promise<void> => {
+    kycReviewInput: KycReviewInput, options?: RequestInit): Promise<KycReviewResponse> => {
 
-  return customFetch<void>(getReviewKycSubmissionUrl(id),
+  return customFetch<KycReviewResponse>(getReviewKycSubmissionUrl(id),
   {
     ...options,
     method: 'PUT',

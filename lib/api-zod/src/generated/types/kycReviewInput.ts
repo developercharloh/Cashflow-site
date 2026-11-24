@@ -5,8 +5,10 @@
  * TaskEarn Pro API
  * OpenAPI spec version: 0.1.0
  */
+import type { KycReviewInputAction } from './kycReviewInputAction';
 
 export interface KycReviewInput {
-  action: string;
+  action: KycReviewInputAction;
+  /** @maxLength 500 */
   rejectionReason?: string;
 }

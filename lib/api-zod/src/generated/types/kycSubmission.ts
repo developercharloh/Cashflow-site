@@ -14,6 +14,8 @@ export interface KycSubmission {
   fullName: string;
   dateOfBirth: string;
   country: string;
+  /** @nullable */
+  nationality?: string | null;
   phoneNumber: string;
   nationalId: string;
   submissionMethod?: string;
@@ -23,6 +25,8 @@ export interface KycSubmission {
   frontIdPath?: string | null;
   /** @nullable */
   backIdPath?: string | null;
+  /** @nullable */
+  selfieImagePath?: string | null;
   /** @nullable */
   faceMatchScore?: number | null;
   kycStatus: string;

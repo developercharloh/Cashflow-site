@@ -32,6 +32,8 @@ router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
         id: sub.id,
         fullName: sub.fullName,
         country: sub.country,
+        nationality: sub.nationality ?? null,
+        documentType: sub.documentType ?? null,
         kycStatus: sub.kycStatus,
         submittedAt: sub.submittedAt.toISOString(),
         rejectionReason: sub.rejectionReason ?? null,
@@ -84,7 +86,7 @@ router.post("/kyc/upload-url", (req, res, next) => {
           contentType?: unknown;
           size?: unknown;
         };
-        if ((payload.side !== "front" && payload.side !== "back") ||
+        if ((payload.side !== "front" && payload.side !== "back" && payload.side !== "selfie") ||
             typeof payload.name !== "string" || payload.name.trim().length < 1 ||
             payload.name.length > 180 || typeof payload.contentType !== "string" ||
             !ID_IMAGE_TYPES.has(payload.contentType) || !Number.isInteger(payload.size) ||
@@ -109,8 +111,8 @@ router.post("/kyc/upload-url", (req, res, next) => {
 router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) => {
   try {
     const {
-      fullName, dateOfBirth, country, phoneNumber, nationalId,
-      documentType, frontIdPath, backIdPath,
+      fullName, dateOfBirth, country, nationality, phoneNumber, nationalId,
+      documentType, frontIdPath, backIdPath, selfieImagePath,
     } = req.body ?? {};
     const parsedBirthDate = typeof dateOfBirth === "string"
       ? new Date(`${dateOfBirth}T00:00:00.000Z`)
@@ -121,11 +123,14 @@ router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) 
         parsedBirthDate.toISOString().slice(0, 10) !== dateOfBirth ||
         parsedBirthDate > new Date() ||
         typeof country !== "string" || !country.trim() || country.length > 80 ||
+        typeof nationality !== "string" || !nationality.trim() || nationality.length > 80 ||
         typeof phoneNumber !== "string" || !phoneNumber.trim() || phoneNumber.length > 32 ||
         typeof nationalId !== "string" || !nationalId.trim() || nationalId.length > 100 ||
-        !["national_id", "passport", "other"].includes(documentType) ||
-        typeof frontIdPath !== "string") {
-      res.status(400).json({ error: "Complete all required identity details and upload the front image." });
+        !["alien_id", "national_id", "passport", "driving_license"].includes(documentType) ||
+        typeof frontIdPath !== "string" || typeof selfieImagePath !== "string" ||
+        (documentType !== "passport" && typeof backIdPath !== "string") ||
+        (documentType === "passport" && backIdPath != null && typeof backIdPath !== "string")) {
+      res.status(400).json({ error: "Complete all required identity details and upload the required document and selfie images." });
       return;
     }
 
@@ -139,7 +144,7 @@ router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) 
     const validObjectPath = (path: unknown): path is string =>
       typeof path === "string" && path.startsWith(userPrefix) &&
       !path.includes("..") && path.length <= 500;
-    if (!validObjectPath(frontIdPath) ||
+    if (!validObjectPath(frontIdPath) || !validObjectPath(selfieImagePath) ||
         (backIdPath != null && !validObjectPath(backIdPath))) {
       res.status(400).json({ error: "The identity document upload is invalid." });
       return;
@@ -167,6 +172,7 @@ router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) 
     try {
       await checkBlob(frontIdPath);
       if (backIdPath) await checkBlob(backIdPath);
+      await checkBlob(selfieImagePath);
     } catch {
       res.status(400).json({ error: "The document image could not be verified. Upload it again." });
       return;
@@ -178,12 +184,14 @@ router.post("/kyc/upload-documents", requireAuth, async (req: AuthRequest, res) 
         fullName: fullName.trim(),
         dateOfBirth,
         country: country.trim(),
+        nationality: nationality.trim(),
         phoneNumber: phoneNumber.trim(),
         nationalId: nationalId.trim(),
         documentType,
         submissionMethod: "manual_upload",
         frontIdUrl: frontIdPath,
         backIdUrl: backIdPath ?? null,
+        selfieImageUrl: selfieImagePath,
         kycStatus: "pending_review",
       });
       await tx.update(usersTable)
@@ -220,12 +228,14 @@ router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: Auth
       fullName: sub.fullName,
       dateOfBirth: sub.dateOfBirth,
       country: sub.country,
+      nationality: sub.nationality ?? null,
       phoneNumber: sub.phoneNumber,
       nationalId: sub.nationalId,
       submissionMethod: sub.submissionMethod,
       documentType: sub.documentType ?? null,
       frontIdPath: sub.frontIdUrl ?? null,
       backIdPath: sub.backIdUrl ?? null,
+      selfieImagePath: sub.selfieImageUrl ?? null,
       faceMatchScore: sub.faceMatchScore ?? null,
       kycStatus: sub.kycStatus,
       rejectionReason: sub.rejectionReason ?? null,
@@ -245,7 +255,8 @@ router.get("/kyc/admin/submissions/:id/document/:side", requireAuth, requireAdmi
   try {
     const id = Number(req.params["id"]);
     const side = req.params["side"];
-    if (!Number.isSafeInteger(id) || id < 1 || (side !== "front" && side !== "back")) {
+    if (!Number.isSafeInteger(id) || id < 1 ||
+        (side !== "front" && side !== "back" && side !== "selfie")) {
       res.status(400).json({ error: "Invalid document request." });
       return;
     }
@@ -253,8 +264,11 @@ router.get("/kyc/admin/submissions/:id/document/:side", requireAuth, requireAdmi
       userId: kycSubmissionsTable.userId,
       frontIdUrl: kycSubmissionsTable.frontIdUrl,
       backIdUrl: kycSubmissionsTable.backIdUrl,
+      selfieImageUrl: kycSubmissionsTable.selfieImageUrl,
     }).from(kycSubmissionsTable).where(eq(kycSubmissionsTable.id, id));
-    const objectPath = side === "front" ? submission?.frontIdUrl : submission?.backIdUrl;
+    const objectPath = side === "front"
+      ? submission?.frontIdUrl
+      : side === "back" ? submission?.backIdUrl : submission?.selfieImageUrl;
     const expectedPrefix = submission ? `/objects/uploads/kyc/${submission.userId}/` : "";
     if (!objectPath || !objectPath.startsWith(expectedPrefix) || objectPath.includes("..")) {
       res.status(404).json({ error: "Document not found." });
@@ -283,10 +297,20 @@ router.get("/kyc/admin/submissions/:id/document/:side", requireAuth, requireAdmi
 // ─── PUT /kyc/admin/submissions/:id/review — admin approve/reject ─────────────
 router.put("/kyc/admin/submissions/:id/review", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(String(req.params["id"]));
-    const { action, rejectionReason } = req.body;
+    const id = Number(req.params["id"]);
+    const { action, rejectionReason } = req.body ?? {};
+    if (!Number.isSafeInteger(id) || id < 1) {
+      res.status(400).json({ error: "Invalid submission." });
+      return;
+    }
     if (!["approve", "reject", "resubmit"].includes(action)) {
       res.status(400).json({ error: "action must be approve, reject, or resubmit" }); return;
+    }
+    const normalizedReason = typeof rejectionReason === "string" ? rejectionReason.trim() : "";
+    if ((action === "reject" || action === "resubmit") &&
+        (!normalizedReason || normalizedReason.length > 500)) {
+      res.status(400).json({ error: "A reason of 1 to 500 characters is required for rejection or resubmission." });
+      return;
     }
 
     const [sub] = await db.select().from(kycSubmissionsTable).where(eq(kycSubmissionsTable.id, id));
@@ -295,18 +319,24 @@ router.put("/kyc/admin/submissions/:id/review", requireAuth, requireAdmin, async
     const newSubStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "resubmit_required";
     const newUserStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "none";
 
-    await db.update(kycSubmissionsTable).set({
-      kycStatus: newSubStatus,
-      rejectionReason: rejectionReason ?? null,
-      reviewedAt: new Date(),
-      reviewedBy: req.userId,
-    }).where(eq(kycSubmissionsTable.id, id));
+    await db.transaction(async (tx) => {
+      await tx.update(kycSubmissionsTable).set({
+        kycStatus: newSubStatus,
+        rejectionReason: action === "approve" ? null : normalizedReason,
+        reviewedAt: new Date(),
+        reviewedBy: req.userId,
+      }).where(eq(kycSubmissionsTable.id, id));
 
-    await db.update(usersTable).set({
+      await tx.update(usersTable).set({
+        kycStatus: newUserStatus,
+      }).where(eq(usersTable.id, sub.userId));
+    });
+
+    res.json({
+      ok: true,
       kycStatus: newUserStatus,
-    }).where(eq(usersTable.id, sub.userId));
-
-    res.json({ ok: true, kycStatus: newUserStatus });
+      rejectionReason: action === "approve" ? null : normalizedReason,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

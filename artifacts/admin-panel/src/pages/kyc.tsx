@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { get, getBlob, put } from "@/api";
-import { RefreshCw, CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage } from "lucide-react";
 
 interface KYCSub {
   id: number;
@@ -10,6 +10,7 @@ interface KYCSub {
   fullName: string;
   dateOfBirth: string;
   country: string;
+  nationality: string | null;
   phone: string;
   phoneNumber?: string;
   nationalId: string;
@@ -17,6 +18,7 @@ interface KYCSub {
   submissionMethod: string;
   frontIdPath: string | null;
   backIdPath: string | null;
+  selfieImagePath: string | null;
   faceMatchScore: number | null;
   rejectionReason: string | null;
   diditSessionId: string | null;
@@ -32,6 +34,12 @@ const STATUS_STYLES: Record<string, string> = {
   approved:       "bg-green-900/40 text-green-400 border-green-800/50",
   rejected:       "bg-red-900/40 text-red-400 border-red-800/50",
   resubmit_required: "bg-purple-900/40 text-purple-400 border-purple-800/50",
+};
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  alien_id: "Alien ID card",
+  national_id: "National ID",
+  passport: "Passport",
+  driving_license: "Driving License",
 };
 
 function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
@@ -71,7 +79,7 @@ export default function KYC() {
 
   useEffect(load, []);
 
-  const openDocument = async (id: number, side: "front" | "back") => {
+  const openDocument = async (id: number, side: "front" | "back" | "selfie") => {
     const key = `${id}:${side}`;
     setLoadingDocument(key);
     try {
@@ -163,7 +171,7 @@ export default function KYC() {
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    {s.userEmail} · {s.country} · {s.documentType ?? "ID"}
+                    {s.userEmail} · {s.nationality ?? "Nationality not provided"} · {DOCUMENT_TYPE_LABELS[s.documentType ?? ""] ?? s.documentType ?? "ID"}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -177,11 +185,7 @@ export default function KYC() {
                       title="Approve" className="p-1.5 rounded-lg bg-green-900/40 hover:bg-green-900/70 text-green-400 disabled:opacity-40 transition-colors">
                       <CheckCircle className="w-4 h-4" />
                     </button>
-                    <button onClick={() => action(s.id, "resubmit")} disabled={acting === s.id}
-                      title="Request Resubmit" className="p-1.5 rounded-lg bg-yellow-900/40 hover:bg-yellow-900/70 text-yellow-400 disabled:opacity-40 transition-colors">
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setRejectModal(rejectModal === s.id ? null : s.id)} disabled={acting === s.id}
+                    <button onClick={() => { setRejectModal(rejectModal === s.id ? null : s.id); setReason(""); }} disabled={acting === s.id}
                       title="Reject" className="p-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 text-red-400 disabled:opacity-40 transition-colors">
                       <XCircle className="w-4 h-4" />
                     </button>
@@ -195,9 +199,9 @@ export default function KYC() {
               {/* Rejection reason form */}
               {rejectModal === s.id && (
                 <div className="px-4 pb-4 border-t border-slate-800 pt-3 space-y-2">
-                  <p className="text-xs text-slate-400">Rejection reason <span className="text-red-400">(required — shown to user)</span></p>
-                  <textarea value={reason} onChange={e => setReason(e.target.value)}
-                    placeholder="e.g. ID photo is blurry or expired document — user will see this message"
+                  <p className="text-xs text-slate-400">Decision reason <span className="text-red-400">(required for rejection or update request — shown to user)</span></p>
+                  <textarea value={reason} onChange={e => setReason(e.target.value.slice(0, 500))}
+                    placeholder="Explain what needs to be corrected. The worker will see this message."
                     rows={3}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 resize-none" />
                   <div className="flex gap-2">
@@ -207,6 +211,10 @@ export default function KYC() {
                       className="flex-1 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-xl transition-colors">
                       {acting === s.id ? "Rejecting…" : "Confirm Reject"}
                     </button>
+                    <button onClick={() => action(s.id, "resubmit", reason)} disabled={!reason.trim() || acting === s.id}
+                      className="flex-1 py-1.5 text-xs text-yellow-200 bg-yellow-900/60 hover:bg-yellow-900 disabled:opacity-60 rounded-xl transition-colors">
+                      {acting === s.id ? "Sending…" : "Request Update"}
+                    </button>
                   </div>
                 </div>
               )}
@@ -215,7 +223,7 @@ export default function KYC() {
               {expanded === s.id && (
                 <div className="px-4 pb-4 border-t border-slate-800 pt-3 space-y-3">
                   {/* Uploaded ID photos (manual submissions) */}
-                  {s.submissionMethod === "manual_upload" && (s.frontIdPath || s.backIdPath) && (
+                  {s.submissionMethod === "manual_upload" && (s.frontIdPath || s.backIdPath || s.selfieImagePath) && (
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-slate-300">Private identity documents</p>
                       <div className="grid grid-cols-2 gap-2">
@@ -239,6 +247,16 @@ export default function KYC() {
                             </button>
                           </div>
                         )}
+                        {s.selfieImagePath && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500">Selfie</p>
+                            <button type="button" disabled={loadingDocument === `${s.id}:selfie`} onClick={() => openDocument(s.id, "selfie")}
+                              className="flex h-28 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50">
+                              {loadingDocument === `${s.id}:selfie` ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileImage className="h-4 w-4" /><ZoomIn className="h-4 w-4" /></>}
+                              View selfie image
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -249,9 +267,10 @@ export default function KYC() {
                       { l: "Full Legal Name",   v: s.fullName },
                       { l: "Date of Birth",     v: s.dateOfBirth },
                       { l: "Country",           v: s.country },
+                      { l: "Nationality",       v: s.nationality ?? "—" },
                       { l: "Phone",             v: s.phoneNumber ?? s.phone ?? "—" },
-                      { l: "National ID",       v: s.nationalId },
-                      { l: "Document Type",     v: s.documentType ?? "—" },
+                      { l: "Document Number",   v: s.nationalId },
+                      { l: "Document Type",     v: DOCUMENT_TYPE_LABELS[s.documentType ?? ""] ?? s.documentType ?? "—" },
                       { l: "Method",            v: s.submissionMethod === "manual_upload" ? "Identity document upload" : "Legacy submission" },
                       { l: "Face Match %",      v: s.faceMatchScore != null ? `${(s.faceMatchScore * 100).toFixed(2)}%` : "—" },
                       { l: "Didit Session",     v: s.diditSessionId ?? "—" },

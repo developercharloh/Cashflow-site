@@ -880,21 +880,28 @@ export type KycUploadInputDocumentType = typeof KycUploadInputDocumentType[keyof
 
 
 export const KycUploadInputDocumentType = {
+  alien_id: 'alien_id',
   national_id: 'national_id',
   passport: 'passport',
-  other: 'other',
+  driving_license: 'driving_license',
 } as const;
 
 export interface KycUploadInput {
   fullName: string;
   dateOfBirth: string;
   country: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  nationality: string;
   phoneNumber: string;
   nationalId: string;
   documentType: KycUploadInputDocumentType;
   frontIdPath: string;
   /** @nullable */
   backIdPath?: string | null;
+  selfieImagePath: string;
 }
 
 export type KycUploadResponseKycStatus = typeof KycUploadResponseKycStatus[keyof typeof KycUploadResponseKycStatus];
@@ -929,6 +936,8 @@ export interface KycSubmission {
   fullName: string;
   dateOfBirth: string;
   country: string;
+  /** @nullable */
+  nationality?: string | null;
   phoneNumber: string;
   nationalId: string;
   submissionMethod?: string;
@@ -938,6 +947,8 @@ export interface KycSubmission {
   frontIdPath?: string | null;
   /** @nullable */
   backIdPath?: string | null;
+  /** @nullable */
+  selfieImagePath?: string | null;
   /** @nullable */
   faceMatchScore?: number | null;
   kycStatus: string;
@@ -952,9 +963,35 @@ export interface KycSubmission {
   reviewedBy?: number | null;
 }
 
+export type KycReviewInputAction = typeof KycReviewInputAction[keyof typeof KycReviewInputAction];
+
+
+export const KycReviewInputAction = {
+  approve: 'approve',
+  reject: 'reject',
+  resubmit: 'resubmit',
+} as const;
+
 export interface KycReviewInput {
-  action: string;
+  action: KycReviewInputAction;
+  /** @maxLength 500 */
   rejectionReason?: string;
+}
+
+export type KycReviewResponseKycStatus = typeof KycReviewResponseKycStatus[keyof typeof KycReviewResponseKycStatus];
+
+
+export const KycReviewResponseKycStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+  none: 'none',
+} as const;
+
+export interface KycReviewResponse {
+  ok: boolean;
+  kycStatus: KycReviewResponseKycStatus;
+  /** @nullable */
+  rejectionReason: string | null;
 }
 
 /**
@@ -964,6 +1001,10 @@ export type KycStatusResponseSubmission = {
   id?: number;
   fullName?: string;
   country?: string;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  documentType?: string | null;
   kycStatus?: string;
   submittedAt?: string;
   /** @nullable */

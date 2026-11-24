@@ -636,6 +636,8 @@ export const GetKycStatusResponse = zod.object({
   "id": zod.number().optional(),
   "fullName": zod.string().optional(),
   "country": zod.string().optional(),
+  "nationality": zod.string().nullish(),
+  "documentType": zod.string().nullish(),
   "kycStatus": zod.string().optional(),
   "submittedAt": zod.string().optional(),
   "rejectionReason": zod.string().nullish(),
@@ -660,15 +662,21 @@ export const SubmitKycBody = zod.object({
 /**
  * @summary Submit private identity documents for manual review
  */
+export const uploadKycDocumentsBodyNationalityMax = 80;
+
+
+
 export const UploadKycDocumentsBody = zod.object({
   "fullName": zod.string(),
   "dateOfBirth": zod.string(),
   "country": zod.string(),
+  "nationality": zod.string().min(1).max(uploadKycDocumentsBodyNationalityMax),
   "phoneNumber": zod.string(),
   "nationalId": zod.string(),
-  "documentType": zod.enum(['national_id', 'passport', 'other']),
+  "documentType": zod.enum(['alien_id', 'national_id', 'passport', 'driving_license']),
   "frontIdPath": zod.string(),
-  "backIdPath": zod.string().nullish()
+  "backIdPath": zod.string().nullish(),
+  "selfieImagePath": zod.string()
 })
 
 
@@ -697,12 +705,14 @@ export const GetKycSubmissionsResponseItem = zod.object({
   "fullName": zod.string(),
   "dateOfBirth": zod.string(),
   "country": zod.string(),
+  "nationality": zod.string().nullish(),
   "phoneNumber": zod.string(),
   "nationalId": zod.string(),
   "submissionMethod": zod.string().optional(),
   "documentType": zod.string().nullish(),
   "frontIdPath": zod.string().nullish(),
   "backIdPath": zod.string().nullish(),
+  "selfieImagePath": zod.string().nullish(),
   "faceMatchScore": zod.number().nullish(),
   "kycStatus": zod.string(),
   "rejectionReason": zod.string().nullish(),
@@ -719,7 +729,7 @@ export const GetKycSubmissionsResponse = zod.array(GetKycSubmissionsResponseItem
  */
 export const GetKycSubmissionDocumentParams = zod.object({
   "id": zod.coerce.number(),
-  "side": zod.enum(['front', 'back'])
+  "side": zod.enum(['front', 'back', 'selfie'])
 })
 
 
@@ -730,9 +740,19 @@ export const ReviewKycSubmissionParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const reviewKycSubmissionBodyRejectionReasonMax = 500;
+
+
+
 export const ReviewKycSubmissionBody = zod.object({
-  "action": zod.string(),
-  "rejectionReason": zod.string().optional()
+  "action": zod.enum(['approve', 'reject', 'resubmit']),
+  "rejectionReason": zod.string().max(reviewKycSubmissionBodyRejectionReasonMax).optional()
+})
+
+export const ReviewKycSubmissionResponse = zod.object({
+  "ok": zod.boolean(),
+  "kycStatus": zod.enum(['approved', 'rejected', 'none']),
+  "rejectionReason": zod.string().nullable()
 })
 
 

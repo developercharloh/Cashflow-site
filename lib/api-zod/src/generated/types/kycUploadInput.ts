@@ -11,10 +11,16 @@ export interface KycUploadInput {
   fullName: string;
   dateOfBirth: string;
   country: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  nationality: string;
   phoneNumber: string;
   nationalId: string;
   documentType: KycUploadInputDocumentType;
   frontIdPath: string;
   /** @nullable */
   backIdPath?: string | null;
+  selfieImagePath: string;
 }

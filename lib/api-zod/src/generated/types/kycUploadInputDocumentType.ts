@@ -10,7 +10,8 @@ export type KycUploadInputDocumentType = typeof KycUploadInputDocumentType[keyof
 
 
 export const KycUploadInputDocumentType = {
+  alien_id: 'alien_id',
   national_id: 'national_id',
   passport: 'passport',
-  other: 'other',
+  driving_license: 'driving_license',
 } as const;

@@ -9,7 +9,7 @@ import {
 export default function ProfilePage() {
   const { user } = useAuth();
   const { data: kyc, isLoading: kycLoading } = useGetKycStatus({
-    query: { queryKey: ["kycStatus"], enabled: !!user },
+    query: { queryKey: ["kycStatus"], enabled: !!user, refetchInterval: 15_000 },
   });
   const isKycApproved = kyc?.kycStatus === "approved";
   const isKycUnderReview = (kyc?.kycStatus === "pending" && !!kyc?.submission) || kyc?.submission?.kycStatus === "pending_review";
@@ -110,6 +110,11 @@ export default function ProfilePage() {
                 ? "Your identity check is under review. The status will update here."
                 : "Complete identity verification to request a withdrawal."}
           </p>
+          {needsCorrection && kyc?.submission?.rejectionReason && (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+              Update needed: {kyc.submission.rejectionReason}
+            </p>
+          )}
           {!isKycApproved && (
             <Link href="/kyc">
               <Button variant="outline" className="w-full">
