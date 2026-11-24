@@ -9,6 +9,20 @@ function readableError(error: unknown) {
   return error instanceof Error ? error.message : "Please try again.";
 }
 
+function waitingAge(updatedAt: string) {
+  const elapsedMs = Math.max(0, Date.now() - new Date(updatedAt).getTime());
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
+  if (elapsedMinutes < 1) return "under 1m";
+
+  const minutes = elapsedMinutes % 60;
+  const hours = Math.floor(elapsedMinutes / 60);
+  if (hours < 1) return `${minutes}m`;
+
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  return `${hours}h ${minutes}m`;
+}
+
 function MessageRow({ message }: { message: SupportMessage }) {
   const fromAdmin = message.authorType === "admin";
   return (
@@ -186,7 +200,19 @@ export default function SupportPage() {
                     </div>
                     <span className="mt-1 block truncate text-xs text-slate-500">{thread.workerEmail}</span>
                     <span className="mt-2 block line-clamp-2 text-xs leading-5 text-slate-400">{thread.latestMessage}</span>
-                    <time className="mt-2 block text-[10px] text-slate-600" dateTime={thread.updatedAt}>{new Date(thread.updatedAt).toLocaleString()}</time>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      {thread.status === "open" && (
+                        <span
+                          className={`text-[10px] font-semibold ${Date.now() - new Date(thread.updatedAt).getTime() >= 86_400_000 ? "text-rose-300" : "text-amber-300"}`}
+                          title={`Waiting since ${new Date(thread.updatedAt).toLocaleString()}`}
+                        >
+                          Waiting {waitingAge(thread.updatedAt)}
+                        </span>
+                      )}
+                      <time className="ml-auto text-right text-[10px] text-slate-600" dateTime={thread.updatedAt}>
+                        {new Date(thread.updatedAt).toLocaleString()}
+                      </time>
+                    </div>
                   </button>
                 </li>
               ))}

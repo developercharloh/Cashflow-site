@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import {
   AdminCreateSupportMessageBody,
   AdminCreateSupportMessageParams,
@@ -176,7 +176,11 @@ router.get("/admin/support/threads", requireAdmin, async (req: AuthRequest, res)
     .from(supportThreadsTable)
     .innerJoin(usersTable, eq(supportThreadsTable.userId, usersTable.id))
     .where(conditions)
-    .orderBy(desc(supportThreadsTable.updatedAt))
+    .orderBy(
+      parsed.data.status === "open"
+        ? asc(supportThreadsTable.updatedAt)
+        : desc(supportThreadsTable.updatedAt),
+    )
     .limit(200);
 
   const threadIds = rows.map(({ thread }) => thread.id);
