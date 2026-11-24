@@ -62,7 +62,7 @@ router.post("/wallet/withdraw", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
     const normalizedMethod = String(method).toLowerCase();
-    if (!["mpesa", "bank", "paypal"].includes(normalizedMethod)) {
+    if (!["mpesa", "airtel", "bank", "paypal"].includes(normalizedMethod)) {
       res.status(400).json({ error: "That withdrawal method is not currently available." });
       return;
     }
