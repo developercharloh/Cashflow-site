@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/auth";
 import {
   LayoutDashboard, Users, CheckSquare, Wallet2, ShieldCheck,
-  Activity, LogOut, Menu, X, ChevronRight,
+  Activity, LogOut, Menu, X, ChevronRight, Headset,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -14,6 +14,7 @@ const NAV = [
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/withdrawals", label: "Withdrawals", icon: Wallet2 },
   { to: "/kyc", label: "KYC", icon: ShieldCheck },
+  { to: "/support", label: "Support", icon: Headset },
 ];
 
 function NavItem({ to, label, Icon, onNavigate }: { to: string; label: string; Icon: typeof LayoutDashboard; onNavigate?: () => void }) {

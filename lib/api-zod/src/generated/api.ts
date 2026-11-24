@@ -803,6 +803,104 @@ export const MarkAllNotificationsReadResponse = zod.object({
 
 
 /**
+ * @summary Get the current worker's support thread
+ */
+export const GetSupportThreadResponse = zod.object({
+  "thread": zod.union([zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['open', 'replied']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()]),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "threadId": zod.number(),
+  "authorType": zod.enum(['worker', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Send a message to support
+ */
+export const createSupportMessageBodyBodyMax = 5000;
+
+
+
+export const CreateSupportMessageBody = zod.object({
+  "body": zod.string().min(1).max(createSupportMessageBodyBodyMax)
+})
+
+
+/**
+ * @summary List worker support threads
+ */
+export const adminListSupportThreadsQueryStatusDefault = `open`;
+
+export const AdminListSupportThreadsQueryParams = zod.object({
+  "status": zod.enum(['open', 'replied', 'all']).default(adminListSupportThreadsQueryStatusDefault)
+})
+
+export const AdminListSupportThreadsResponseItem = zod.object({
+  "id": zod.number(),
+  "workerId": zod.number(),
+  "workerName": zod.string(),
+  "workerEmail": zod.string(),
+  "status": zod.enum(['open', 'replied']),
+  "latestMessage": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListSupportThreadsResponse = zod.array(AdminListSupportThreadsResponseItem)
+
+
+/**
+ * @summary Get a support thread and its messages
+ */
+export const AdminGetSupportThreadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetSupportThreadResponse = zod.object({
+  "thread": zod.object({
+  "id": zod.number(),
+  "workerId": zod.number(),
+  "workerName": zod.string(),
+  "workerEmail": zod.string(),
+  "status": zod.enum(['open', 'replied']),
+  "latestMessage": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "threadId": zod.number(),
+  "authorType": zod.enum(['worker', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Reply to a worker support thread
+ */
+export const AdminCreateSupportMessageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminCreateSupportMessageBodyBodyMax = 5000;
+
+
+
+export const AdminCreateSupportMessageBody = zod.object({
+  "body": zod.string().min(1).max(adminCreateSupportMessageBodyBodyMax)
+})
+
+
+/**
  * @summary Get leaderboard
  */
 export const GetLeaderboardQueryParams = zod.object({

@@ -16,6 +16,7 @@ tags:
   - name: quiz
   - name: dashboard
   - name: notifications
+  - name: support
   - name: leaderboard
   - name: admin
 
@@ -1010,6 +1011,132 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
+
+  # ─── SUPPORT ──────────────────────────────────────────────────────────────────
+  /support/thread:
+    get:
+      operationId: getSupportThread
+      tags: [support]
+      summary: Get the current worker's support thread
+      responses:
+        "200":
+          description: Current support thread and messages, or an empty thread state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportThreadResponse"
+        "401":
+          description: Unauthenticated
+
+  /support/thread/messages:
+    post:
+      operationId: createSupportMessage
+      tags: [support]
+      summary: Send a message to support
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageInput"
+      responses:
+        "201":
+          description: Updated support thread and messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportThreadResponse"
+        "400":
+          description: Invalid message
+        "401":
+          description: Unauthenticated
+
+  /admin/support/threads:
+    get:
+      operationId: adminListSupportThreads
+      tags: [support]
+      summary: List worker support threads
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, replied, all]
+            default: open
+      responses:
+        "200":
+          description: Support threads with worker details and latest message
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminSupportThread"
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Admin access required
+
+  /admin/support/threads/{id}:
+    get:
+      operationId: adminGetSupportThread
+      tags: [support]
+      summary: Get a support thread and its messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Support thread and its messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSupportThreadDetail"
+        "400":
+          description: Invalid thread ID
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Admin access required
+        "404":
+          description: Thread not found
+
+  /admin/support/threads/{id}/messages:
+    post:
+      operationId: adminCreateSupportMessage
+      tags: [support]
+      summary: Reply to a worker support thread
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageInput"
+      responses:
+        "201":
+          description: Updated support thread and messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSupportThreadDetail"
+        "400":
+          description: Invalid thread ID or message
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Admin access required
+        "404":
+          description: Thread not found
 
   # ─── LEADERBOARD ─────────────────────────────────────────────────────────────
   /leaderboard:
@@ -2660,6 +2787,96 @@ components:
           type: boolean
         createdAt:
           type: string
+
+    SupportMessageInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    SupportMessage:
+      type: object
+      required: [id, threadId, authorType, body, createdAt]
+      properties:
+        id:
+          type: integer
+        threadId:
+          type: integer
+        authorType:
+          type: string
+          enum: [worker, admin]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    SupportThread:
+      type: object
+      required: [id, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [open, replied]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SupportThreadResponse:
+      type: object
+      required: [thread, messages]
+      properties:
+        thread:
+          oneOf:
+            - $ref: "#/components/schemas/SupportThread"
+            - type: "null"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportMessage"
+
+    AdminSupportThread:
+      type: object
+      required: [id, workerId, workerName, workerEmail, status, latestMessage, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        workerId:
+          type: integer
+        workerName:
+          type: string
+        workerEmail:
+          type: string
+        status:
+          type: string
+          enum: [open, replied]
+        latestMessage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AdminSupportThreadDetail:
+      type: object
+      required: [thread, messages]
+      properties:
+        thread:
+          $ref: "#/components/schemas/AdminSupportThread"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportMessage"
 
     # ── Leaderboard ───────────────────────────────────────────────────────────
     LeaderboardEntry:

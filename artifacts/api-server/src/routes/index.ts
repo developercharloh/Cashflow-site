@@ -16,6 +16,7 @@ import kycRouter from "./kyc";
 import workSubmissionsRouter from "./work-submissions";
 import taskSourcesRouter from "./task-sources";
 import taskLibraryRouter from "./task-library";
+import supportRouter from "./support";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(kycRouter);
 router.use(workSubmissionsRouter);
 router.use(taskSourcesRouter);
 router.use(taskLibraryRouter);
+router.use(supportRouter);
 
 export default router;

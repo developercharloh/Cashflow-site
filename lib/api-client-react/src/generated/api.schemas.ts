@@ -726,6 +726,74 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface SupportMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  body: string;
+}
+
+export type SupportMessageAuthorType = typeof SupportMessageAuthorType[keyof typeof SupportMessageAuthorType];
+
+
+export const SupportMessageAuthorType = {
+  worker: 'worker',
+  admin: 'admin',
+} as const;
+
+export interface SupportMessage {
+  id: number;
+  threadId: number;
+  authorType: SupportMessageAuthorType;
+  body: string;
+  createdAt: string;
+}
+
+export type SupportThreadStatus = typeof SupportThreadStatus[keyof typeof SupportThreadStatus];
+
+
+export const SupportThreadStatus = {
+  open: 'open',
+  replied: 'replied',
+} as const;
+
+export interface SupportThread {
+  id: number;
+  status: SupportThreadStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportThreadResponse {
+  thread: SupportThread | null;
+  messages: SupportMessage[];
+}
+
+export type AdminSupportThreadStatus = typeof AdminSupportThreadStatus[keyof typeof AdminSupportThreadStatus];
+
+
+export const AdminSupportThreadStatus = {
+  open: 'open',
+  replied: 'replied',
+} as const;
+
+export interface AdminSupportThread {
+  id: number;
+  workerId: number;
+  workerName: string;
+  workerEmail: string;
+  status: AdminSupportThreadStatus;
+  latestMessage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSupportThreadDetail {
+  thread: AdminSupportThread;
+  messages: SupportMessage[];
+}
+
 export interface LeaderboardEntry {
   rank: number;
   userId: number;
@@ -931,6 +999,19 @@ type?: string;
 page?: number;
 limit?: number;
 };
+
+export type AdminListSupportThreadsParams = {
+status?: AdminListSupportThreadsStatus;
+};
+
+export type AdminListSupportThreadsStatus = typeof AdminListSupportThreadsStatus[keyof typeof AdminListSupportThreadsStatus];
+
+
+export const AdminListSupportThreadsStatus = {
+  open: 'open',
+  replied: 'replied',
+  all: 'all',
+} as const;
 
 export type GetLeaderboardParams = {
 type?: GetLeaderboardType;

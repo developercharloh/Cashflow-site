@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Home, Search, Wallet, Landmark, CandlestickChart } from "lucide-react";
+import { Home, Search, Wallet, Landmark, CandlestickChart, UserRound } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home",       icon: Home },
@@ -111,6 +111,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </span>
             <span className="font-semibold tracking-tight">Lipwa Tasks</span>
           </Link>
+          {!isAdminRoute && (
+            <Link href="/profile" aria-label="Open your account" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+              <UserRound className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </header>
       {user.isAdmin && isAdminRoute && (

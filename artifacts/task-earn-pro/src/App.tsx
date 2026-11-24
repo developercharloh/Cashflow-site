@@ -18,6 +18,7 @@ import TasksPage from "@/pages/tasks";
 import QuizPage from "@/pages/quiz";
 import LoansPage from "@/pages/loans";
 import ForexPage from "@/pages/forex";
+import SupportPage from "@/pages/support";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -39,6 +40,7 @@ function Router() {
         <Route path="/auth/forgot-password" component={ForgotPassword} />
         <Route path="/terms"               component={Terms} />
         <Route path="/profile"             component={ProfilePage} />
+        <Route path="/support"             component={SupportPage} />
         <Route path="/callback"            component={CallbackPage} />
         <Route                             component={NotFound} />
       </Switch>

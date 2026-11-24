@@ -13,6 +13,7 @@ import AdminAuditLog from "@/pages/admin/audit-log";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
 import AdminAnalytics from "@/pages/admin/analytics";
 import AdminKycPage from "@/pages/admin/kyc";
+import AdminSupportPage from "@/pages/support";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -36,6 +37,7 @@ function AdminRoutes() {
         <Route path="/admin/withdrawals" component={AdminWithdrawals} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/kyc" component={AdminKycPage} />
+        <Route path="/support" component={AdminSupportPage} />
         <Route>
           {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
         </Route>
