@@ -92,7 +92,13 @@ export default function SupportPage() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <MessageCircle className="h-4 w-4 text-primary" />
-            {data?.thread ? (data.thread.status === "replied" ? "Support replied" : "Conversation") : "New conversation"}
+            {data?.thread
+              ? data.thread.status === "resolved"
+                ? "Resolved · reply to reopen"
+                : data.thread.status === "replied"
+                  ? "Support replied"
+                  : "Conversation"
+              : "New conversation"}
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={() => void refetch()} aria-label="Refresh conversation">
             Refresh

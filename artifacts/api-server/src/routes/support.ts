@@ -7,6 +7,7 @@ import {
   AdminGetSupportThreadResponse,
   AdminListSupportThreadsQueryParams,
   AdminListSupportThreadsResponse,
+  AdminResolveSupportThreadParams,
   CreateSupportMessageBody,
   GetSupportThreadResponse,
 } from "@workspace/api-zod";
@@ -213,6 +214,32 @@ router.get("/admin/support/threads/:id", requireAdmin, async (req: AuthRequest, 
   }
 
   const response = await getAdminThread(params.data.id);
+  if (!response) {
+    res.status(404).json({ error: "Support thread not found." });
+    return;
+  }
+  res.json(response);
+});
+
+router.post("/admin/support/threads/:id/resolve", requireAdmin, async (req: AuthRequest, res): Promise<void> => {
+  const params = AdminResolveSupportThreadParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [thread] = await db
+    .update(supportThreadsTable)
+    .set({ status: "resolved", updatedAt: new Date() })
+    .where(eq(supportThreadsTable.id, params.data.id))
+    .returning({ id: supportThreadsTable.id });
+
+  if (!thread) {
+    res.status(404).json({ error: "Support thread not found." });
+    return;
+  }
+
+  const response = await getAdminThread(thread.id);
   if (!response) {
     res.status(404).json({ error: "Support thread not found." });
     return;

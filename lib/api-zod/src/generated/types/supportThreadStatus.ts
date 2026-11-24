@@ -12,4 +12,5 @@ export type SupportThreadStatus = typeof SupportThreadStatus[keyof typeof Suppor
 export const SupportThreadStatus = {
   open: 'open',
   replied: 'replied',
+  resolved: 'resolved',
 } as const;

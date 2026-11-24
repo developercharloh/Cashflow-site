@@ -4577,6 +4577,76 @@ export const useAdminCreateSupportMessage = <TError = ErrorType<void>,
       return useMutation(getAdminCreateSupportMessageMutationOptions(options));
     }
 
+export const getAdminResolveSupportThreadUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/support/threads/${id}/resolve`
+}
+
+/**
+ * @summary Mark a worker support thread as resolved
+ */
+export const adminResolveSupportThread = async (id: number, options?: RequestInit): Promise<AdminSupportThreadDetail> => {
+
+  return customFetch<AdminSupportThreadDetail>(getAdminResolveSupportThreadUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminResolveSupportThreadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResolveSupportThread>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminResolveSupportThread>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminResolveSupportThread'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminResolveSupportThread>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminResolveSupportThread(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminResolveSupportThreadMutationResult = NonNullable<Awaited<ReturnType<typeof adminResolveSupportThread>>>
+
+    export type AdminResolveSupportThreadMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a worker support thread as resolved
+ */
+export const useAdminResolveSupportThread = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResolveSupportThread>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminResolveSupportThread>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminResolveSupportThreadMutationOptions(options));
+    }
+
 export const getGetLeaderboardUrl = (params?: GetLeaderboardParams,) => {
   const normalizedParams = new URLSearchParams();
 

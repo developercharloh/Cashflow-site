@@ -756,6 +756,7 @@ export type SupportThreadStatus = typeof SupportThreadStatus[keyof typeof Suppor
 export const SupportThreadStatus = {
   open: 'open',
   replied: 'replied',
+  resolved: 'resolved',
 } as const;
 
 export interface SupportThread {
@@ -776,6 +777,7 @@ export type AdminSupportThreadStatus = typeof AdminSupportThreadStatus[keyof typ
 export const AdminSupportThreadStatus = {
   open: 'open',
   replied: 'replied',
+  resolved: 'resolved',
 } as const;
 
 export interface AdminSupportThread {
@@ -1010,6 +1012,7 @@ export type AdminListSupportThreadsStatus = typeof AdminListSupportThreadsStatus
 export const AdminListSupportThreadsStatus = {
   open: 'open',
   replied: 'replied',
+  resolved: 'resolved',
   all: 'all',
 } as const;
 

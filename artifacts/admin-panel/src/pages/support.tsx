@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ArrowDownLeft, Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
+import { ArrowDownLeft, Check, Loader2, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { get, post } from "@/api";
 import type { AdminSupportThread, AdminSupportThreadDetail, SupportMessage } from "@workspace/api-client-react";
 
-type StatusFilter = "open" | "replied" | "all";
+type StatusFilter = "open" | "replied" | "resolved" | "all";
 
 function readableError(error: unknown) {
   return error instanceof Error ? error.message : "Please try again.";
@@ -33,6 +33,7 @@ export default function SupportPage() {
   const [listLoading, setListLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [listError, setListError] = useState("");
   const [detailError, setDetailError] = useState("");
   const [sendError, setSendError] = useState("");
@@ -43,7 +44,11 @@ export default function SupportPage() {
       const result = await get<AdminSupportThread[]>(`/admin/support/threads?status=${status}`);
       setThreads(result);
       setListError("");
-      setSelectedId((current) => current ?? result[0]?.id ?? null);
+      setSelectedId((current) =>
+        current !== null && result.some((thread) => thread.id === current)
+          ? current
+          : result[0]?.id ?? null,
+      );
     } catch (error) {
       setListError(readableError(error));
     } finally {
@@ -106,6 +111,24 @@ export default function SupportPage() {
     }
   };
 
+  const resolveThread = async () => {
+    if (!selectedId || resolving) return;
+    setResolving(true);
+    setSendError("");
+    try {
+      const result = await post<AdminSupportThreadDetail>(`/admin/support/threads/${selectedId}/resolve`);
+      setDetail(result);
+      await loadThreads(true);
+    } catch (error) {
+      setSendError(readableError(error));
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const statusLabel = (threadStatus?: AdminSupportThread["status"]) =>
+    threadStatus === "open" ? "Needs reply" : threadStatus === "resolved" ? "Resolved" : "Waiting on worker";
+
   const selected = threads.find((thread) => thread.id === selectedId) ?? detail?.thread;
 
   return (
@@ -121,7 +144,7 @@ export default function SupportPage() {
       </header>
 
       <div className="flex flex-wrap gap-2" aria-label="Filter support threads">
-        {(["open", "replied", "all"] as const).map((item) => (
+        {(["open", "replied", "resolved", "all"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -132,7 +155,7 @@ export default function SupportPage() {
             aria-pressed={status === item}
             className={`rounded-xl border px-3 py-2 text-xs font-semibold capitalize ${status === item ? "border-blue-500 bg-blue-600 text-white" : "border-slate-700 bg-slate-800 text-slate-400 hover:text-white"}`}
           >
-            {item === "open" ? "Needs reply" : item === "replied" ? "Waiting on worker" : "All conversations"}
+            {item === "open" ? "Needs reply" : item === "replied" ? "Waiting on worker" : item === "resolved" ? "Resolved" : "All conversations"}
           </button>
         ))}
       </div>
@@ -157,8 +180,8 @@ export default function SupportPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-slate-100">{thread.workerName}</span>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${thread.status === "open" ? "bg-amber-900/50 text-amber-300" : "bg-emerald-900/50 text-emerald-300"}`}>
-                        {thread.status === "open" ? "Needs reply" : "Replied"}
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${thread.status === "open" ? "bg-amber-900/50 text-amber-300" : thread.status === "resolved" ? "bg-slate-700 text-slate-300" : "bg-emerald-900/50 text-emerald-300"}`}>
+                        {statusLabel(thread.status)}
                       </span>
                     </div>
                     <span className="mt-1 block truncate text-xs text-slate-500">{thread.workerEmail}</span>
@@ -192,15 +215,31 @@ export default function SupportPage() {
                     <h2 className="truncate font-semibold text-white">{selected?.workerName ?? "Worker"}</h2>
                     <p className="truncate text-xs text-slate-500">{selected?.workerEmail}</p>
                   </div>
-                  <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${selected?.status === "open" ? "bg-amber-900/50 text-amber-300" : "bg-emerald-900/50 text-emerald-300"}`}>
-                    {selected?.status === "open" ? "Needs reply" : "Replied"}
+                  <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${selected?.status === "open" ? "bg-amber-900/50 text-amber-300" : selected?.status === "resolved" ? "bg-slate-700 text-slate-300" : "bg-emerald-900/50 text-emerald-300"}`}>
+                    {statusLabel(selected?.status)}
                   </span>
                 </div>
+                {selected?.status !== "resolved" && (
+                  <button
+                    type="button"
+                    onClick={() => void resolveThread()}
+                    disabled={resolving}
+                    className="mt-4 inline-flex items-center rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-emerald-600 hover:text-emerald-300 disabled:opacity-50"
+                  >
+                    {resolving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-2 h-3.5 w-3.5" />}
+                    Mark resolved
+                  </button>
+                )}
               </header>
               <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5" aria-live="polite">
                 {detail?.messages.map((message: SupportMessage) => <MessageRow key={message.id} message={message} />)}
                 {!detail?.messages.length && <p className="py-10 text-center text-sm text-slate-500">No messages in this conversation yet.</p>}
               </div>
+              {selected?.status === "resolved" && (
+                <p className="border-t border-slate-800 px-4 py-3 text-xs text-slate-400">
+                  This conversation is resolved. A new worker message will reopen it.
+                </p>
+              )}
               <form onSubmit={sendReply} className="border-t border-slate-800 p-3 sm:p-4">
                 <label htmlFor="support-reply" className="sr-only">Reply to worker</label>
                 <textarea

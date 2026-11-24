@@ -12,5 +12,6 @@ export type AdminListSupportThreadsStatus = typeof AdminListSupportThreadsStatus
 export const AdminListSupportThreadsStatus = {
   open: 'open',
   replied: 'replied',
+  resolved: 'resolved',
   all: 'all',
 } as const;

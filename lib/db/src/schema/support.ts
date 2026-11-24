@@ -6,7 +6,7 @@ import { z } from "zod/v4";
 export const supportThreadsTable = pgTable("support_threads", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("open"),
+  status: text("status").$type<"open" | "replied" | "resolved">().notNull().default("open"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

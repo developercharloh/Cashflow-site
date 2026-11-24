@@ -808,7 +808,7 @@ export const MarkAllNotificationsReadResponse = zod.object({
 export const GetSupportThreadResponse = zod.object({
   "thread": zod.union([zod.object({
   "id": zod.number(),
-  "status": zod.enum(['open', 'replied']),
+  "status": zod.enum(['open', 'replied', 'resolved']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),zod.null()]),
@@ -840,7 +840,7 @@ export const CreateSupportMessageBody = zod.object({
 export const adminListSupportThreadsQueryStatusDefault = `open`;
 
 export const AdminListSupportThreadsQueryParams = zod.object({
-  "status": zod.enum(['open', 'replied', 'all']).default(adminListSupportThreadsQueryStatusDefault)
+  "status": zod.enum(['open', 'replied', 'resolved', 'all']).default(adminListSupportThreadsQueryStatusDefault)
 })
 
 export const AdminListSupportThreadsResponseItem = zod.object({
@@ -848,7 +848,7 @@ export const AdminListSupportThreadsResponseItem = zod.object({
   "workerId": zod.number(),
   "workerName": zod.string(),
   "workerEmail": zod.string(),
-  "status": zod.enum(['open', 'replied']),
+  "status": zod.enum(['open', 'replied', 'resolved']),
   "latestMessage": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -869,7 +869,7 @@ export const AdminGetSupportThreadResponse = zod.object({
   "workerId": zod.number(),
   "workerName": zod.string(),
   "workerEmail": zod.string(),
-  "status": zod.enum(['open', 'replied']),
+  "status": zod.enum(['open', 'replied', 'resolved']),
   "latestMessage": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -897,6 +897,34 @@ export const adminCreateSupportMessageBodyBodyMax = 5000;
 
 export const AdminCreateSupportMessageBody = zod.object({
   "body": zod.string().min(1).max(adminCreateSupportMessageBodyBodyMax)
+})
+
+
+/**
+ * @summary Mark a worker support thread as resolved
+ */
+export const AdminResolveSupportThreadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminResolveSupportThreadResponse = zod.object({
+  "thread": zod.object({
+  "id": zod.number(),
+  "workerId": zod.number(),
+  "workerName": zod.string(),
+  "workerEmail": zod.string(),
+  "status": zod.enum(['open', 'replied', 'resolved']),
+  "latestMessage": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "threadId": zod.number(),
+  "authorType": zod.enum(['worker', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 

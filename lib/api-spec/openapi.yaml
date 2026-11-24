@@ -1062,7 +1062,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [open, replied, all]
+            enum: [open, replied, resolved, all]
             default: open
       responses:
         "200":
@@ -1131,6 +1131,33 @@ paths:
                 $ref: "#/components/schemas/AdminSupportThreadDetail"
         "400":
           description: Invalid thread ID or message
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Admin access required
+        "404":
+          description: Thread not found
+
+  /admin/support/threads/{id}/resolve:
+    post:
+      operationId: adminResolveSupportThread
+      tags: [support]
+      summary: Mark a worker support thread as resolved
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resolved support thread and its messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSupportThreadDetail"
+        "400":
+          description: Invalid thread ID
         "401":
           description: Unauthenticated
         "403":
@@ -2822,7 +2849,7 @@ components:
           type: integer
         status:
           type: string
-          enum: [open, replied]
+          enum: [open, replied, resolved]
         createdAt:
           type: string
           format: date-time
@@ -2857,7 +2884,7 @@ components:
           type: string
         status:
           type: string
-          enum: [open, replied]
+          enum: [open, replied, resolved]
         latestMessage:
           type: string
         createdAt:
