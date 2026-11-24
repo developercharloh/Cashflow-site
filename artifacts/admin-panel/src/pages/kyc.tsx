@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { get, put } from "@/api";
-import { RefreshCw, CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp, Upload, Camera, ZoomIn } from "lucide-react";
+import { get, getBlob, put } from "@/api";
+import { RefreshCw, CheckCircle, XCircle, RotateCcw, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage } from "lucide-react";
 
 interface KYCSub {
   id: number;
@@ -15,8 +15,8 @@ interface KYCSub {
   nationalId: string;
   documentType: string | null;
   submissionMethod: string;
-  frontIdUrl: string | null;
-  backIdUrl: string | null;
+  frontIdPath: string | null;
+  backIdPath: string | null;
   faceMatchScore: number | null;
   rejectionReason: string | null;
   diditSessionId: string | null;
@@ -36,7 +36,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Private identity document" onClick={onClose}>
       <div className="relative max-w-lg w-full" onClick={e => e.stopPropagation()}>
         <img src={src} alt="ID Document" className="w-full rounded-2xl object-contain max-h-[80vh]" />
         <button onClick={onClose}
@@ -57,6 +57,11 @@ export default function KYC() {
   const [rejectModal, setRejectModal] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (lightbox?.startsWith("blob:")) URL.revokeObjectURL(lightbox);
+  }, [lightbox]);
 
   const load = () => {
     setLoading(true);
@@ -66,13 +71,26 @@ export default function KYC() {
 
   useEffect(load, []);
 
+  const openDocument = async (id: number, side: "front" | "back") => {
+    const key = `${id}:${side}`;
+    setLoadingDocument(key);
+    try {
+      const blob = await getBlob(`/kyc/admin/submissions/${id}/document/${side}`);
+      setLightbox(URL.createObjectURL(blob));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "The document could not be opened.");
+    } finally {
+      setLoadingDocument(null);
+    }
+  };
+
   const action = async (id: number, act: "approve" | "reject" | "resubmit", rejectionReason?: string) => {
     setActing(id);
     try {
       await put(`/kyc/admin/submissions/${id}/review`, { action: act, rejectionReason });
       setItems(prev => prev.map(s => s.id === id ? {
         ...s,
-        kycStatus: act === "approve" ? "approved" : act === "reject" ? "rejected" : "pending",
+        kycStatus: act === "approve" ? "approved" : act === "reject" ? "rejected" : "resubmit_required",
         rejectionReason: rejectionReason ?? s.rejectionReason,
       } : s));
       setRejectModal(null); setReason("");
@@ -197,30 +215,28 @@ export default function KYC() {
               {expanded === s.id && (
                 <div className="px-4 pb-4 border-t border-slate-800 pt-3 space-y-3">
                   {/* Uploaded ID photos (manual submissions) */}
-                  {s.submissionMethod === "manual_upload" && (s.frontIdUrl || s.backIdUrl) && (
+                  {s.submissionMethod === "manual_upload" && (s.frontIdPath || s.backIdPath) && (
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-300">Uploaded ID Photos</p>
+                      <p className="text-xs font-semibold text-slate-300">Private identity documents</p>
                       <div className="grid grid-cols-2 gap-2">
-                        {s.frontIdUrl && (
+                        {s.frontIdPath && (
                           <div className="space-y-1">
                             <p className="text-[10px] text-slate-500">Front</p>
-                            <div className="relative group cursor-pointer" onClick={() => setLightbox(s.frontIdUrl!)}>
-                              <img src={s.frontIdUrl} alt="ID Front" className="w-full rounded-xl object-cover h-28 border border-slate-700" />
-                              <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
-                                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            </div>
+                            <button type="button" disabled={loadingDocument === `${s.id}:front`} onClick={() => openDocument(s.id, "front")}
+                              className="flex h-28 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50">
+                              {loadingDocument === `${s.id}:front` ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileImage className="h-4 w-4" /><ZoomIn className="h-4 w-4" /></>}
+                              View front image
+                            </button>
                           </div>
                         )}
-                        {s.backIdUrl && (
+                        {s.backIdPath && (
                           <div className="space-y-1">
                             <p className="text-[10px] text-slate-500">Back</p>
-                            <div className="relative group cursor-pointer" onClick={() => setLightbox(s.backIdUrl!)}>
-                              <img src={s.backIdUrl} alt="ID Back" className="w-full rounded-xl object-cover h-28 border border-slate-700" />
-                              <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
-                                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            </div>
+                            <button type="button" disabled={loadingDocument === `${s.id}:back`} onClick={() => openDocument(s.id, "back")}
+                              className="flex h-28 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50">
+                              {loadingDocument === `${s.id}:back` ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FileImage className="h-4 w-4" /><ZoomIn className="h-4 w-4" /></>}
+                              View back image
+                            </button>
                           </div>
                         )}
                       </div>
@@ -236,7 +252,7 @@ export default function KYC() {
                       { l: "Phone",             v: s.phoneNumber ?? s.phone ?? "—" },
                       { l: "National ID",       v: s.nationalId },
                       { l: "Document Type",     v: s.documentType ?? "—" },
-                      { l: "Method",            v: s.submissionMethod === "manual_upload" ? "Manual Upload" : "Live (Didit)" },
+                      { l: "Method",            v: s.submissionMethod === "manual_upload" ? "Identity document upload" : "Legacy submission" },
                       { l: "Face Match %",      v: s.faceMatchScore != null ? `${(s.faceMatchScore * 100).toFixed(2)}%` : "—" },
                       { l: "Didit Session",     v: s.diditSessionId ?? "—" },
                       { l: "Submitted",         v: new Date(s.submittedAt ?? s.createdAt).toLocaleString() },

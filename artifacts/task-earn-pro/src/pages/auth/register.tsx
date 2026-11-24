@@ -175,11 +175,11 @@ export default function Register() {
           <div>
             <p className="text-4xl font-extrabold leading-tight mb-3">Find work with<br />the details up front.</p>
             <p className="text-white/60 text-sm leading-relaxed">
-              Explore Academic Writing, Data Entry, Transcription, and AI Training categories. Use Simple Quiz and your Wallet; Soft Loans and Forex are coming soon.
+              Explore Academic Writing, Data Entry, Transcription, and AI Training categories. Your Wallet is available; Simple Quiz, Soft Loans, and Forex are coming soon.
             </p>
           </div>
           <div className="space-y-2">
-            {["Expert written and file tasks across four categories", "Admin reviews submissions before rewards are credited", "Soft Loans and Forex are coming soon"].map(t => (
+            {["Expert written and file tasks across four categories", "Admin reviews submissions before rewards are credited", "Simple Quiz, Soft Loans, and Forex are coming soon"].map(t => (
               <div key={t} className="flex items-center gap-2 text-sm text-white/70">
                 <span className="text-emerald-400">✓</span> {t}
               </div>
@@ -202,7 +202,7 @@ export default function Register() {
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Create your account</h2>
-          <p className="text-muted-foreground text-sm mb-6">Create an account to explore work areas, Simple Quiz, and your Wallet.</p>
+          <p className="text-muted-foreground text-sm mb-6">Create an account to explore work areas and your Wallet. Simple Quiz is coming soon.</p>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

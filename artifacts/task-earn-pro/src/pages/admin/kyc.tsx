@@ -1,12 +1,11 @@
-import { useState } from "react";
-import { useGetKycSubmissions, useReviewKycSubmission } from "@workspace/api-client-react";
+import { useEffect, useState } from "react";
+import { getKycSubmissionDocument, useGetKycSubmissions, useReviewKycSubmission } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   ShieldCheck, ShieldX, Shield, ShieldAlert, Loader2,
-  Search, ChevronDown, ChevronUp, CheckCircle, XCircle, RefreshCw,
+  Search, ChevronDown, ChevronUp, CheckCircle, XCircle, RefreshCw, FileImage, X,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
@@ -24,12 +23,34 @@ export default function AdminKycPage() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionId, setActionId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ url: string; label: string } | null>(null);
+  const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+  }, [preview]);
 
   const { data: submissions, isLoading, refetch } = useGetKycSubmissions({
     query: { queryKey: ["kycSubmissions"] },
   });
 
   const reviewMutation = useReviewKycSubmission();
+
+  const openDocument = async (id: number, side: "front" | "back") => {
+    const key = `${id}:${side}`;
+    setLoadingDocument(key);
+    try {
+      const file = await getKycSubmissionDocument(id, side);
+      setPreview({ url: URL.createObjectURL(file), label: `${side === "front" ? "Front" : "Back"} identity document` });
+    } catch (error) {
+      const detail = (error as { data?: { error?: string }; message?: string }).data?.error
+        ?? (error as { message?: string }).message
+        ?? "The private document could not be opened.";
+      toast({ title: "Document unavailable", description: detail, variant: "destructive" });
+    } finally {
+      setLoadingDocument(null);
+    }
+  };
 
   const filtered = (submissions ?? []).filter(s => {
     const matchSearch = !search || [s.userEmail, s.userName, s.fullName, s.nationalId]
@@ -145,7 +166,7 @@ export default function AdminKycPage() {
                         ["National ID", sub.nationalId],
                         ["Face Match", sub.faceMatchScore != null ? `${(sub.faceMatchScore * 100).toFixed(1)}%` : "—"],
                         ["Submitted", sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : "—"],
-                        ["Didit Session", sub.diditSessionId ?? "—"],
+                         ["Document Type", sub.documentType ?? "—"],
                       ].map(([label, value]) => (
                         <div key={label}>
                           <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -153,6 +174,26 @@ export default function AdminKycPage() {
                         </div>
                       ))}
                     </div>
+
+                    {(sub.frontIdPath || sub.backIdPath) && (
+                      <div className="rounded-xl border border-border bg-muted/20 p-3">
+                        <p className="mb-2 text-xs font-semibold">Private identity documents</p>
+                        <div className="flex flex-wrap gap-2">
+                          {sub.frontIdPath && (
+                            <Button type="button" variant="outline" size="sm" disabled={loadingDocument === `${sub.id}:front`} onClick={() => openDocument(sub.id, "front")}>
+                              {loadingDocument === `${sub.id}:front` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileImage className="mr-2 h-4 w-4" />}
+                              View front image
+                            </Button>
+                          )}
+                          {sub.backIdPath && (
+                            <Button type="button" variant="outline" size="sm" disabled={loadingDocument === `${sub.id}:back`} onClick={() => openDocument(sub.id, "back")}>
+                              {loadingDocument === `${sub.id}:back` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileImage className="mr-2 h-4 w-4" />}
+                              View back image
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {sub.rejectionReason && (
                       <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
@@ -215,6 +256,17 @@ export default function AdminKycPage() {
               </div>
             );
           })}
+        </div>
+      )}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={preview.label} onClick={() => setPreview(null)}>
+          <div className="relative max-h-full w-full max-w-3xl rounded-2xl bg-card p-3 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold">{preview.label}</p>
+              <Button type="button" variant="ghost" size="icon" aria-label="Close image preview" onClick={() => setPreview(null)}><X className="h-4 w-4" /></Button>
+            </div>
+            <img src={preview.url} alt={preview.label} className="mx-auto max-h-[75vh] w-auto max-w-full rounded-lg object-contain" />
+          </div>
         </div>
       )}
     </div>

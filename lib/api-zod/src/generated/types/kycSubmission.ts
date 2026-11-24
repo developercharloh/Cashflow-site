@@ -20,9 +20,9 @@ export interface KycSubmission {
   /** @nullable */
   documentType?: string | null;
   /** @nullable */
-  frontIdUrl?: string | null;
+  frontIdPath?: string | null;
   /** @nullable */
-  backIdUrl?: string | null;
+  backIdPath?: string | null;
   /** @nullable */
   faceMatchScore?: number | null;
   kycStatus: string;

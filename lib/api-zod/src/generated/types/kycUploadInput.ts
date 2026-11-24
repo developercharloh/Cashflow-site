@@ -5,6 +5,7 @@
  * TaskEarn Pro API
  * OpenAPI spec version: 0.1.0
  */
+import type { KycUploadInputDocumentType } from './kycUploadInputDocumentType';
 
 export interface KycUploadInput {
   fullName: string;
@@ -12,8 +13,8 @@ export interface KycUploadInput {
   country: string;
   phoneNumber: string;
   nationalId: string;
-  documentType: string;
-  frontIdImage: string;
+  documentType: KycUploadInputDocumentType;
+  frontIdPath: string;
   /** @nullable */
-  backIdImage?: string | null;
+  backIdPath?: string | null;
 }

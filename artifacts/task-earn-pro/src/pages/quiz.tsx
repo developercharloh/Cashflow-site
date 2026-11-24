@@ -1,219 +1,23 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
-import { useGetQuizQuestions, useSubmitQuiz, getGetMeQueryKey, getGetQuizQuestionsQueryKey } from "@workspace/api-client-react";
+import { Link } from "wouter";
+import { ArrowLeft, Clock3, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Trophy, Loader2, ChevronRight, Star } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/hooks/use-auth";
 
-export default function Quiz() {
-  const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [result, setResult] = useState<{ score: number; totalQuestions: number; bonusEarned: number; message: string } | null>(null);
-
-  const { data: questions, isLoading, isError, refetch } = useGetQuizQuestions({
-    query: { enabled: !user?.quizCompleted, queryKey: getGetQuizQuestionsQueryKey() },
-  });
-  const submitMutation = useSubmitQuiz();
-
-  if (user?.quizCompleted && !result) {
-    return (
-      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
-        <section data-testid="status-quiz-completed" className="w-full max-w-lg rounded-2xl border border-border bg-card p-7 text-center sm:p-9">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-accent text-primary"><CheckCircle className="h-6 w-6" /></div>
-          <h1 className="mt-5 font-serif text-3xl">Simple Quiz completed</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">This one-time platform-funded quiz feature has already been completed on your account. It is separate from client freelance work.</p>
-          <Button data-testid="button-quiz-completed-home" className="mt-6 w-full" onClick={() => setLocation("/dashboard")}>Back to Home</Button>
-        </section>
-      </div>
-    );
-  }
-
-  if (isLoading || !questions) {
-    return (
-      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
-        {isError ? (
-          <div role="alert" className="max-w-md rounded-2xl border border-border bg-card p-6 text-center">
-            <p className="font-semibold">Simple Quiz could not load.</p>
-            <button data-testid="button-retry-quiz" onClick={() => void refetch()} className="mt-3 text-sm font-semibold text-primary underline underline-offset-4">Try again</button>
-          </div>
-        ) : <div aria-label="Loading Simple Quiz" className="h-40 w-full max-w-xl animate-pulse rounded-2xl bg-muted" />}
-      </div>
-    );
-  }
-
-  if (questions.length === 0) {
-    return (
-      <div className="min-h-[70dvh] flex items-center justify-center bg-background p-4">
-        <section data-testid="empty-simple-quiz" className="max-w-md rounded-2xl border border-border bg-card p-7 text-center">
-          <h1 className="font-serif text-2xl">Simple Quiz is unavailable right now</h1>
-          <p className="mt-3 text-sm text-muted-foreground">Please try again later.</p>
-          <button data-testid="button-retry-empty-quiz" onClick={() => void refetch()} className="mt-4 text-sm font-semibold text-primary underline underline-offset-4">Check again</button>
-        </section>
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[currentIndex];
-  const progress = ((currentIndex) / questions.length) * 100;
-
-  const handleSelect = (option: string) => {
-    setSelectedAnswer(option);
-  };
-
-  const handleNext = () => {
-    if (!selectedAnswer) return;
-    const newAnswers = { ...answers, [currentQuestion.id]: selectedAnswer };
-    setAnswers(newAnswers);
-    setSelectedAnswer(null);
-
-    if (currentIndex === questions.length - 1) {
-      const payload = Object.entries(newAnswers).map(([qId, answer]) => ({
-        questionId: parseInt(qId),
-        answer,
-      }));
-      submitMutation.mutate({ data: { answers: payload } }, {
-        onSuccess: (res) => {
-          setResult(res);
-          queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        },
-        onError: () => {
-          toast({ title: "Submission failed", variant: "destructive" });
-        }
-      });
-    } else {
-      setCurrentIndex(i => i + 1);
-    }
-  };
-
-  if (result) {
-    const pct = Math.round((result.score / result.totalQuestions) * 100);
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md text-center space-y-6"
-        >
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-            <Trophy className="w-12 h-12 text-primary" />
-          </div>
-          <div>
-            <h1 data-testid="status-quiz-result" className="text-3xl font-bold">Simple Quiz complete</h1>
-            <p className="text-muted-foreground mt-2">{result.message}</p>
-          </div>
-          <Card className="border-border">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Score</span>
-                <Badge className="text-lg px-4 py-1">{result.score}/{result.totalQuestions}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Accuracy</span>
-                <span className="text-2xl font-bold text-primary">{pct}%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Platform-funded quiz reward</span>
-                <span className="text-2xl font-bold text-green-500">${result.bonusEarned.toFixed(2)}</span>
-              </div>
-            </CardContent>
-          </Card>
-          <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
-            <Star className="w-4 h-4 text-yellow-500" />
-            This is a one-time platform-funded quiz reward, not client payment.
-          </div>
-          <Button data-testid="button-quiz-result-home" className="w-full" size="lg" onClick={() => setLocation("/dashboard")}>
-            Back to Home <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
-
+export default function QuizPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-xl space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Simple Quiz</h1>
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">A separate interactive quiz with a one-time platform-funded reward of $1–$5 based on quiz results. It is not a client freelance job or client payment.</p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Question {currentIndex + 1} of {questions.length}</span>
-            <span>{Math.round(progress)}% complete</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentIndex}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.25 }}
-          >
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-lg leading-relaxed">
-                  {currentQuestion.question}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {currentQuestion.options.map((opt, optionIndex) => (
-                  <button
-                    key={opt}
-                    data-testid={`quiz-option-${optionIndex + 1}`}
-                    aria-pressed={selectedAnswer === opt}
-                    onClick={() => handleSelect(opt)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-200 ${
-                      selectedAnswer === opt
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/50 hover:bg-muted"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedAnswer === opt ? "border-primary" : "border-muted-foreground"
-                      }`}>
-                        {selectedAnswer === opt && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                      </div>
-                      <span>{opt}</span>
-                    </div>
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={handleNext}
-          disabled={!selectedAnswer || submitMutation.isPending}
-          data-testid="button-next"
-        >
-          {submitMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          ) : currentIndex === questions.length - 1 ? (
-            <><CheckCircle className="w-4 h-4 mr-2" /> Submit Quiz</>
-          ) : (
-            <>Next <ChevronRight className="w-4 h-4 ml-2" /></>
-          )}
-        </Button>
+    <main className="mx-auto flex min-h-[65vh] max-w-lg flex-col items-center justify-center px-5 py-12 text-center">
+      <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">
+        <Sparkles className="h-8 w-8" />
       </div>
-    </div>
+      <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <Clock3 className="h-3.5 w-3.5" /> Coming soon
+      </p>
+      <h1 className="font-serif text-3xl">Simple Quiz</h1>
+      <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
+        This feature is not available yet. Browse the available work categories while we prepare it.
+      </p>
+      <Link href="/dashboard" className="mt-7">
+        <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to home</Button>
+      </Link>
+    </main>
   );
 }

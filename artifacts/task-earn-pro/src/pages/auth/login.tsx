@@ -70,12 +70,12 @@ export default function Login() {
               Welcome back.<br />Pick up where you left off.
             </p>
             <p className="text-white/60 text-sm leading-relaxed">
-              Sign in to explore academic writing, data entry, transcription, AI training, Simple Quiz, and your wallet.
+              Sign in to explore academic writing, data entry, transcription, AI training, and your wallet. Simple Quiz is coming soon.
             </p>
           </div>
 
           <div className="space-y-3">
-            {["Expert tasks in four work categories", "Simple Quiz and wallet tools", "Soft Loans and Forex are coming soon"].map((text) => (
+            {["Expert tasks in four work categories", "Wallet tools", "Simple Quiz, Soft Loans, and Forex are coming soon"].map((text) => (
               <div key={text} className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-emerald-300">•</span><span className="text-sm text-white/80">{text}</span></div>
             ))}
           </div>

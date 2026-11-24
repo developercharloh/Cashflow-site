@@ -341,7 +341,7 @@ export default function WalletPage() {
           <button
             onClick={() => {
               if (!isKycApproved) {
-                toast({ title: "Identity Verification Required", description: "Verification is coming soon. Only already verified accounts can withdraw.", variant: "destructive" });
+                toast({ title: "Identity verification required", description: "Complete identity verification to request a withdrawal.", variant: "destructive" });
                 setLocation("/kyc");
                 return;
               }

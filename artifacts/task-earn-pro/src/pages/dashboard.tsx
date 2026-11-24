@@ -44,10 +44,10 @@ export default function Dashboard() {
       </section>
 
       <section className="mt-8 grid gap-3 sm:grid-cols-2" aria-label="Other LipwaTasks features">
-        <Link href="/quiz" data-testid="link-home-simple-quiz" className="flex items-center gap-4 rounded-2xl border border-primary/20 bg-[#e9eee8] p-5 transition-transform hover:-translate-y-0.5">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-card text-primary"><Sparkles className="h-5 w-5" /></div>
-          <div className="flex-1"><p className="font-mono text-[9px] uppercase tracking-[.17em] text-primary">{user?.quizCompleted ? "Completed" : "Platform-funded feature"}</p><h2 className="mt-1 font-serif text-xl">Simple Quiz</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{user?.quizCompleted ? "This one-time quiz has been completed on your account." : "One-time $1–$5 platform-funded quiz reward based on results; separate from client work."}</p></div><ArrowRight className="h-4 w-4 text-primary" />
-        </Link>
+        <article data-testid="link-home-simple-quiz" aria-label="Simple Quiz coming soon" className="flex items-center gap-4 rounded-2xl border border-border bg-muted/40 p-5">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-card text-muted-foreground"><Sparkles className="h-5 w-5" /></div>
+          <div className="flex-1"><p className="font-mono text-[9px] uppercase tracking-[.17em] text-muted-foreground">Coming soon</p><h2 className="mt-1 font-serif text-xl">Simple Quiz</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">This feature is not available yet.</p></div>
+        </article>
         <Link href="/wallet" data-testid="link-home-wallet" className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 transition-transform hover:-translate-y-0.5">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-primary"><WalletCards className="h-5 w-5" /></div>
           <div className="flex-1"><p className="font-mono text-[9px] uppercase tracking-[.17em] text-muted-foreground">Account</p><h2 className="mt-1 font-serif text-xl">Wallet</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">View your balance and wallet activity.</p></div><ArrowRight className="h-4 w-4 text-primary" />

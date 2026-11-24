@@ -33,11 +33,7 @@ export default function VerifyEmail() {
       onSuccess: () => {
         toast({ title: "Email Verified!", description: "Your email has been verified successfully." });
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        if (!user?.quizCompleted) {
-          setLocation("/quiz");
-        } else {
-          setLocation("/dashboard");
-        }
+        setLocation("/dashboard");
       },
       onError: () => {
         toast({ title: "Invalid Code", description: "The code you entered is incorrect.", variant: "destructive" });

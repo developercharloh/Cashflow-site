@@ -1,4 +1,5 @@
 import { useGetKycStatus } from "@workspace/api-client-react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,8 @@ export default function ProfilePage() {
     query: { queryKey: ["kycStatus"], enabled: !!user },
   });
   const isKycApproved = kyc?.kycStatus === "approved";
+  const isKycUnderReview = (kyc?.kycStatus === "pending" && !!kyc?.submission) || kyc?.submission?.kycStatus === "pending_review";
+  const needsCorrection = kyc?.kycStatus === "rejected" || kyc?.submission?.kycStatus === "resubmit_required";
 
   return (
     <div className="px-4 pt-4 pb-24 space-y-5 max-w-lg mx-auto">
@@ -70,30 +73,38 @@ export default function ProfilePage() {
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-border">
           <p className="font-bold text-sm">Identity Verification</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Required for withdrawals · New checks are coming soon</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Required before requesting a withdrawal</p>
         </div>
         <div className="p-4 space-y-4">
           <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-semibold ${
             isKycApproved
               ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-              : "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+              : isKycUnderReview
+                ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+                : needsCorrection
+                  ? "bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800"
+                  : "bg-muted text-muted-foreground border-border"
           }`}>
             {kycLoading
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : isKycApproved
                 ? <ShieldCheck className="w-4 h-4" />
-                : <Clock3 className="w-4 h-4" />}
-            {kycLoading ? "Checking status…" : isKycApproved ? "Verified" : "Coming Soon"}
+                : isKycUnderReview ? <Clock3 className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+            {kycLoading ? "Checking status…" : isKycApproved ? "Verified" : isKycUnderReview ? "Under review" : needsCorrection ? "Update needed" : "Not verified"}
           </div>
           <p className="text-xs text-muted-foreground">
             {isKycApproved
               ? "Your identity is verified. Withdrawals remain available."
-              : "We are not collecting identity details right now. Withdrawals require an already approved account."}
+              : isKycUnderReview
+                ? "Your identity check is under review. The status will update here."
+                : "Complete identity verification to request a withdrawal."}
           </p>
           {!isKycApproved && (
-            <Button variant="outline" className="w-full" disabled>
-              Verification Coming Soon
-            </Button>
+            <Link href="/kyc">
+              <Button variant="outline" className="w-full">
+                {isKycUnderReview ? "View status" : needsCorrection ? "Update details" : "Complete verification"}
+              </Button>
+            </Link>
           )}
         </div>
       </div>

@@ -131,7 +131,7 @@ export function TaskLibraryPanel({
             </p>
             <h2 className="text-lg font-extrabold tracking-tight text-white sm:text-xl">Original task library</h2>
             <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-400">
-              Platform-authored work, ready for your review. Set the reward and completion cap before it appears in the worker app.
+              These original templates stay in the library after posting, so you can reuse them whenever the worker feed needs more work. Set a fresh reward budget and completion cap for each listing.
             </p>
           </div>
           <label className="flex w-full items-center gap-2.5 rounded-xl border border-slate-700 bg-white px-3.5 py-3 transition focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-100 xl:max-w-sm">

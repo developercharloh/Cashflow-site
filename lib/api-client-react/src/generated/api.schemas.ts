@@ -806,17 +806,50 @@ export interface KycSubmitInput {
   nationalId: string;
 }
 
+export type KycUploadInputDocumentType = typeof KycUploadInputDocumentType[keyof typeof KycUploadInputDocumentType];
+
+
+export const KycUploadInputDocumentType = {
+  national_id: 'national_id',
+  passport: 'passport',
+  other: 'other',
+} as const;
+
 export interface KycUploadInput {
   fullName: string;
   dateOfBirth: string;
   country: string;
   phoneNumber: string;
   nationalId: string;
-  documentType: string;
-  frontIdImage: string;
+  documentType: KycUploadInputDocumentType;
+  frontIdPath: string;
   /** @nullable */
-  backIdImage?: string | null;
+  backIdPath?: string | null;
 }
+
+export type KycUploadResponseKycStatus = typeof KycUploadResponseKycStatus[keyof typeof KycUploadResponseKycStatus];
+
+
+export const KycUploadResponseKycStatus = {
+  pending_review: 'pending_review',
+} as const;
+
+export interface KycUploadResponse {
+  ok: boolean;
+  kycStatus: KycUploadResponseKycStatus;
+}
+
+export interface KycUploadTokenRequest {
+  type: string;
+  pathname: string;
+  clientPayload?: string;
+  [key: string]: unknown;
+ }
+
+export interface KycUploadTokenResponse {
+  token: string;
+  [key: string]: unknown;
+ }
 
 export interface KycSubmission {
   id: number;
@@ -832,9 +865,9 @@ export interface KycSubmission {
   /** @nullable */
   documentType?: string | null;
   /** @nullable */
-  frontIdUrl?: string | null;
+  frontIdPath?: string | null;
   /** @nullable */
-  backIdUrl?: string | null;
+  backIdPath?: string | null;
   /** @nullable */
   faceMatchScore?: number | null;
   kycStatus: string;
@@ -854,9 +887,27 @@ export interface KycReviewInput {
   rejectionReason?: string;
 }
 
+/**
+ * @nullable
+ */
+export type KycStatusResponseSubmission = {
+  id?: number;
+  fullName?: string;
+  country?: string;
+  kycStatus?: string;
+  submittedAt?: string;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  faceMatchScore?: number | null;
+} | null;
+
 export interface KycStatusResponse {
   kycStatus: string;
-  kycSessionId?: string;
+  /** @nullable */
+  kycSessionId?: string | null;
+  /** @nullable */
+  submission?: KycStatusResponseSubmission;
 }
 
 export interface KycSessionResponse {

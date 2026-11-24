@@ -52,13 +52,13 @@ export default function Landing() {
                 <div className="space-y-4 py-6">
                   {[
                     ["Work", "Four expert task categories"],
-                    ["Simple Quiz", "A separate platform-funded feature"],
+                    ["Simple Quiz", "Coming Soon"],
                     ["Wallet", "Your account balance and activity"],
                   ].map(([label, text], i) => <div key={label} className="flex items-center gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-primary/20 font-mono text-xs text-primary">0{i + 1}</span><div><p className="text-sm font-semibold">{label}</p><p className="text-sm text-muted-foreground">{text}</p></div><Check className="ml-auto h-4 w-4 text-primary" /></div>)}
                 </div>
                 <div className="rounded-xl bg-muted/70 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold"><ClipboardList className="h-4 w-4 text-primary" /> Simple Quiz reward</div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">One-time, platform-funded $1–$5 reward based on quiz results. Not a client job or client payment.</p>
+                  <div className="flex items-center gap-2 text-sm font-semibold"><ClipboardList className="h-4 w-4 text-primary" /> Simple Quiz · Coming Soon</div>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Simple Quiz is not available yet.</p>
                 </div>
               </div>
             </div>
@@ -87,7 +87,7 @@ export default function Landing() {
           <div className="mx-auto max-w-7xl px-5 py-20 md:px-10 md:py-24">
             <div className="max-w-2xl"><p className="font-mono text-[11px] uppercase tracking-[.2em] text-primary">More in the app</p><h2 className="mt-4 font-serif text-4xl leading-tight md:text-5xl">One home for work and useful tools.</h2></div>
             <div className="mt-9 grid gap-3 md:grid-cols-2">
-               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><ClipboardList className="h-5 w-5 text-primary" /><h3 className="font-serif text-xl">Simple Quiz</h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">A separate interactive quiz with a one-time platform-funded $1–$5 reward based on quiz results. Not freelance work, a client job, or a client payment.</p><Link href="/auth/register" data-testid="link-landing-quiz" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">Learn about Lipwa Tasks <ArrowRight className="h-4 w-4" /></Link></article>
+               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5" data-testid="feature-simple-quiz-coming-soon"><div className="flex items-center gap-3"><ClipboardList className="h-5 w-5 text-muted-foreground" /><h3 className="font-serif text-xl">Simple Quiz <span className="font-sans text-xs text-muted-foreground">Coming Soon</span></h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Simple Quiz is not available yet.</p></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><WalletCards className="h-5 w-5 text-primary" /><h3 className="font-serif text-xl">Wallet</h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Review your account balance and wallet activity in the existing wallet.</p></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><Landmark className="h-5 w-5 text-muted-foreground" /><h3 className="font-serif text-xl">Soft Loans <span className="font-sans text-xs text-muted-foreground">Coming Soon</span></h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Soft Loans are not available yet.</p></article>
               <article className="rounded-2xl border border-[#d4d2c8] bg-card p-5"><div className="flex items-center gap-3"><CandlestickChart className="h-5 w-5 text-muted-foreground" /><h3 className="font-serif text-xl">Forex <span className="font-sans text-xs text-muted-foreground">Coming Soon</span></h3></div><p className="mt-3 text-sm leading-6 text-muted-foreground">Forex is not available yet. No forex trades or deposits are available.</p></article>

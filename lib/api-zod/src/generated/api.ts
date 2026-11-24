@@ -147,31 +147,14 @@ export const ClaimWelcomeGiftResponse = zod.object({
 
 
 /**
- * @summary Get welcome quiz questions (10 random)
- */
-export const GetQuizQuestionsResponseItem = zod.object({
-  "id": zod.number(),
-  "question": zod.string(),
-  "options": zod.array(zod.string())
-})
-export const GetQuizQuestionsResponse = zod.array(GetQuizQuestionsResponseItem)
-
-
-/**
- * @summary Submit welcome quiz answers
+ * @deprecated
+ * @summary Simple Quiz is coming soon
  */
 export const SubmitQuizBody = zod.object({
   "answers": zod.array(zod.object({
   "questionId": zod.number(),
   "answer": zod.string()
 }))
-})
-
-export const SubmitQuizResponse = zod.object({
-  "score": zod.number(),
-  "totalQuestions": zod.number(),
-  "bonusEarned": zod.number(),
-  "message": zod.string()
 })
 
 
@@ -648,21 +631,22 @@ export const BuyTranscriptionMinutesResponse = zod.object({
  */
 export const GetKycStatusResponse = zod.object({
   "kycStatus": zod.string(),
-  "kycSessionId": zod.string().optional()
+  "kycSessionId": zod.string().nullish(),
+  "submission": zod.object({
+  "id": zod.number().optional(),
+  "fullName": zod.string().optional(),
+  "country": zod.string().optional(),
+  "kycStatus": zod.string().optional(),
+  "submittedAt": zod.string().optional(),
+  "rejectionReason": zod.string().nullish(),
+  "faceMatchScore": zod.number().nullish()
+}).nullish()
 })
 
 
 /**
- * @summary Create a Didit identity verification session
- */
-export const CreateKycSessionResponse = zod.object({
-  "url": zod.string(),
-  "sessionId": zod.string()
-})
-
-
-/**
- * @summary Submit personal info for KYC verification
+ * @deprecated
+ * @summary Submit personal info for external KYC verification (disabled)
  */
 export const SubmitKycBody = zod.object({
   "fullName": zod.string(),
@@ -672,14 +656,9 @@ export const SubmitKycBody = zod.object({
   "nationalId": zod.string()
 })
 
-export const SubmitKycResponse = zod.object({
-  "url": zod.string(),
-  "sessionId": zod.string()
-})
-
 
 /**
- * @summary Upload ID document photos for manual KYC review
+ * @summary Submit private identity documents for manual review
  */
 export const UploadKycDocumentsBody = zod.object({
   "fullName": zod.string(),
@@ -687,9 +666,23 @@ export const UploadKycDocumentsBody = zod.object({
   "country": zod.string(),
   "phoneNumber": zod.string(),
   "nationalId": zod.string(),
-  "documentType": zod.string(),
-  "frontIdImage": zod.string(),
-  "backIdImage": zod.string().nullish()
+  "documentType": zod.enum(['national_id', 'passport', 'other']),
+  "frontIdPath": zod.string(),
+  "backIdPath": zod.string().nullish()
+})
+
+
+/**
+ * @summary Request a private upload token for a KYC document
+ */
+export const RequestKycDocumentUploadBody = zod.object({
+  "type": zod.string(),
+  "pathname": zod.string(),
+  "clientPayload": zod.string().optional()
+})
+
+export const RequestKycDocumentUploadResponse = zod.object({
+  "token": zod.string()
 })
 
 
@@ -708,8 +701,8 @@ export const GetKycSubmissionsResponseItem = zod.object({
   "nationalId": zod.string(),
   "submissionMethod": zod.string().optional(),
   "documentType": zod.string().nullish(),
-  "frontIdUrl": zod.string().nullish(),
-  "backIdUrl": zod.string().nullish(),
+  "frontIdPath": zod.string().nullish(),
+  "backIdPath": zod.string().nullish(),
   "faceMatchScore": zod.number().nullish(),
   "kycStatus": zod.string(),
   "rejectionReason": zod.string().nullish(),
@@ -719,6 +712,15 @@ export const GetKycSubmissionsResponseItem = zod.object({
   "reviewedBy": zod.number().nullish()
 })
 export const GetKycSubmissionsResponse = zod.array(GetKycSubmissionsResponseItem)
+
+
+/**
+ * @summary Admin-only download of a private identity document
+ */
+export const GetKycSubmissionDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "side": zod.enum(['front', 'back'])
+})
 
 
 /**

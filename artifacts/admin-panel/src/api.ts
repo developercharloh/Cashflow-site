@@ -19,6 +19,14 @@ export async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function getBlob(path: string): Promise<Blob> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: headers({ Accept: "image/jpeg,image/png,image/webp" }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.blob();
+}
+
 export async function post<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",

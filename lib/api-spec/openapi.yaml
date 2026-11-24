@@ -780,20 +780,18 @@ paths:
     post:
       operationId: createKycSession
       tags: [kyc]
-      summary: Create a Didit identity verification session
+      deprecated: true
+      summary: Create a Didit identity verification session (disabled)
       responses:
-        "200":
-          description: Verification session URL
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/KycSessionResponse"
+        "503":
+          description: External verification is disabled; use manual document submission
 
   /kyc/submit:
     post:
       operationId: submitKyc
       tags: [kyc]
-      summary: Submit personal info for KYC verification
+      deprecated: true
+      summary: Submit personal info for external KYC verification (disabled)
       requestBody:
         required: true
         content:
@@ -801,18 +799,14 @@ paths:
             schema:
               $ref: "#/components/schemas/KycSubmitInput"
       responses:
-        "200":
-          description: Didit session created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/KycSessionResponse"
+        "503":
+          description: External verification is disabled; use manual document submission
 
   /kyc/upload-documents:
     post:
       operationId: uploadKycDocuments
       tags: [kyc]
-      summary: Upload ID document photos for manual KYC review
+      summary: Submit private identity documents for manual review
       requestBody:
         required: true
         content:
@@ -820,8 +814,31 @@ paths:
             schema:
               $ref: "#/components/schemas/KycUploadInput"
       responses:
+        "201":
+          description: Identity application saved for manual review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycUploadResponse"
+
+  /kyc/upload-url:
+    post:
+      operationId: requestKycDocumentUpload
+      tags: [kyc]
+      summary: Request a private upload token for a KYC document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycUploadTokenRequest"
+      responses:
         "200":
-          description: Documents uploaded, pending admin review
+          description: Private upload token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycUploadTokenResponse"
 
   /kyc/admin/submissions:
     get:
@@ -837,6 +854,44 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/KycSubmission"
+
+  /kyc/admin/submissions/{id}/document/{side}:
+    get:
+      operationId: getKycSubmissionDocument
+      tags: [kyc]
+      summary: Admin-only download of a private identity document
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: side
+          required: true
+          schema:
+            type: string
+            enum: [front, back]
+      responses:
+        "200":
+          description: Private identity image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Admin access required
+        "404":
+          description: Document not found
 
   /kyc/admin/submissions/{id}/review:
     put:
@@ -2755,7 +2810,7 @@ components:
 
     KycUploadInput:
       type: object
-      required: [fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdImage]
+      required: [fullName, dateOfBirth, country, phoneNumber, nationalId, documentType, frontIdPath]
       properties:
         fullName:
           type: string
@@ -2769,10 +2824,41 @@ components:
           type: string
         documentType:
           type: string
-        frontIdImage:
+          enum: [national_id, passport, other]
+        frontIdPath:
           type: string
-        backIdImage:
+        backIdPath:
           type: ["string", "null"]
+
+    KycUploadResponse:
+      type: object
+      required: [ok, kycStatus]
+      properties:
+        ok:
+          type: boolean
+        kycStatus:
+          type: string
+          enum: [pending_review]
+
+    KycUploadTokenRequest:
+      type: object
+      required: [type, pathname]
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+        pathname:
+          type: string
+        clientPayload:
+          type: string
+
+    KycUploadTokenResponse:
+      type: object
+      required: [token]
+      additionalProperties: true
+      properties:
+        token:
+          type: string
 
     KycSubmission:
       type: object
@@ -2800,9 +2886,9 @@ components:
           type: string
         documentType:
           type: ["string", "null"]
-        frontIdUrl:
+        frontIdPath:
           type: ["string", "null"]
-        backIdUrl:
+        backIdPath:
           type: ["string", "null"]
         faceMatchScore:
           type: ["number", "null"]
@@ -2835,7 +2921,24 @@ components:
         kycStatus:
           type: string
         kycSessionId:
-          type: string
+          type: ["string", "null"]
+        submission:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            fullName:
+              type: string
+            country:
+              type: string
+            kycStatus:
+              type: string
+            submittedAt:
+              type: string
+            rejectionReason:
+              type: ["string", "null"]
+            faceMatchScore:
+              type: ["number", "null"]
 
     KycSessionResponse:
       type: object

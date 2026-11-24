@@ -5,8 +5,12 @@
  * TaskEarn Pro API
  * OpenAPI spec version: 0.1.0
  */
+import type { KycStatusResponseSubmission } from './kycStatusResponseSubmission';
 
 export interface KycStatusResponse {
   kycStatus: string;
-  kycSessionId?: string;
+  /** @nullable */
+  kycSessionId?: string | null;
+  /** @nullable */
+  submission?: KycStatusResponseSubmission;
 }
