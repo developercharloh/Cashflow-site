@@ -38,6 +38,7 @@ function NavItem({ to, label, Icon, onNavigate }: { to: string; label: string; I
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const [location] = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -124,6 +125,22 @@ export default function Layout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      {user?.isAdmin && !location.startsWith("/support") && (
+        <Link
+          href="/support"
+          data-testid="floating-support-link"
+          aria-label="Open support tickets"
+          title="Support tickets"
+          className="fixed z-[60] flex h-12 items-center gap-2 rounded-full bg-blue-600 px-4 text-white shadow-lg shadow-blue-950/30 ring-1 ring-white/15 transition-transform hover:-translate-y-0.5 hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+          style={{
+            right: "max(1rem, env(safe-area-inset-right))",
+            bottom: "max(1rem, env(safe-area-inset-bottom))",
+          }}
+        >
+          <Headset className="h-4 w-4" aria-hidden="true" />
+          <span className="text-sm font-semibold">Support</span>
+        </Link>
+      )}
     </div>
   );
 }

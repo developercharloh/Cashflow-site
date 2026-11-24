@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Home, Search, Wallet, Landmark, CandlestickChart, UserRound } from "lucide-react";
+import { Home, Search, Wallet, Landmark, CandlestickChart, UserRound, Headset } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home",       icon: Home },
@@ -137,6 +137,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       )}
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
+      {!isAdminRoute && !location.startsWith("/support") && (
+        <Link
+          href="/support"
+          data-testid="floating-support-link"
+          aria-label="Open support"
+          title="Support"
+          className="fixed z-[60] flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-primary-foreground shadow-lg shadow-primary/25 ring-1 ring-primary-foreground/15 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          style={{
+            right: "max(1rem, env(safe-area-inset-right))",
+            bottom: "calc(84px + env(safe-area-inset-bottom))",
+          }}
+        >
+          <Headset className="h-4 w-4" aria-hidden="true" />
+          <span className="text-sm font-semibold">Support</span>
+        </Link>
+      )}
       {!isAdminRoute && <BottomNav />}
     </div>
   );
