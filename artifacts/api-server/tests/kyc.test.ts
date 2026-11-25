@@ -392,6 +392,43 @@ describe("private KYC routes", () => {
     expect(del).not.toHaveBeenCalled();
   });
 
+  it("retains uploads at and newer than the fixed retention cutoff", async () => {
+    const app = createApp();
+    const fixedNow = new Date("2025-01-03T12:00:00.000Z");
+    const cutoff = new Date(fixedNow.getTime() - 24 * 60 * 60 * 1000);
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNow.getTime());
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [
+        blob("uploads/kyc/7/just-before-cutoff.jpg", new Date(cutoff.getTime() - 1)),
+        blob("uploads/kyc/7/exactly-at-cutoff.jpg", cutoff),
+        blob("uploads/kyc/7/just-after-cutoff.jpg", new Date(cutoff.getTime() + 1)),
+      ],
+      hasMore: false,
+    });
+
+    try {
+      const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+        method: "POST",
+        token: "admin",
+        body: { dryRun: false },
+      });
+      const result = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result).toMatchObject({
+        cutoff: cutoff.toISOString(),
+        scanned: 3,
+        olderThanCutoff: 1,
+        eligible: 1,
+        deleted: 1,
+      });
+      expect(del).toHaveBeenCalledExactlyOnceWith(["uploads/kyc/7/just-before-cutoff.jpg"]);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("deletes only eligible stale objects when an admin explicitly disables dry-run", async () => {
     const app = createApp();
     queueSelectResults(...authenticatedAdminReads(), [
