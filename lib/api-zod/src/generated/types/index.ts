@@ -59,6 +59,8 @@ export * from './kycStatusResponse';
 export * from './kycStatusResponseSubmission';
 export * from './kycSubmission';
 export * from './kycSubmitInput';
+export * from './kycUploadCleanupInput';
+export * from './kycUploadCleanupResponse';
 export * from './kycUploadInput';
 export * from './kycUploadInputDocumentType';
 export * from './kycUploadResponse';

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Readable } from "node:stream";
-import { get, head } from "@vercel/blob";
+import { del, get, head, list } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { db, usersTable, kycSubmissionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -9,6 +9,11 @@ import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requ
 const router = Router();
 const MAX_ID_IMAGE_BYTES = 5 * 1024 * 1024;
 const ID_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const KYC_UPLOAD_RETENTION_MS = 24 * 60 * 60 * 1000;
+const KYC_CLEANUP_PAGE_SIZE = 1000;
+const KYC_CLEANUP_MAX_PAGES = 5;
+const KYC_CLEANUP_MAX_OBJECTS = 100;
+const KYC_UPLOAD_PREFIX = "uploads/kyc/";
 
 // ─── GET /kyc/status ──────────────────────────────────────────────────────────
 router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
@@ -247,6 +252,100 @@ router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: Auth
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Remove only old, unreferenced KYC uploads. A dry run is the default so an
+// administrator can inspect the result before allowing private files to be deleted.
+router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const dryRun = req.body?.dryRun ?? true;
+    if (typeof dryRun !== "boolean") {
+      res.status(400).json({ error: "dryRun must be a boolean." });
+      return;
+    }
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      res.status(503).json({ error: "Private document storage is not configured." });
+      return;
+    }
+
+    const cutoff = new Date(Date.now() - KYC_UPLOAD_RETENTION_MS);
+    const submissions = await db.select({
+      frontIdUrl: kycSubmissionsTable.frontIdUrl,
+      backIdUrl: kycSubmissionsTable.backIdUrl,
+      selfieImageUrl: kycSubmissionsTable.selfieImageUrl,
+    }).from(kycSubmissionsTable);
+    const referencedPaths = new Set(
+      submissions.flatMap((submission) => [
+        submission.frontIdUrl,
+        submission.backIdUrl,
+        submission.selfieImageUrl,
+      ]).filter((path): path is string => typeof path === "string"),
+    );
+
+    let scanned = 0;
+    let olderThanCutoff = 0;
+    let referenced = 0;
+    const candidates: string[] = [];
+    let cursor: string | undefined;
+    let hasMore = true;
+    let pages = 0;
+
+    while (hasMore && pages < KYC_CLEANUP_MAX_PAGES && candidates.length < KYC_CLEANUP_MAX_OBJECTS) {
+      const page = await list({
+        prefix: KYC_UPLOAD_PREFIX,
+        limit: KYC_CLEANUP_PAGE_SIZE,
+        ...(cursor ? { cursor } : {}),
+      });
+      pages += 1;
+      scanned += page.blobs.length;
+      let stoppedAtObjectLimit = false;
+
+      for (let index = 0; index < page.blobs.length; index += 1) {
+        const blob = page.blobs[index];
+        if (!/^uploads\/kyc\/\d+\/[^/]+$/.test(blob.pathname) || blob.pathname.includes("..")) continue;
+        if (!(blob.uploadedAt instanceof Date) || Number.isNaN(blob.uploadedAt.getTime()) ||
+            blob.uploadedAt >= cutoff) continue;
+        olderThanCutoff += 1;
+        const objectPath = `/objects/${blob.pathname}`;
+        if (referencedPaths.has(objectPath)) {
+          referenced += 1;
+          continue;
+        }
+        candidates.push(blob.pathname);
+        if (candidates.length >= KYC_CLEANUP_MAX_OBJECTS) {
+          stoppedAtObjectLimit = index < page.blobs.length - 1;
+          break;
+        }
+      }
+
+      hasMore = page.hasMore || stoppedAtObjectLimit;
+      cursor = page.cursor;
+      if (hasMore && !cursor) {
+        throw new Error("KYC cleanup listing returned no cursor for another page.");
+      }
+    }
+
+    if (!dryRun && candidates.length > 0) {
+      await del(candidates);
+    }
+
+    const result = {
+      dryRun,
+      cutoff: cutoff.toISOString(),
+      scanned,
+      olderThanCutoff,
+      referenced,
+      eligible: candidates.length,
+      deleted: dryRun ? 0 : candidates.length,
+      pages,
+      hasMore,
+    };
+    req.log.info(result, "KYC upload cleanup finished");
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Could not clean up abandoned KYC uploads");
+    res.status(500).json({ error: "Could not clean up abandoned identity uploads." });
   }
 });
 

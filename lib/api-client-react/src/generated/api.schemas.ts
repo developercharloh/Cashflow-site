@@ -974,8 +974,28 @@ export const KycReviewInputAction = {
 
 export interface KycReviewInput {
   action: KycReviewInputAction;
-  /** @maxLength 500 */
+  /**
+     * Required and non-blank for reject or resubmit; ignored for approve.
+     * @minLength 1
+     * @maxLength 500
+     */
   rejectionReason?: string;
+}
+
+export interface KycUploadCleanupInput {
+  dryRun?: boolean;
+}
+
+export interface KycUploadCleanupResponse {
+  dryRun: boolean;
+  cutoff: string;
+  scanned: number;
+  olderThanCutoff: number;
+  referenced: number;
+  eligible: number;
+  deleted: number;
+  pages: number;
+  hasMore: boolean;
 }
 
 export type KycReviewResponseKycStatus = typeof KycReviewResponseKycStatus[keyof typeof KycReviewResponseKycStatus];

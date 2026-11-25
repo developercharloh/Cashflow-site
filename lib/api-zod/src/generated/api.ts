@@ -627,6 +627,7 @@ export const BuyTranscriptionMinutesResponse = zod.object({
 
 
 /**
+ * Returns review status and non-image submission details. Private image paths and identity document numbers are never returned.
  * @summary Get the current user's KYC verification status
  */
 export const GetKycStatusResponse = zod.object({
@@ -681,6 +682,7 @@ export const UploadKycDocumentsBody = zod.object({
 
 
 /**
+ * Authenticated users may upload only into their own KYC storage prefix. Images must be JPEG, PNG, or WebP and no larger than 5 MB. Blob completion callbacks are authenticated by Blob's signature.
  * @summary Request a private upload token for a KYC document
  */
 export const RequestKycDocumentUploadBody = zod.object({
@@ -725,6 +727,29 @@ export const GetKycSubmissionsResponse = zod.array(GetKycSubmissionsResponseItem
 
 
 /**
+ * Lists at most five pages of KYC uploads per request, considers only objects older than 24 hours, and never deletes an image path referenced by any KYC submission. Dry-run is enabled by default.
+ * @summary Admin — preview or clean up abandoned KYC uploads
+ */
+export const cleanupAbandonedKycUploadsBodyDryRunDefault = true;
+
+export const CleanupAbandonedKycUploadsBody = zod.object({
+  "dryRun": zod.boolean().default(cleanupAbandonedKycUploadsBodyDryRunDefault)
+})
+
+export const CleanupAbandonedKycUploadsResponse = zod.object({
+  "dryRun": zod.boolean(),
+  "cutoff": zod.coerce.date(),
+  "scanned": zod.number(),
+  "olderThanCutoff": zod.number(),
+  "referenced": zod.number(),
+  "eligible": zod.number(),
+  "deleted": zod.number(),
+  "pages": zod.number(),
+  "hasMore": zod.boolean()
+})
+
+
+/**
  * @summary Admin-only download of a private identity document
  */
 export const GetKycSubmissionDocumentParams = zod.object({
@@ -746,7 +771,7 @@ export const reviewKycSubmissionBodyRejectionReasonMax = 500;
 
 export const ReviewKycSubmissionBody = zod.object({
   "action": zod.enum(['approve', 'reject', 'resubmit']),
-  "rejectionReason": zod.string().max(reviewKycSubmissionBodyRejectionReasonMax).optional()
+  "rejectionReason": zod.string().min(1).max(reviewKycSubmissionBodyRejectionReasonMax).optional().describe('Required and non-blank for reject or resubmit; ignored for approve.')
 })
 
 export const ReviewKycSubmissionResponse = zod.object({

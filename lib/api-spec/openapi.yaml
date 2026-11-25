@@ -889,6 +889,36 @@ paths:
         "403":
           description: Admin access required
 
+  /kyc/admin/uploads/cleanup:
+    post:
+      operationId: cleanupAbandonedKycUploads
+      tags: [kyc]
+      summary: Admin — preview or clean up abandoned KYC uploads
+      description: Lists at most five pages of KYC uploads per request, considers only objects older than 24 hours, and never deletes an image path referenced by any KYC submission. Dry-run is enabled by default.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycUploadCleanupInput"
+      responses:
+        "200":
+          description: Cleanup counts and cutoff; object paths are not returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycUploadCleanupResponse"
+        "400":
+          description: Invalid dryRun value
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin access required
+        "503":
+          description: Private document storage is not configured
+
   /kyc/admin/submissions/{id}/document/{side}:
     get:
       operationId: getKycSubmissionDocument
@@ -3226,6 +3256,37 @@ components:
           description: Required and non-blank for reject or resubmit; ignored for approve.
           minLength: 1
           maxLength: 500
+
+    KycUploadCleanupInput:
+      type: object
+      properties:
+        dryRun:
+          type: boolean
+          default: true
+
+    KycUploadCleanupResponse:
+      type: object
+      required: [dryRun, cutoff, scanned, olderThanCutoff, referenced, eligible, deleted, pages, hasMore]
+      properties:
+        dryRun:
+          type: boolean
+        cutoff:
+          type: string
+          format: date-time
+        scanned:
+          type: integer
+        olderThanCutoff:
+          type: integer
+        referenced:
+          type: integer
+        eligible:
+          type: integer
+        deleted:
+          type: integer
+        pages:
+          type: integer
+        hasMore:
+          type: boolean
 
     KycReviewResponse:
       type: object

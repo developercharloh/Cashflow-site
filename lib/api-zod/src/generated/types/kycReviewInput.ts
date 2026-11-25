@@ -9,6 +9,10 @@ import type { KycReviewInputAction } from './kycReviewInputAction';
 
 export interface KycReviewInput {
   action: KycReviewInputAction;
-  /** @maxLength 500 */
+  /**
+     * Required and non-blank for reject or resubmit; ignored for approve.
+     * @minLength 1
+     * @maxLength 500
+     */
   rejectionReason?: string;
 }

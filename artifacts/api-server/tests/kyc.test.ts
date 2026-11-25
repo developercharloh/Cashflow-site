@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "pino-http";
 import { db } from "@workspace/db";
-import { get } from "@vercel/blob";
+import { del, get, list } from "@vercel/blob";
 import { handleUpload } from "@vercel/blob/client";
 import { verifyToken } from "../src/lib/auth";
 import kycRouter from "../src/routes/kyc";
@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
   select: vi.fn(),
   transaction: vi.fn(),
+  list: vi.fn(),
+  del: vi.fn(),
 }));
 
 vi.mock("@workspace/db", () => ({
@@ -35,8 +37,10 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("@vercel/blob", () => ({
+  del: mocks.del,
   get: vi.fn(),
   head: vi.fn(),
+  list: mocks.list,
 }));
 
 vi.mock("@vercel/blob/client", () => ({
@@ -77,7 +81,7 @@ function createApp(): Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    Object.assign(req, { log: { error: () => undefined } });
+    Object.assign(req, { log: { error: () => undefined, info: () => undefined } });
     next();
   });
   app.use("/api", kycRouter);
@@ -138,6 +142,8 @@ beforeEach(() => {
       })),
     }),
   );
+  mocks.list.mockResolvedValue({ blobs: [], hasMore: false });
+  mocks.del.mockResolvedValue(undefined);
   process.env.BLOB_READ_WRITE_TOKEN = "test-blob-token";
   vi.mocked(handleUpload).mockImplementation(async ({ body, onBeforeGenerateToken }) => {
     const requestBody = body as unknown as { pathname: string; clientPayload: string };
@@ -305,5 +311,110 @@ describe("private KYC routes", () => {
     expect(serialized).not.toContain("backIdPath");
     expect(serialized).not.toContain("selfieImagePath");
     expect(serialized).not.toContain("PRIVATE-ID-NUMBER");
+  });
+
+  it("dry-runs only old unreferenced KYC uploads and protects every submission status", async () => {
+    const app = createApp();
+    const submissions = [
+      { frontIdUrl: "/objects/uploads/kyc/7/pending-front.jpg", backIdUrl: null, selfieImageUrl: null, kycStatus: "pending_review" },
+      { frontIdUrl: null, backIdUrl: "/objects/uploads/kyc/7/approved-back.jpg", selfieImageUrl: null, kycStatus: "approved" },
+      { frontIdUrl: null, backIdUrl: null, selfieImageUrl: "/objects/uploads/kyc/7/rejected-selfie.jpg", kycStatus: "rejected" },
+      { frontIdUrl: "/objects/uploads/kyc/7/resubmit-front.jpg", backIdUrl: null, selfieImageUrl: null, kycStatus: "resubmit_required" },
+    ];
+    const uploadedAt = new Date("2020-01-01T00:00:00.000Z");
+    queueSelectResults(...authenticatedAdminReads(), submissions);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [
+        ...[
+          "pending-front.jpg",
+          "approved-back.jpg",
+          "rejected-selfie.jpg",
+          "resubmit-front.jpg",
+        ].map((filename) => ({
+          pathname: `uploads/kyc/7/${filename}`,
+          url: `https://example.invalid/${filename}`,
+          downloadUrl: `https://example.invalid/${filename}`,
+          size: 10,
+          uploadedAt,
+          etag: "etag",
+        })),
+        {
+          pathname: "uploads/kyc/7/abandoned.jpg",
+          url: "https://example.invalid/abandoned.jpg",
+          downloadUrl: "https://example.invalid/abandoned.jpg",
+          size: 10,
+          uploadedAt,
+          etag: "etag",
+        },
+        {
+          pathname: "uploads/kyc/7/recent.jpg",
+          url: "https://example.invalid/recent.jpg",
+          downloadUrl: "https://example.invalid/recent.jpg",
+          size: 10,
+          uploadedAt: new Date(Date.now() + 60_000),
+          etag: "etag",
+        },
+      ],
+      hasMore: false,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({
+      dryRun: true,
+      scanned: 6,
+      olderThanCutoff: 5,
+      referenced: 4,
+      eligible: 1,
+      deleted: 0,
+      pages: 1,
+    });
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("deletes only eligible stale objects when an admin explicitly disables dry-run", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), [
+      { frontIdUrl: "/objects/uploads/kyc/7/linked.jpg", backIdUrl: null, selfieImageUrl: null },
+    ]);
+    vi.mocked(list).mockResolvedValue({
+      blobs: ["linked.jpg", "abandoned.jpg"].map((filename) => ({
+        pathname: `uploads/kyc/7/${filename}`,
+        url: `https://example.invalid/${filename}`,
+        downloadUrl: `https://example.invalid/${filename}`,
+        size: 10,
+        uploadedAt: new Date("2020-01-01T00:00:00.000Z"),
+        etag: "etag",
+      })),
+      hasMore: false,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({ dryRun: false, referenced: 1, eligible: 1, deleted: 1 });
+    expect(del).toHaveBeenCalledWith(["uploads/kyc/7/abandoned.jpg"]);
+  });
+
+  it("does not allow workers to run KYC upload cleanup", async () => {
+    queueSelectResults([userRecord()], [userRecord()]);
+    const response = await request(createApp(), "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "worker",
+      body: { dryRun: false },
+    });
+    expect(response.status).toBe(403);
+    expect(list).not.toHaveBeenCalled();
+    expect(del).not.toHaveBeenCalled();
   });
 });

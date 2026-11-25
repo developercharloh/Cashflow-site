@@ -61,6 +61,8 @@ import type {
   KycStatusResponse,
   KycSubmission,
   KycSubmitInput,
+  KycUploadCleanupInput,
+  KycUploadCleanupResponse,
   KycUploadInput,
   KycUploadResponse,
   KycUploadTokenRequest,
@@ -3100,6 +3102,7 @@ export const getGetKycStatusUrl = () => {
 }
 
 /**
+ * Returns review status and non-image submission details. Private image paths and identity document numbers are never returned.
  * @summary Get the current user's KYC verification status
  */
 export const getKycStatus = async ( options?: RequestInit): Promise<KycStatusResponse> => {
@@ -3124,7 +3127,7 @@ export const getGetKycStatusQueryKey = () => {
     }
 
 
-export const getGetKycStatusQueryOptions = <TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetKycStatusQueryOptions = <TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -3143,14 +3146,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetKycStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getKycStatus>>>
-export type GetKycStatusQueryError = ErrorType<unknown>
+export type GetKycStatusQueryError = ErrorType<void>
 
 
 /**
  * @summary Get the current user's KYC verification status
  */
 
-export function useGetKycStatus<TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<unknown>>(
+export function useGetKycStatus<TData = Awaited<ReturnType<typeof getKycStatus>>, TError = ErrorType<void>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -3339,7 +3342,7 @@ export const uploadKycDocuments = async (kycUploadInput: KycUploadInput, options
 
 
 
-export const getUploadKycDocumentsMutationOptions = <TError = ErrorType<unknown>,
+export const getUploadKycDocumentsMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext> => {
 
@@ -3368,12 +3371,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UploadKycDocumentsMutationResult = NonNullable<Awaited<ReturnType<typeof uploadKycDocuments>>>
     export type UploadKycDocumentsMutationBody = BodyType<KycUploadInput>
-    export type UploadKycDocumentsMutationError = ErrorType<unknown>
+    export type UploadKycDocumentsMutationError = ErrorType<void>
 
     /**
  * @summary Submit private identity documents for manual review
  */
-export const useUploadKycDocuments = <TError = ErrorType<unknown>,
+export const useUploadKycDocuments = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadKycDocuments>>, TError,{data: BodyType<KycUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof uploadKycDocuments>>,
@@ -3393,6 +3396,7 @@ export const getRequestKycDocumentUploadUrl = () => {
 }
 
 /**
+ * Authenticated users may upload only into their own KYC storage prefix. Images must be JPEG, PNG, or WebP and no larger than 5 MB. Blob completion callbacks are authenticated by Blob's signature.
  * @summary Request a private upload token for a KYC document
  */
 export const requestKycDocumentUpload = async (kycUploadTokenRequest: KycUploadTokenRequest, options?: RequestInit): Promise<KycUploadTokenResponse> => {
@@ -3410,7 +3414,7 @@ export const requestKycDocumentUpload = async (kycUploadTokenRequest: KycUploadT
 
 
 
-export const getRequestKycDocumentUploadMutationOptions = <TError = ErrorType<unknown>,
+export const getRequestKycDocumentUploadMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestKycDocumentUpload>>, TError,{data: BodyType<KycUploadTokenRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof requestKycDocumentUpload>>, TError,{data: BodyType<KycUploadTokenRequest>}, TContext> => {
 
@@ -3439,12 +3443,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RequestKycDocumentUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestKycDocumentUpload>>>
     export type RequestKycDocumentUploadMutationBody = BodyType<KycUploadTokenRequest>
-    export type RequestKycDocumentUploadMutationError = ErrorType<unknown>
+    export type RequestKycDocumentUploadMutationError = ErrorType<void>
 
     /**
  * @summary Request a private upload token for a KYC document
  */
-export const useRequestKycDocumentUpload = <TError = ErrorType<unknown>,
+export const useRequestKycDocumentUpload = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestKycDocumentUpload>>, TError,{data: BodyType<KycUploadTokenRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof requestKycDocumentUpload>>,
@@ -3488,7 +3492,7 @@ export const getGetKycSubmissionsQueryKey = () => {
     }
 
 
-export const getGetKycSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof getKycSubmissions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetKycSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof getKycSubmissions>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -3507,14 +3511,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetKycSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getKycSubmissions>>>
-export type GetKycSubmissionsQueryError = ErrorType<unknown>
+export type GetKycSubmissionsQueryError = ErrorType<void>
 
 
 /**
  * @summary Admin — list all KYC submissions
  */
 
-export function useGetKycSubmissions<TData = Awaited<ReturnType<typeof getKycSubmissions>>, TError = ErrorType<unknown>>(
+export function useGetKycSubmissions<TData = Awaited<ReturnType<typeof getKycSubmissions>>, TError = ErrorType<void>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKycSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -3531,6 +3535,78 @@ export function useGetKycSubmissions<TData = Awaited<ReturnType<typeof getKycSub
 
 
 
+
+export const getCleanupAbandonedKycUploadsUrl = () => {
+
+
+
+
+  return `/api/kyc/admin/uploads/cleanup`
+}
+
+/**
+ * Lists at most five pages of KYC uploads per request, considers only objects older than 24 hours, and never deletes an image path referenced by any KYC submission. Dry-run is enabled by default.
+ * @summary Admin — preview or clean up abandoned KYC uploads
+ */
+export const cleanupAbandonedKycUploads = async (kycUploadCleanupInput?: KycUploadCleanupInput, options?: RequestInit): Promise<KycUploadCleanupResponse> => {
+
+  return customFetch<KycUploadCleanupResponse>(getCleanupAbandonedKycUploadsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      kycUploadCleanupInput,)
+  }
+);}
+
+
+
+
+export const getCleanupAbandonedKycUploadsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>, TError,{data?: BodyType<KycUploadCleanupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>, TError,{data?: BodyType<KycUploadCleanupInput>}, TContext> => {
+
+const mutationKey = ['cleanupAbandonedKycUploads'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>, {data?: BodyType<KycUploadCleanupInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cleanupAbandonedKycUploads(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CleanupAbandonedKycUploadsMutationResult = NonNullable<Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>>
+    export type CleanupAbandonedKycUploadsMutationBody = BodyType<KycUploadCleanupInput> | undefined
+    export type CleanupAbandonedKycUploadsMutationError = ErrorType<void>
+
+    /**
+ * @summary Admin — preview or clean up abandoned KYC uploads
+ */
+export const useCleanupAbandonedKycUploads = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>, TError,{data?: BodyType<KycUploadCleanupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cleanupAbandonedKycUploads>>,
+        TError,
+        {data?: BodyType<KycUploadCleanupInput>},
+        TContext
+      > => {
+      return useMutation(getCleanupAbandonedKycUploadsMutationOptions(options));
+    }
 
 export const getGetKycSubmissionDocumentUrl = (id: number,
     side: 'front' | 'back' | 'selfie',) => {
@@ -3641,7 +3717,7 @@ export const reviewKycSubmission = async (id: number,
 
 
 
-export const getReviewKycSubmissionMutationOptions = <TError = ErrorType<unknown>,
+export const getReviewKycSubmissionMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewKycSubmission>>, TError,{id: number;data: BodyType<KycReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof reviewKycSubmission>>, TError,{id: number;data: BodyType<KycReviewInput>}, TContext> => {
 
@@ -3670,12 +3746,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ReviewKycSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof reviewKycSubmission>>>
     export type ReviewKycSubmissionMutationBody = BodyType<KycReviewInput>
-    export type ReviewKycSubmissionMutationError = ErrorType<unknown>
+    export type ReviewKycSubmissionMutationError = ErrorType<void>
 
     /**
  * @summary Admin — approve, reject, or request resubmission
  */
-export const useReviewKycSubmission = <TError = ErrorType<unknown>,
+export const useReviewKycSubmission = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewKycSubmission>>, TError,{id: number;data: BodyType<KycReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof reviewKycSubmission>>,
