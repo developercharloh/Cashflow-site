@@ -11,5 +11,11 @@
     "types": ["vite/client"],
     "paths": { "@/*": ["../task-earn-pro/src/*"] }
   },
-  "include": ["src/App.tsx", "src/main.tsx"]
+  "include": [
+    "src/App.tsx",
+    "src/main.tsx",
+    "src/api.ts",
+    "src/pages/kyc.tsx",
+    "src/pages/kyc.test.tsx"
+  ]
 }

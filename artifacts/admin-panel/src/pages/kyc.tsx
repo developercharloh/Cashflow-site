@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { cleanupKycUploads, get, getBlob, put } from "@/api";
+import { cleanupKycUploads, get, getBlob, put } from "../api";
 import type { KycUploadCleanupResponse } from "@workspace/api-client-react";
 import { RefreshCw, CheckCircle, XCircle, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage, Trash2, ShieldCheck } from "lucide-react";
 
@@ -43,15 +43,8 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   driving_license: "Driving License",
 };
 
-function getCleanupErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : "The cleanup request failed.";
-  try {
-    const response = JSON.parse(message);
-    if (typeof response.error === "string") return response.error;
-  } catch {
-    // Keep plain-text server errors readable too.
-  }
-  return message || "The cleanup request failed.";
+function getCleanupErrorMessage(_error: unknown): string {
+  return "The cleanup request failed. Please try again.";
 }
 
 function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
