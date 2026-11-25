@@ -1,0 +1,191 @@
+{
+	"info": {
+		"_postman_id": "6e9c6c12-69d9-44a3-9583-af690f529ca2",
+		"name": "Cashia Hosted Checkout Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "48593125",
+		"_collection_link": "https://dilip-sabherwal-3773088.postman.co/workspace/Dilip-Sabherwal's-Workspace~052724d2-b6e5-474a-8003-061fb37fd3b9/collection/48593125-6e9c6c12-69d9-44a3-9583-af690f529ca2?action=share&source=collection_link&creator=48593125"
+	},
+	"item": [
+		{
+			"name": "Create Hosted Checkout Session Staging",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Body is built here so the EXACT same string is hashed and sent.",
+							"// Reading pm.request.body.raw at pre-request time returns unresolved {{variables}},",
+							"// causing a body hash mismatch. Building it in script avoids that.",
+							"//",
+							"// IMPORTANT: signing host is always https://prod.cashia.com regardless of",
+							"// which backend URL (blue/green/etc) the request is sent to.",
+							"const signingHost = 'https://staging.cashia.com';",
+							"const keyId       = pm.environment.get('key_id');",
+							"const secret      = pm.environment.get('secret');",
+							"const coinSerial  = pm.environment.get('coin_serial');",
+							"const currency    = pm.environment.get('currency');",
+							"",
+							"const timestamp = Math.floor(Date.now() / 1000).toString();",
+							"const nonce     = CryptoJS.lib.WordArray.random(16).toString();",
+							"",
+							"const payload = {",
+							"  requestId:          pm.variables.replaceIn('{{$randomUUID}}'),",
+							"  coinSerial:         coinSerial,",
+							"  amount:             104,",
+							"  successRedirectUrl: 'https://yourapp.com/payment/result?status=success',",
+							"  errorRedirectUrl:   'https://yourapp.com/payment/result?status=error',",
+							"  webhookUrl:         'https://yourapp.com/api/webhooks/cashia',",
+							"  orderDetails: [{",
+							"    name:        'Test Item',",
+							"    currency:    currency,",
+							"    quantity:    1,",
+							"    description: 'Test item description',",
+							"    price:       104",
+							"  }],",
+							"  deliveryDetails: { currency: currency, fee: 0 }",
+							"};",
+							"",
+							"const rawBody = JSON.stringify(payload);",
+							"pm.request.body.raw = rawBody;",
+							"",
+							"const bodyHash      = CryptoJS.HmacSHA256(rawBody, secret).toString(CryptoJS.enc.Hex);",
+							"const signingString = signingHost + 'POST' + timestamp + nonce + keyId;",
+							"const signature     = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+							"",
+							"pm.request.headers.add({ key: 'X-Cashia-Key-ID',   value: keyId });",
+							"pm.request.headers.add({ key: 'X-Cashia-Nonce',     value: nonce });",
+							"pm.request.headers.add({ key: 'X-Cashia-Timestamp', value: timestamp });",
+							"pm.request.headers.add({ key: 'X-Cashia-Hash',      value: bodyHash });",
+							"pm.request.headers.add({ key: 'X-Cashia-Signature', value: signature });"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/api/v1/hosted-checkout/new",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"hosted-checkout",
+						"new"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Hosted Checkout Session Production",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Body is built here so the EXACT same string is hashed and sent.",
+							"// Reading pm.request.body.raw at pre-request time returns unresolved {{variables}},",
+							"// causing a body hash mismatch. Building it in script avoids that.",
+							"//",
+							"// IMPORTANT: signing host is always https://prod.cashia.com regardless of",
+							"// which backend URL (blue/green/etc) the request is sent to.",
+							"const signingHost = 'https://prod.cashia.com';",
+							"const keyId       = pm.environment.get('key_id');",
+							"const secret      = pm.environment.get('secret');",
+							"const coinSerial  = pm.environment.get('coin_serial');",
+							"const currency    = pm.environment.get('currency');",
+							"",
+							"const timestamp = Math.floor(Date.now() / 1000).toString();",
+							"const nonce     = CryptoJS.lib.WordArray.random(16).toString();",
+							"",
+							"const payload = {",
+							"  requestId:          pm.variables.replaceIn('{{$randomUUID}}'),",
+							"  coinSerial:         coinSerial,",
+							"  amount:             104,",
+							"  successRedirectUrl: 'https://yourapp.com/payment/result?status=success',",
+							"  errorRedirectUrl:   'https://yourapp.com/payment/result?status=error',",
+							"  webhookUrl:         'https://yourapp.com/api/webhooks/cashia',",
+							"  orderDetails: [{",
+							"    name:        'Test Item',",
+							"    currency:    currency,",
+							"    quantity:    1,",
+							"    description: 'Test item description',",
+							"    price:       104",
+							"  }],",
+							"  deliveryDetails: { currency: currency, fee: 0 }",
+							"};",
+							"",
+							"const rawBody = JSON.stringify(payload);",
+							"pm.request.body.raw = rawBody;",
+							"",
+							"const bodyHash      = CryptoJS.HmacSHA256(rawBody, secret).toString(CryptoJS.enc.Hex);",
+							"const signingString = signingHost + 'POST' + timestamp + nonce + keyId;",
+							"const signature     = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);",
+							"",
+							"pm.request.headers.add({ key: 'X-Cashia-Key-ID',   value: keyId });",
+							"pm.request.headers.add({ key: 'X-Cashia-Nonce',     value: nonce });",
+							"pm.request.headers.add({ key: 'X-Cashia-Timestamp', value: timestamp });",
+							"pm.request.headers.add({ key: 'X-Cashia-Hash',      value: bodyHash });",
+							"pm.request.headers.add({ key: 'X-Cashia-Signature', value: signature });"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/api/v1/hosted-checkout/new",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"hosted-checkout",
+						"new"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
