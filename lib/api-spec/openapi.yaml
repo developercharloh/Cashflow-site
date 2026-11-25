@@ -19,6 +19,7 @@ tags:
   - name: support
   - name: leaderboard
   - name: admin
+  - name: kyc
 
 paths:
   /healthz:
@@ -769,6 +770,9 @@ paths:
       operationId: getKycStatus
       tags: [kyc]
       summary: Get the current user's KYC verification status
+      description: Returns review status and non-image submission details. Private image paths and identity document numbers are never returned.
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: KYC status
@@ -776,6 +780,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KycStatusResponse"
+        "401":
+          description: Authentication required
 
   /kyc/session:
     post:
@@ -783,9 +789,13 @@ paths:
       tags: [kyc]
       deprecated: true
       summary: Create a Didit identity verification session (disabled)
+      security:
+        - bearerAuth: []
       responses:
         "503":
           description: External verification is disabled; use manual document submission
+        "401":
+          description: Authentication required
 
   /kyc/submit:
     post:
@@ -793,6 +803,8 @@ paths:
       tags: [kyc]
       deprecated: true
       summary: Submit personal info for external KYC verification (disabled)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -802,12 +814,16 @@ paths:
       responses:
         "503":
           description: External verification is disabled; use manual document submission
+        "401":
+          description: Authentication required
 
   /kyc/upload-documents:
     post:
       operationId: uploadKycDocuments
       tags: [kyc]
       summary: Submit private identity documents for manual review
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -821,12 +837,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KycUploadResponse"
+        "401":
+          description: Authentication required
+        "400":
+          description: Invalid identity details, private path, or image
 
   /kyc/upload-url:
     post:
       operationId: requestKycDocumentUpload
       tags: [kyc]
       summary: Request a private upload token for a KYC document
+      description: Authenticated users may upload only into their own KYC storage prefix. Images must be JPEG, PNG, or WebP and no larger than 5 MB. Blob completion callbacks are authenticated by Blob's signature.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -840,12 +863,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KycUploadTokenResponse"
+        "400":
+          description: Unsupported image, oversized image, or invalid destination
+        "401":
+          description: Authentication required for token generation
 
   /kyc/admin/submissions:
     get:
       operationId: getKycSubmissions
       tags: [kyc]
       summary: Admin — list all KYC submissions
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: List of submissions
@@ -855,12 +884,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/KycSubmission"
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin access required
 
   /kyc/admin/submissions/{id}/document/{side}:
     get:
       operationId: getKycSubmissionDocument
       tags: [kyc]
       summary: Admin-only download of a private identity document
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
@@ -891,6 +926,8 @@ paths:
                 format: binary
         "403":
           description: Admin access required
+        "401":
+          description: Authentication required
         "404":
           description: Document not found
 
@@ -899,6 +936,8 @@ paths:
       operationId: reviewKycSubmission
       tags: [kyc]
       summary: Admin — approve, reject, or request resubmission
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
@@ -918,6 +957,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KycReviewResponse"
+        "400":
+          description: Invalid action or missing rejection/resubmission reason
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin access required
 
   /kyc/webhook:
     post:
@@ -1742,6 +1787,12 @@ paths:
                 $ref: "#/components/schemas/Notification"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -3172,6 +3223,8 @@ components:
           enum: [approve, reject, resubmit]
         rejectionReason:
           type: string
+          description: Required and non-blank for reject or resubmit; ignored for approve.
+          minLength: 1
           maxLength: 500
 
     KycReviewResponse:
