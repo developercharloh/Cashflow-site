@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Readable } from "node:stream";
 import { del, get, head, list } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { db, usersTable, kycSubmissionsTable } from "@workspace/db";
+import { db, usersTable, kycSubmissionsTable, kycUploadCleanupRunsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, type AuthRequest } from "../middlewares/requireAuth";
 
@@ -273,6 +273,46 @@ router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: Auth
   }
 });
 
+router.get("/kyc/admin/uploads/cleanup/history", requireAuth, requireAdmin, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const runs = await db.select({
+      id: kycUploadCleanupRunsTable.id,
+      ranAt: kycUploadCleanupRunsTable.ranAt,
+      adminId: kycUploadCleanupRunsTable.adminId,
+      cutoff: kycUploadCleanupRunsTable.cutoff,
+      mode: kycUploadCleanupRunsTable.mode,
+      scanned: kycUploadCleanupRunsTable.scanned,
+      olderThanCutoff: kycUploadCleanupRunsTable.olderThanCutoff,
+      referenced: kycUploadCleanupRunsTable.referenced,
+      eligible: kycUploadCleanupRunsTable.eligible,
+      deleted: kycUploadCleanupRunsTable.deleted,
+      pages: kycUploadCleanupRunsTable.pages,
+      hasMore: kycUploadCleanupRunsTable.hasMore,
+    })
+      .from(kycUploadCleanupRunsTable)
+      .orderBy(desc(kycUploadCleanupRunsTable.ranAt))
+      .limit(100);
+
+    res.json(runs.map((run) => ({
+      id: run.id,
+      ranAt: run.ranAt.toISOString(),
+      adminId: run.adminId,
+      cutoff: run.cutoff.toISOString(),
+      mode: run.mode,
+      scanned: run.scanned,
+      olderThanCutoff: run.olderThanCutoff,
+      referenced: run.referenced,
+      eligible: run.eligible,
+      deleted: run.deleted,
+      pages: run.pages,
+      hasMore: run.hasMore,
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Could not load KYC upload cleanup history");
+    res.status(500).json({ error: "Could not load cleanup history." });
+  }
+});
+
 // Remove only old, unreferenced KYC uploads. A dry run is the default so an
 // administrator can inspect the result before allowing private files to be deleted.
 router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
@@ -362,6 +402,18 @@ router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req:
       pages,
       hasMore,
     };
+    await db.insert(kycUploadCleanupRunsTable).values({
+      adminId: req.userId!,
+      cutoff,
+      mode: dryRun ? "preview" : "deletion",
+      scanned,
+      olderThanCutoff,
+      referenced,
+      eligible: candidates.length,
+      deleted: dryRun ? 0 : candidates.length,
+      pages,
+      hasMore,
+    });
     req.log.info(result, "KYC upload cleanup finished");
     res.json(result);
   } catch (err) {

@@ -2,6 +2,21 @@ import type { KycUploadCleanupResponse } from "@workspace/api-client-react";
 
 const BASE = "/api";
 
+export interface KycUploadCleanupRun {
+  id: number;
+  ranAt: string;
+  adminId: number;
+  cutoff: string;
+  mode: "preview" | "deletion";
+  scanned: number;
+  olderThanCutoff: number;
+  referenced: number;
+  eligible: number;
+  deleted: number;
+  pages: number;
+  hasMore: boolean;
+}
+
 function getToken() {
   return localStorage.getItem("token") ?? "";
 }
@@ -41,6 +56,10 @@ export async function post<T>(path: string, body?: unknown): Promise<T> {
 
 export function cleanupKycUploads(dryRun: boolean): Promise<KycUploadCleanupResponse> {
   return post<KycUploadCleanupResponse>("/kyc/admin/uploads/cleanup", { dryRun });
+}
+
+export function getKycUploadCleanupHistory(): Promise<KycUploadCleanupRun[]> {
+  return get<KycUploadCleanupRun[]>("/kyc/admin/uploads/cleanup/history");
 }
 
 export async function patch<T>(path: string, body?: unknown): Promise<T> {

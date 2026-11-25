@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { cleanupKycUploads, get, getBlob, put } from "../api";
+import { cleanupKycUploads, get, getBlob, getKycUploadCleanupHistory, put, type KycUploadCleanupRun } from "../api";
 import type { KycUploadCleanupResponse } from "@workspace/api-client-react";
 import { RefreshCw, CheckCircle, XCircle, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage, Trash2, ShieldCheck } from "lucide-react";
 
@@ -75,6 +75,9 @@ export default function KYC() {
   const [cleanupBusy, setCleanupBusy] = useState<"preview" | "delete" | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
+  const [cleanupHistory, setCleanupHistory] = useState<KycUploadCleanupRun[]>([]);
+  const [cleanupHistoryLoading, setCleanupHistoryLoading] = useState(true);
+  const [cleanupHistoryError, setCleanupHistoryError] = useState<string | null>(null);
 
   useEffect(() => () => {
     if (lightbox?.startsWith("blob:")) URL.revokeObjectURL(lightbox);
@@ -86,7 +89,17 @@ export default function KYC() {
       .then(setItems).catch(console.error).finally(() => setLoading(false));
   };
 
+  const loadCleanupHistory = () => {
+    setCleanupHistoryLoading(true);
+    setCleanupHistoryError(null);
+    getKycUploadCleanupHistory()
+      .then(setCleanupHistory)
+      .catch(() => setCleanupHistoryError("Cleanup history could not be loaded. Please try again."))
+      .finally(() => setCleanupHistoryLoading(false));
+  };
+
   useEffect(load, []);
+  useEffect(loadCleanupHistory, []);
 
   const openDocument = async (id: number, side: "front" | "back" | "selfie") => {
     const key = `${id}:${side}`;
@@ -122,6 +135,7 @@ export default function KYC() {
     setConfirmCleanup(false);
     try {
       setCleanupReport(await cleanupKycUploads(true));
+      loadCleanupHistory();
     } catch (error) {
       setCleanupError(getCleanupErrorMessage(error));
     } finally {
@@ -136,6 +150,7 @@ export default function KYC() {
     try {
       setCleanupReport(await cleanupKycUploads(false));
       setConfirmCleanup(false);
+      loadCleanupHistory();
     } catch (error) {
       setCleanupError(getCleanupErrorMessage(error));
     } finally {
@@ -262,6 +277,61 @@ export default function KYC() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 space-y-3" aria-labelledby="kyc-cleanup-history-title">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 id="kyc-cleanup-history-title" className="text-sm font-bold text-white">Cleanup history</h2>
+            <p className="mt-1 text-xs text-slate-400">Recent previews and deletions. Object paths are not recorded here.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadCleanupHistory}
+            disabled={cleanupHistoryLoading}
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+          >
+            {cleanupHistoryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Refresh
+          </button>
+        </div>
+        {cleanupHistoryError && <p role="alert" className="text-xs text-red-300">{cleanupHistoryError}</p>}
+        {cleanupHistoryLoading ? (
+          <p className="py-4 text-center text-xs text-slate-400">Loading cleanup history…</p>
+        ) : cleanupHistory.length === 0 ? (
+          <p className="py-4 text-center text-xs text-slate-500">No cleanup runs recorded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {cleanupHistory.map((run) => (
+              <article key={run.id} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-white">
+                    {run.mode === "preview" ? "Preview" : "Deletion"} · {new Date(run.ranAt).toLocaleString()}
+                  </p>
+                  <span className="text-[10px] text-slate-400">Administrator #{run.adminId}</span>
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">Cutoff: {new Date(run.cutoff).toLocaleString()}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { label: "Scanned", value: run.scanned },
+                    { label: "Older than cutoff", value: run.olderThanCutoff },
+                    { label: "Referenced", value: run.referenced },
+                    { label: run.mode === "preview" ? "Eligible" : "Deleted", value: run.mode === "preview" ? run.eligible : run.deleted },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-lg bg-slate-900/70 px-2.5 py-2">
+                      <p className="text-[10px] text-slate-500">{label}</p>
+                      <p className="text-xs font-semibold text-slate-200">{value.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] text-slate-500">
+                  {run.pages} page{run.pages === 1 ? "" : "s"} scanned
+                  {run.hasMore ? " · Scan limit reached; more uploads may remain." : ""}
+                </p>
+              </article>
+            ))}
           </div>
         )}
       </section>

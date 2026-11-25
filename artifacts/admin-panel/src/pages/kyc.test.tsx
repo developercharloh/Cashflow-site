@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import KYC from "./kyc";
 
 const cleanupEndpoint = "/api/kyc/admin/uploads/cleanup";
+const cleanupHistoryEndpoint = "/api/kyc/admin/uploads/cleanup/history";
 const privateObjectPath = "uploads/kyc/7/private-id.jpg";
 
 let cleanupPayload: unknown;
 let cleanupStatus: number;
+let cleanupHistoryPayload: unknown;
 let mockFetch: ReturnType<typeof vi.fn>;
 
 function cleanupRequests() {
@@ -31,10 +33,17 @@ function previewPayload(eligible: number) {
 beforeEach(() => {
   cleanupPayload = previewPayload(2);
   cleanupStatus = 200;
+  cleanupHistoryPayload = [];
   mockFetch = vi.fn(async (input: RequestInfo | URL) => {
     if (String(input) === cleanupEndpoint) {
       return new Response(JSON.stringify(cleanupPayload), {
         status: cleanupStatus,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (String(input) === cleanupHistoryEndpoint) {
+      return new Response(JSON.stringify(cleanupHistoryPayload), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -52,6 +61,33 @@ afterEach(() => {
 });
 
 describe("KYC upload cleanup safety", () => {
+  it("shows administrator, cutoff, mode, and aggregate counts without rendering object paths", async () => {
+    cleanupHistoryPayload = [{
+      id: 9,
+      ranAt: "2025-01-03T12:00:00.000Z",
+      adminId: 1,
+      cutoff: "2025-01-02T12:00:00.000Z",
+      mode: "deletion",
+      scanned: 20,
+      olderThanCutoff: 8,
+      referenced: 3,
+      eligible: 5,
+      deleted: 5,
+      pages: 1,
+      hasMore: false,
+      privatePath: privateObjectPath,
+    }];
+    const { container } = render(<KYC />);
+
+    expect(await screen.findByText(/Deletion ·/)).toBeTruthy();
+    expect(container.textContent).toContain("Administrator #1");
+    expect(container.textContent).toContain("Scanned");
+    expect(container.textContent).toContain("20");
+    expect(container.textContent).toContain("Deleted");
+    expect(container.textContent).not.toContain(privateObjectPath);
+    expect(mockFetch).toHaveBeenCalledWith(cleanupHistoryEndpoint, expect.anything());
+  });
+
   it("previews with dryRun=true and does not delete until separately confirmed", async () => {
     const { container } = render(<KYC />);
 

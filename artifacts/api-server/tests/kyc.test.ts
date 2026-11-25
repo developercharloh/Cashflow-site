@@ -10,6 +10,7 @@ import kycRouter from "../src/routes/kyc";
 const mocks = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
   select: vi.fn(),
+  insert: vi.fn(),
   transaction: vi.fn(),
   list: vi.fn(),
   del: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@workspace/db", () => ({
   db: {
     select: mocks.select,
+    insert: mocks.insert,
     transaction: mocks.transaction,
   },
   usersTable: { id: "users.id", kycStatus: "users.kycStatus", kycSessionId: "users.kycSessionId" },
@@ -30,6 +32,20 @@ vi.mock("@workspace/db", () => ({
     backIdUrl: "kyc.backIdUrl",
     selfieImageUrl: "kyc.selfieImageUrl",
     submittedAt: "kyc.submittedAt",
+  },
+  kycUploadCleanupRunsTable: {
+    id: "cleanup.id",
+    ranAt: "cleanup.ranAt",
+    adminId: "cleanup.adminId",
+    cutoff: "cleanup.cutoff",
+    mode: "cleanup.mode",
+    scanned: "cleanup.scanned",
+    olderThanCutoff: "cleanup.olderThanCutoff",
+    referenced: "cleanup.referenced",
+    eligible: "cleanup.eligible",
+    deleted: "cleanup.deleted",
+    pages: "cleanup.pages",
+    hasMore: "cleanup.hasMore",
   },
 }));
 
@@ -155,6 +171,9 @@ beforeEach(() => {
       })),
     }),
   );
+  mocks.insert.mockImplementation(() => ({
+    values: vi.fn(async () => undefined),
+  }));
   mocks.list.mockResolvedValue({ blobs: [], hasMore: false });
   mocks.del.mockResolvedValue(undefined);
   mocks.logError.mockReset();
@@ -326,6 +345,72 @@ describe("private KYC routes", () => {
     expect(serialized).not.toContain("backIdPath");
     expect(serialized).not.toContain("selfieImagePath");
     expect(serialized).not.toContain("PRIVATE-ID-NUMBER");
+  });
+
+  it("records successful cleanup counts without retaining private object paths", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [blob("uploads/kyc/7/abandoned.jpg")],
+      hasMore: false,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const values = mocks.insert.mock.results[0]?.value.values;
+
+    expect(response.status).toBe(200);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.anything());
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({
+      adminId: 1,
+      mode: "deletion",
+      scanned: 1,
+      olderThanCutoff: 1,
+      referenced: 0,
+      eligible: 1,
+      deleted: 1,
+      pages: 1,
+      hasMore: false,
+    }));
+    expect(JSON.stringify(values.mock.calls)).not.toContain("uploads/kyc/");
+  });
+
+  it("returns only sanitized cleanup history fields to administrators", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), [{
+      id: 12,
+      ranAt: new Date("2025-01-03T12:00:00.000Z"),
+      adminId: 1,
+      cutoff: new Date("2025-01-02T12:00:00.000Z"),
+      mode: "preview",
+      scanned: 10,
+      olderThanCutoff: 4,
+      referenced: 2,
+      eligible: 2,
+      deleted: 0,
+      pages: 1,
+      hasMore: false,
+      privatePath: "uploads/kyc/7/private.jpg",
+    }]);
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup/history", { token: "admin" });
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(body).toContain('"adminId":1');
+    expect(body).toContain('"mode":"preview"');
+    expect(body).not.toContain("privatePath");
+    expect(body).not.toContain("uploads/kyc/");
+  });
+
+  it("does not allow workers to read KYC upload cleanup history", async () => {
+    queueSelectResults([userRecord()], [userRecord()]);
+    const response = await request(createApp(), "/api/kyc/admin/uploads/cleanup/history", { token: "worker" });
+
+    expect(response.status).toBe(403);
   });
 
   it("dry-runs only old unreferenced KYC uploads and protects every submission status", async () => {

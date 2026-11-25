@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, real, timestamp, boolean } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 
 export const kycSubmissionsTable = pgTable("kyc_submissions", {
@@ -23,4 +23,19 @@ export const kycSubmissionsTable = pgTable("kyc_submissions", {
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   reviewedBy: integer("reviewed_by"),
+});
+
+export const kycUploadCleanupRunsTable = pgTable("kyc_upload_cleanup_runs", {
+  id: serial("id").primaryKey(),
+  ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
+  adminId: integer("admin_id").notNull(),
+  cutoff: timestamp("cutoff", { withTimezone: true }).notNull(),
+  mode: text("mode").notNull(),
+  scanned: integer("scanned").notNull(),
+  olderThanCutoff: integer("older_than_cutoff").notNull(),
+  referenced: integer("referenced").notNull(),
+  eligible: integer("eligible").notNull(),
+  deleted: integer("deleted").notNull(),
+  pages: integer("pages").notNull(),
+  hasMore: boolean("has_more").notNull(),
 });
