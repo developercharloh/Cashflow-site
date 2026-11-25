@@ -39,14 +39,14 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">Platform overview and management</p>
         </div>
-        <Link
+        <a
           href="/admin/support"
           data-testid="admin-support-dashboard-link"
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Headset className="h-4 w-4" />
           Support tickets
-        </Link>
+        </a>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
