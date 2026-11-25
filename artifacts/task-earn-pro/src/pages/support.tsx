@@ -15,7 +15,11 @@ import { useToast } from "@/hooks/use-toast";
 
 function errorMessage(error: unknown) {
   const apiError = error as { data?: { error?: string }; message?: string };
-  return apiError.data?.error ?? apiError.message ?? "Please try again.";
+  const message = apiError.data?.error ?? apiError.message ?? "Please try again.";
+  if (/<!doctype|<html|internal server error/i.test(message)) {
+    return "Support is temporarily unavailable. Please try again shortly.";
+  }
+  return message;
 }
 
 function MessageBubble({ message }: { message: SupportMessage }) {

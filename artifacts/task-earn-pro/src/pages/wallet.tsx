@@ -39,18 +39,18 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 
 const DEPOSIT_METHODS = [
   {
-    id: "card",
-    label: "Card Deposit",
-    sub: "Coming Soon — card deposits are not available yet",
-    icon: <CreditCard className="w-6 h-6 text-blue-500" />,
-    color: "border-blue-500/20 bg-blue-500/5",
-  },
-  {
     id: "mpesa",
     label: "M-Pesa Express",
     sub: "Secure STK push to your Kenyan phone",
-    icon: <Smartphone className="w-6 h-6 text-green-500" />,
-    color: "border-green-500/20 bg-green-500/5",
+    icon: <Smartphone className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />,
+    color: "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40",
+  },
+  {
+    id: "card",
+    label: "Card Deposit",
+    sub: "Card deposits are not available yet",
+    icon: <CreditCard className="w-6 h-6 text-slate-500 dark:text-slate-400" />,
+    color: "border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80",
   },
 ];
 
@@ -465,14 +465,14 @@ export default function WalletPage() {
                   if (m.id === "card") return;
                   setStage({ view: "deposit_form", method: m });
                 }}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${m.color} ${m.id === "card" ? "cursor-not-allowed opacity-60" : "hover:border-primary/40"}`}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${m.color} ${m.id === "card" ? "cursor-not-allowed" : "hover:border-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-950/70"}`}
               >
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${m.id === "card" ? "bg-white dark:bg-slate-700" : "bg-white/80 dark:bg-slate-900/50"}`}>
                   {m.icon}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-sm text-white">{m.label}</p>
-                  <p className="text-xs text-muted-foreground">{m.sub}</p>
+                  <p className={`font-semibold text-sm ${m.id === "card" ? "text-slate-600 dark:text-slate-300" : "text-slate-900 dark:text-white"}`}>{m.label}</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300">{m.sub}</p>
                 </div>
                 {m.id === "card"
                   ? <Badge variant="outline" className="shrink-0 text-[10px]">Coming Soon</Badge>

@@ -10,6 +10,7 @@ import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
 import Terms from "@/pages/terms";
 import ProfilePage from "@/pages/profile";
+import KycPage from "@/pages/kyc";
 import CallbackPage from "@/pages/callback";
 import WalletPage from "@/pages/wallet";
 import Landing from "@/pages/landing";
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/auth/forgot-password" component={ForgotPassword} />
         <Route path="/terms"               component={Terms} />
         <Route path="/profile"             component={ProfilePage} />
+        <Route path="/kyc"                 component={KycPage} />
         <Route path="/support"             component={SupportPage} />
         <Route path="/callback"            component={CallbackPage} />
         <Route                             component={NotFound} />
