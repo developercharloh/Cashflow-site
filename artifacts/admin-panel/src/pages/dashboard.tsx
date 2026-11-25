@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { get } from "@/api";
-import { Users, CheckSquare, Wallet2, TrendingUp, DollarSign, Clock, BarChart3, Star } from "lucide-react";
+import { Link } from "wouter";
+import { Users, CheckSquare, Wallet2, TrendingUp, DollarSign, Clock, BarChart3, Star, Headset } from "lucide-react";
 
 interface Analytics {
   totalUsers: number;
@@ -102,10 +103,20 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-white">Dashboard</h1>
-        <p className="text-sm text-slate-400">Platform overview &amp; live metrics</p>
-      </div>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-slate-400">Platform overview &amp; live metrics</p>
+        </div>
+        <Link
+          href="/support"
+          data-testid="admin-support-dashboard-link"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        >
+          <Headset className="h-4 w-4" />
+          Support tickets
+        </Link>
+      </header>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map(s => <StatCard key={s.label} {...s} />)}

@@ -123,6 +123,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-7">
             {[
               ["/admin", "Overview"],
+              ["/admin/support", "Support"],
               ["/admin/users", "Users"],
               ["/admin/tasks", "Tasks"],
               ["/admin/task-submissions", "Work review"],
@@ -137,6 +138,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       )}
       <main className="mx-auto max-w-6xl pb-20">{children}</main>
+      {user?.isAdmin && isAdminRoute && location !== "/admin/support" && (
+        <Link
+          href="/admin/support"
+          data-testid="admin-support-shortcut"
+          aria-label="Open support tickets"
+          title="Support tickets"
+          className="fixed right-4 z-[60] flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-primary-foreground shadow-lg shadow-primary/25 ring-1 ring-primary-foreground/15 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <Headset className="h-4 w-4" aria-hidden="true" />
+          <span className="text-sm font-semibold">Support tickets</span>
+        </Link>
+      )}
       {!isAdminRoute && !location.startsWith("/support") && (
         <Link
           href="/support"

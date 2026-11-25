@@ -41,7 +41,7 @@ const DEPOSIT_METHODS = [
   {
     id: "mpesa",
     label: "M-Pesa Express",
-    sub: "Secure STK push to your Kenyan phone",
+    sub: "Secure STK push to your phone",
     icon: <Smartphone className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />,
     color: "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40",
   },

@@ -1,7 +1,7 @@
 import { useAdminGetAnalytics } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { Users, CheckSquare, Wallet2, BarChart3, Loader2, TrendingUp, Clock, AlertCircle, ShieldCheck, ClipboardCheck, Headset } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 
@@ -34,10 +34,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Platform overview and management</p>
-      </div>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Platform overview and management</p>
+        </div>
+        <Link
+          href="/admin/support"
+          data-testid="admin-support-dashboard-link"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Headset className="h-4 w-4" />
+          Support tickets
+        </Link>
+      </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {tiles.map(({ label, value, icon, link }, idx) => (

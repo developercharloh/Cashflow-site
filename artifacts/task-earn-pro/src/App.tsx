@@ -16,6 +16,7 @@ import WalletPage from "@/pages/wallet";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import TasksPage from "@/pages/tasks";
+import AdminSupportPage from "@/pages/admin/support";
 import QuizPage from "@/pages/quiz";
 import LoansPage from "@/pages/loans";
 import ForexPage from "@/pages/forex";
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/"                    component={Landing} />
         <Route path="/dashboard"           component={Dashboard} />
         <Route path="/tasks"               component={TasksPage} />
+        <Route path="/admin/support"       component={AdminSupportPage} />
         <Route path="/quiz"                component={QuizPage} />
         <Route path="/wallet"              component={WalletPage} />
         <Route path="/loans"               component={LoansPage} />
