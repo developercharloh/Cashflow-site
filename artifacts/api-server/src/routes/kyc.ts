@@ -258,6 +258,7 @@ router.get("/kyc/admin/submissions", requireAuth, requireAdmin, async (req: Auth
 // Remove only old, unreferenced KYC uploads. A dry run is the default so an
 // administrator can inspect the result before allowing private files to be deleted.
 router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  let failureStage = "database";
   try {
     const dryRun = req.body?.dryRun ?? true;
     if (typeof dryRun !== "boolean") {
@@ -292,6 +293,7 @@ router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req:
     let pages = 0;
 
     while (hasMore && pages < KYC_CLEANUP_MAX_PAGES && candidates.length < KYC_CLEANUP_MAX_OBJECTS) {
+      failureStage = "listing";
       const page = await list({
         prefix: KYC_UPLOAD_PREFIX,
         limit: KYC_CLEANUP_PAGE_SIZE,
@@ -327,6 +329,7 @@ router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req:
     }
 
     if (!dryRun && candidates.length > 0) {
+      failureStage = "deletion";
       await del(candidates);
     }
 
@@ -344,7 +347,7 @@ router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req:
     req.log.info(result, "KYC upload cleanup finished");
     res.json(result);
   } catch (err) {
-    req.log.error({ err }, "Could not clean up abandoned KYC uploads");
+    req.log.error({ stage: failureStage }, "Could not clean up abandoned KYC uploads");
     res.status(500).json({ error: "Could not clean up abandoned identity uploads." });
   }
 });

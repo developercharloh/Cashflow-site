@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   list: vi.fn(),
   del: vi.fn(),
+  logError: vi.fn(),
+  logInfo: vi.fn(),
 }));
 
 vi.mock("@workspace/db", () => ({
@@ -81,7 +83,7 @@ function createApp(): Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    Object.assign(req, { log: { error: () => undefined, info: () => undefined } });
+    Object.assign(req, { log: { error: mocks.logError, info: mocks.logInfo } });
     next();
   });
   app.use("/api", kycRouter);
@@ -120,6 +122,17 @@ function authenticatedAdminReads() {
   return [[userRecord(true)], [userRecord(true)]];
 }
 
+function blob(pathname: string, uploadedAt = new Date("2020-01-01T00:00:00.000Z")) {
+  return {
+    pathname,
+    url: `https://example.invalid/${pathname}`,
+    downloadUrl: `https://example.invalid/${pathname}`,
+    size: 10,
+    uploadedAt,
+    etag: "etag",
+  };
+}
+
 beforeEach(() => {
   mocks.selectResults.length = 0;
   mocks.select.mockImplementation(() => {
@@ -144,6 +157,8 @@ beforeEach(() => {
   );
   mocks.list.mockResolvedValue({ blobs: [], hasMore: false });
   mocks.del.mockResolvedValue(undefined);
+  mocks.logError.mockReset();
+  mocks.logInfo.mockReset();
   process.env.BLOB_READ_WRITE_TOKEN = "test-blob-token";
   vi.mocked(handleUpload).mockImplementation(async ({ body, onBeforeGenerateToken }) => {
     const requestBody = body as unknown as { pathname: string; clientPayload: string };
@@ -404,6 +419,132 @@ describe("private KYC routes", () => {
     expect(response.status).toBe(200);
     expect(result).toMatchObject({ dryRun: false, referenced: 1, eligible: 1, deleted: 1 });
     expect(del).toHaveBeenCalledWith(["uploads/kyc/7/abandoned.jpg"]);
+  });
+
+  it("stops after five pages and forwards each returned cursor", async () => {
+    const app = createApp();
+    const referencedPath = "uploads/kyc/7/retained.jpg";
+    queueSelectResults(...authenticatedAdminReads(), [
+      { frontIdUrl: `/objects/${referencedPath}`, backIdUrl: null, selfieImageUrl: null },
+    ]);
+    vi.mocked(list).mockImplementation(async ({ cursor } = {}) => {
+      const pageNumber = cursor ? Number(String(cursor).replace("cursor-", "")) + 1 : 1;
+      const blobs = Array.from({ length: 1000 }, (_, index) =>
+        pageNumber === 1 && index === 0
+          ? blob(referencedPath)
+          : blob(
+              `uploads/kyc/${pageNumber}/recent-${index}.jpg`,
+              new Date(Date.now() + 60_000),
+            ),
+      );
+      return { blobs, hasMore: true, cursor: `cursor-${pageNumber}` };
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+    });
+    const result = await response.json();
+    const listCalls = vi.mocked(list).mock.calls;
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({ scanned: 5000, referenced: 1, eligible: 0, pages: 5, hasMore: true });
+    expect(listCalls).toHaveLength(5);
+    expect(listCalls.map(([options]) => options)).toEqual([
+      expect.objectContaining({ limit: 1000, prefix: "uploads/kyc/" }),
+      expect.objectContaining({ cursor: "cursor-1" }),
+      expect.objectContaining({ cursor: "cursor-2" }),
+      expect.objectContaining({ cursor: "cursor-3" }),
+      expect.objectContaining({ cursor: "cursor-4" }),
+    ]);
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("deletes at most 100 stale objects and never deletes referenced images", async () => {
+    const app = createApp();
+    const referencedPath = "uploads/kyc/7/retained.jpg";
+    queueSelectResults(...authenticatedAdminReads(), [
+      { frontIdUrl: `/objects/${referencedPath}`, backIdUrl: null, selfieImageUrl: null },
+    ]);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [
+        blob(referencedPath),
+        ...Array.from({ length: 150 }, (_, index) => blob(`uploads/kyc/7/abandoned-${index}.jpg`)),
+      ],
+      hasMore: true,
+      cursor: "next-page",
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const result = await response.json();
+    const deletedPaths = vi.mocked(del).mock.calls[0]?.[0] as string[];
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({
+      referenced: 1,
+      eligible: 100,
+      deleted: 100,
+      pages: 1,
+      hasMore: true,
+    });
+    expect(deletedPaths).toHaveLength(100);
+    expect(deletedPaths).not.toContain(referencedPath);
+  });
+
+  it("returns and logs listing failures without exposing private object paths", async () => {
+    const app = createApp();
+    const referencedPath = "uploads/kyc/7/retained.jpg";
+    queueSelectResults(...authenticatedAdminReads(), [
+      { frontIdUrl: `/objects/${referencedPath}`, backIdUrl: null, selfieImageUrl: null },
+    ]);
+    vi.mocked(list).mockRejectedValue(new Error(`Unable to list ${referencedPath}`));
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+    });
+    const responseBody = await response.text();
+    const loggedDetails = JSON.stringify(mocks.logError.mock.calls);
+
+    expect(response.status).toBe(500);
+    expect(responseBody).not.toContain(referencedPath);
+    expect(loggedDetails).toContain('"stage":"listing"');
+    expect(loggedDetails).not.toContain(referencedPath);
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("returns and logs deletion failures without exposing private object paths", async () => {
+    const app = createApp();
+    const referencedPath = "uploads/kyc/7/retained.jpg";
+    const abandonedPath = "uploads/kyc/7/abandoned.jpg";
+    queueSelectResults(...authenticatedAdminReads(), [
+      { frontIdUrl: `/objects/${referencedPath}`, backIdUrl: null, selfieImageUrl: null },
+    ]);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [blob(referencedPath), blob(abandonedPath)],
+      hasMore: false,
+    });
+    vi.mocked(del).mockRejectedValue(new Error(`Unable to delete ${abandonedPath}`));
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const responseBody = await response.text();
+    const loggedDetails = JSON.stringify(mocks.logError.mock.calls);
+
+    expect(response.status).toBe(500);
+    expect(responseBody).not.toContain(abandonedPath);
+    expect(loggedDetails).toContain('"stage":"deletion"');
+    expect(loggedDetails).not.toContain(abandonedPath);
+    expect(loggedDetails).not.toContain(referencedPath);
+    expect(del).toHaveBeenCalledWith([abandonedPath]);
+    expect(del).not.toHaveBeenCalledWith(expect.arrayContaining([referencedPath]));
   });
 
   it("does not allow workers to run KYC upload cleanup", async () => {
