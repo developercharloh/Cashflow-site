@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { get, getBlob, put } from "@/api";
-import { RefreshCw, CheckCircle, XCircle, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage } from "lucide-react";
+import { cleanupKycUploads, get, getBlob, put } from "@/api";
+import type { KycUploadCleanupResponse } from "@workspace/api-client-react";
+import { RefreshCw, CheckCircle, XCircle, ChevronDown, ChevronUp, Upload, Camera, ZoomIn, Loader2, FileImage, Trash2, ShieldCheck } from "lucide-react";
 
 interface KYCSub {
   id: number;
@@ -42,6 +43,17 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   driving_license: "Driving License",
 };
 
+function getCleanupErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "The cleanup request failed.";
+  try {
+    const response = JSON.parse(message);
+    if (typeof response.error === "string") return response.error;
+  } catch {
+    // Keep plain-text server errors readable too.
+  }
+  return message || "The cleanup request failed.";
+}
+
 function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Private identity document" onClick={onClose}>
@@ -66,6 +78,10 @@ export default function KYC() {
   const [reason, setReason] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
+  const [cleanupReport, setCleanupReport] = useState<KycUploadCleanupResponse | null>(null);
+  const [cleanupBusy, setCleanupBusy] = useState<"preview" | "delete" | null>(null);
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
+  const [confirmCleanup, setConfirmCleanup] = useState(false);
 
   useEffect(() => () => {
     if (lightbox?.startsWith("blob:")) URL.revokeObjectURL(lightbox);
@@ -106,6 +122,34 @@ export default function KYC() {
     setActing(null);
   };
 
+  const previewCleanup = async () => {
+    setCleanupBusy("preview");
+    setCleanupError(null);
+    setCleanupReport(null);
+    setConfirmCleanup(false);
+    try {
+      setCleanupReport(await cleanupKycUploads(true));
+    } catch (error) {
+      setCleanupError(getCleanupErrorMessage(error));
+    } finally {
+      setCleanupBusy(null);
+    }
+  };
+
+  const runCleanup = async () => {
+    if (!confirmCleanup || !cleanupReport?.dryRun || cleanupReport.eligible === 0) return;
+    setCleanupBusy("delete");
+    setCleanupError(null);
+    try {
+      setCleanupReport(await cleanupKycUploads(false));
+      setConfirmCleanup(false);
+    } catch (error) {
+      setCleanupError(getCleanupErrorMessage(error));
+    } finally {
+      setCleanupBusy(null);
+    }
+  };
+
   const pendingCount = items.filter(s => s.kycStatus === "pending_review").length;
   const visible = items.filter(s =>
     filter === "all" || s.kycStatus === filter ||
@@ -125,6 +169,109 @@ export default function KYC() {
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>
+
+      <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 space-y-4" aria-labelledby="kyc-cleanup-title">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex gap-3">
+            <div className="mt-0.5 rounded-xl bg-blue-900/40 p-2 text-blue-300">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 id="kyc-cleanup-title" className="text-sm font-bold text-white">Abandoned upload cleanup</h2>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+                Preview privately stored KYC uploads older than 24 hours. Files still referenced by a submission are protected.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={previewCleanup}
+            disabled={cleanupBusy !== null}
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {cleanupBusy === "preview" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {cleanupBusy === "preview" ? "Previewing…" : "Preview cleanup"}
+          </button>
+        </div>
+
+        {cleanupError && (
+          <div role="alert" className="rounded-xl border border-red-800/70 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+            Cleanup failed: {cleanupError}
+          </div>
+        )}
+
+        {cleanupReport && (
+          <div className="space-y-3 border-t border-slate-800 pt-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { label: "Eligible to delete", value: cleanupReport.eligible },
+                { label: "Referenced and protected", value: cleanupReport.referenced },
+                { label: "Older than cutoff", value: cleanupReport.olderThanCutoff },
+                { label: "Uploads scanned", value: cleanupReport.scanned },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl bg-slate-800/70 p-3">
+                  <p className="text-[10px] text-slate-400">{label}</p>
+                  <p className="mt-1 text-lg font-bold text-white">{value.toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <span>
+                {cleanupReport.dryRun ? "Preview cutoff" : "Deletion cutoff"}: {new Date(cleanupReport.cutoff).toLocaleString()}
+                {" · "}{cleanupReport.pages} page{cleanupReport.pages === 1 ? "" : "s"} scanned
+              </span>
+              {cleanupReport.hasMore && (
+                <span className="text-amber-300">Scan limit reached; more uploads may remain.</span>
+              )}
+            </div>
+
+            {!cleanupReport.dryRun && (
+              <div role="status" className="rounded-xl border border-green-800/70 bg-green-950/30 px-3 py-2 text-xs text-green-200">
+                Cleanup finished: {cleanupReport.deleted.toLocaleString()} upload{cleanupReport.deleted === 1 ? "" : "s"} deleted.
+              </div>
+            )}
+
+            {cleanupReport.dryRun && cleanupReport.eligible > 0 && !confirmCleanup && (
+              <button
+                type="button"
+                onClick={() => setConfirmCleanup(true)}
+                disabled={cleanupBusy !== null}
+                className="flex items-center gap-2 rounded-xl border border-red-800/70 bg-red-950/30 px-3 py-2 text-xs font-semibold text-red-200 transition-colors hover:bg-red-950/60 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Review deletion of {cleanupReport.eligible.toLocaleString()} uploads
+              </button>
+            )}
+
+            {cleanupReport.dryRun && confirmCleanup && (
+              <div className="space-y-3 rounded-xl border border-amber-800/70 bg-amber-950/20 p-3">
+                <p className="text-xs leading-5 text-amber-100">
+                  This will permanently delete eligible unreferenced uploads. The server will scan again when you confirm, so the final counts can change.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmCleanup(false)}
+                    disabled={cleanupBusy !== null}
+                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={runCleanup}
+                    disabled={cleanupBusy !== null}
+                    className="flex items-center gap-2 rounded-xl bg-red-700 px-3 py-2 text-xs font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cleanupBusy === "delete" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {cleanupBusy === "delete" ? "Deleting…" : `Confirm and delete ${cleanupReport.eligible.toLocaleString()} uploads`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <div className="flex gap-2 flex-wrap">
         {([

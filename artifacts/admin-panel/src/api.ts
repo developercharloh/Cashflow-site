@@ -1,3 +1,5 @@
+import type { KycUploadCleanupResponse } from "@workspace/api-client-react";
+
 const BASE = "/api";
 
 function getToken() {
@@ -35,6 +37,10 @@ export async function post<T>(path: string, body?: unknown): Promise<T> {
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<T>;
+}
+
+export function cleanupKycUploads(dryRun: boolean): Promise<KycUploadCleanupResponse> {
+  return post<KycUploadCleanupResponse>("/kyc/admin/uploads/cleanup", { dryRun });
 }
 
 export async function patch<T>(path: string, body?: unknown): Promise<T> {
