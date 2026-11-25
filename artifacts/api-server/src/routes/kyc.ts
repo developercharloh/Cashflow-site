@@ -15,6 +15,24 @@ const KYC_CLEANUP_MAX_PAGES = 5;
 const KYC_CLEANUP_MAX_OBJECTS = 100;
 const KYC_UPLOAD_PREFIX = "uploads/kyc/";
 
+function isValidKycUploadPathname(pathname: string): boolean {
+  const match = /^uploads\/kyc\/[1-9]\d*\/([^/]+)$/.exec(pathname);
+  if (!match) return false;
+
+  let filename = match[1];
+  for (let depth = 0; filename.includes("%"); depth += 1) {
+    if (depth >= 5 || /%(?![0-9a-f]{2})/i.test(filename)) return false;
+    try {
+      filename = decodeURIComponent(filename);
+    } catch {
+      return false;
+    }
+  }
+
+  return filename !== "." && filename !== ".." &&
+    !/[\/\\\u0000-\u001f\u007f]/.test(filename);
+}
+
 // ─── GET /kyc/status ──────────────────────────────────────────────────────────
 router.get("/kyc/status", requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -305,7 +323,7 @@ router.post("/kyc/admin/uploads/cleanup", requireAuth, requireAdmin, async (req:
 
       for (let index = 0; index < page.blobs.length; index += 1) {
         const blob = page.blobs[index];
-        if (!/^uploads\/kyc\/\d+\/[^/]+$/.test(blob.pathname) || blob.pathname.includes("..")) continue;
+        if (!isValidKycUploadPathname(blob.pathname)) continue;
         if (!(blob.uploadedAt instanceof Date) || Number.isNaN(blob.uploadedAt.getTime()) ||
             blob.uploadedAt >= cutoff) continue;
         olderThanCutoff += 1;

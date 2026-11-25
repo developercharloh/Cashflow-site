@@ -421,6 +421,38 @@ describe("private KYC routes", () => {
     expect(del).toHaveBeenCalledWith(["uploads/kyc/7/abandoned.jpg"]);
   });
 
+  it("never deletes malformed or traversal-like paths from the storage listing", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [
+        blob("uploads/kyc/7/abandoned.jpg"),
+        blob("uploads/kyc/7/../outside.jpg"),
+        blob("uploads/kyc/7/%2e%2e%2foutside.jpg"),
+        blob("uploads/kyc/7/%252e%252e%255coutside.jpg"),
+        blob("uploads/kyc/7/."),
+        blob("uploads/kyc/7/.."),
+        blob("uploads/kyc/007/leading-zero-user.jpg"),
+        blob("uploads/kyc/0/zero-user.jpg"),
+        blob("uploads/kyc/7\\outside.jpg"),
+        blob("uploads/kyc/7/nested/folder.jpg"),
+        blob("uploads/kyc/7/%not-encoded.jpg"),
+      ],
+      hasMore: false,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({ scanned: 11, olderThanCutoff: 1, eligible: 1, deleted: 1 });
+    expect(del).toHaveBeenCalledExactlyOnceWith(["uploads/kyc/7/abandoned.jpg"]);
+  });
+
   it("stops after five pages and forwards each returned cursor", async () => {
     const app = createApp();
     const referencedPath = "uploads/kyc/7/retained.jpg";
