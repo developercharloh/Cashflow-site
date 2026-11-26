@@ -575,6 +575,51 @@ describe("private KYC routes", () => {
     expect(del).toHaveBeenCalledExactlyOnceWith(["uploads/kyc/7/abandoned.jpg"]);
   });
 
+  it("keeps valid stale files reachable after a page of malformed paths", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockImplementation(async ({ cursor } = {}) => {
+      if (!cursor) {
+        return {
+          blobs: Array.from({ length: 1000 }, (_, index) =>
+            blob(`uploads/kyc/7/../outside-${index}.jpg`),
+          ),
+          hasMore: true,
+          cursor: "malformed-page",
+        };
+      }
+
+      return {
+        blobs: [blob("uploads/kyc/7/abandoned-on-later-page.jpg")],
+        hasMore: false,
+      };
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({
+      scanned: 1001,
+      olderThanCutoff: 1,
+      eligible: 1,
+      deleted: 1,
+      pages: 2,
+      hasMore: false,
+    });
+    expect(vi.mocked(list).mock.calls.map(([options]) => options)).toEqual([
+      expect.objectContaining({ limit: 1000, prefix: "uploads/kyc/" }),
+      expect.objectContaining({ cursor: "malformed-page" }),
+    ]);
+    expect(del).toHaveBeenCalledExactlyOnceWith([
+      "uploads/kyc/7/abandoned-on-later-page.jpg",
+    ]);
+  });
+
   it("stops after five pages and forwards each returned cursor", async () => {
     const app = createApp();
     const referencedPath = "uploads/kyc/7/retained.jpg";
