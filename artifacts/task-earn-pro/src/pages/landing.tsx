@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { ArrowDown, ArrowRight, AudioLines, BookOpenCheck, Check, ClipboardList, FileSpreadsheet, Landmark, ShieldCheck, Sparkles, WalletCards, CandlestickChart } from "lucide-react";
 
 const areas = [
-  { icon: BookOpenCheck, number: "01", title: "Academic Writing", detail: "Ethical help with proofreading, citation formatting, and research organization—not ghostwriting graded work." },
+  { icon: BookOpenCheck, number: "01", title: "Academic Writing", detail: "Technical editing and research organization for engineering and computer science, plus citation and proofreading tasks—not graded coursework." },
   { icon: FileSpreadsheet, number: "02", title: "Data Entry", detail: "Careful information entry, spreadsheet cleanup, and organization." },
   { icon: AudioLines, number: "03", title: "Transcription", detail: "Audio-to-text work with clear language and formatting requirements." },
   { icon: Sparkles, number: "04", title: "AI Training", detail: "AI response evaluation and data labeling against project guidelines." },

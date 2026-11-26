@@ -50,7 +50,7 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
             <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
-          {form.category === "Academic Writing" && <p className="mt-1 text-xs text-muted-foreground">Limit listings to proofreading, citation formatting, and research organization. Do not post requests to complete graded coursework.</p>}
+          {form.category === "Academic Writing" && <p className="mt-1 text-xs text-muted-foreground">Include technical editing and research organization in engineering or computer science. Do not post requests to complete graded coursework.</p>}
         </div>
         <div>
           <Label>Reward ($)</Label>
@@ -72,10 +72,6 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
           <Label>Submission deadline (hours)</Label>
           <Input type="number" min="1" max="720" step="1" value={form.deadlineHours} onChange={e => set("deadlineHours", e.target.value)} />
           <p className="mt-1 text-xs text-muted-foreground">1–720 hours after assignment. New tasks default to 72.</p>
-        </div>
-        <div>
-          <Label>Difficulty</Label>
-          <div className="flex h-10 items-center rounded-md border border-border bg-muted px-3 text-sm font-semibold text-red-500">Expert only</div>
         </div>
         <div>
           <Label>Min Level (1-7)</Label>
@@ -148,18 +144,12 @@ export default function AdminTasks() {
     });
   };
 
-  const DIFF_COLOR: Record<string, string> = {
-    easy: "text-green-500 border-green-500/30",
-    medium: "text-yellow-500 border-yellow-500/30",
-    hard: "text-red-500 border-red-500/30",
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Task Management</h1>
-          <p className="text-muted-foreground mt-1">Publish expert work with a fixed reward pool and capped places</p>
+          <p className="text-muted-foreground mt-1">Publish work with a fixed reward pool and capped places</p>
         </div>
         <div className="flex gap-2">
           <Link href="/admin/task-submissions"><Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4" />Review submissions</Button></Link>
@@ -183,7 +173,7 @@ export default function AdminTasks() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Title", "Category", "Reward", "Budget / places", "Deadline", "Difficulty", "Level", "Status", "Actions"].map(h => (
+                    {["Title", "Category", "Reward", "Budget / places", "Deadline", "Level", "Status", "Actions"].map(h => (
                       <th key={h} className="text-left py-3 px-3 text-xs text-muted-foreground font-medium">{h}</th>
                     ))}
                   </tr>
@@ -196,7 +186,6 @@ export default function AdminTasks() {
                       <td className="py-3 px-3 text-green-500 font-medium">${task.reward.toFixed(2)}</td>
                       <td className="py-3 px-3 text-xs text-muted-foreground">${task.fundingBudget.toFixed(2)} · {task.maxCompletions} max</td>
                       <td className="py-3 px-3 text-xs text-muted-foreground">{task.deadlineHours}h</td>
-                      <td className="py-3 px-3"><Badge variant="outline" className={`text-xs ${DIFF_COLOR[task.difficulty] ?? ""}`}>{task.difficulty}</Badge></td>
                       <td className="py-3 px-3 text-muted-foreground">L{task.minLevel}+</td>
                       <td className="py-3 px-3">
                         <Badge variant="outline" className={task.isActive ? "text-green-500 border-green-500/30" : "text-muted-foreground"}>

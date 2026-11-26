@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/layout";
 import AdminDashboard from "@/pages/admin/index";
 import AdminLoginPage from "@/pages/admin/login";
 import AdminUsers from "@/pages/admin/users";
-import AdminTasks from "@/pages/admin/tasks";
+import AdminTasks from "./pages/tasks";
 import AdminTaskBids from "@/pages/admin/task-bids";
 import AdminTaskSubmissions from "@/pages/admin/task-submissions";
 import AdminAuditLog from "@/pages/admin/audit-log";
@@ -24,27 +24,29 @@ function AdminRoutes() {
   const { user, isLoading } = useAuth();
   if (isLoading) return <div className="min-h-screen animate-pulse bg-background" aria-label="Loading admin workspace" />;
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/">
-          {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
-        </Route>
-        <Route path="/admin/login" component={AdminLoginPage} />
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/tasks" component={AdminTasks} />
-        <Route path="/admin/task-bids" component={AdminTaskBids} />
-        <Route path="/admin/task-submissions" component={AdminTaskSubmissions} />
-        <Route path="/admin/audit-log" component={AdminAuditLog} />
-        <Route path="/admin/withdrawals" component={AdminWithdrawals} />
-        <Route path="/admin/analytics" component={AdminAnalytics} />
-        <Route path="/admin/kyc" component={AdminKycPage} />
-        <Route path="/support" component={AdminSupportPage} />
-        <Route>
-          {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
-        </Route>
-      </Switch>
-    </AppLayout>
+    <div className="admin-theme">
+      <AppLayout>
+        <Switch>
+          <Route path="/">
+            {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
+          </Route>
+          <Route path="/admin/login" component={AdminLoginPage} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/tasks" component={AdminTasks} />
+          <Route path="/admin/task-bids" component={AdminTaskBids} />
+          <Route path="/admin/task-submissions" component={AdminTaskSubmissions} />
+          <Route path="/admin/audit-log" component={AdminAuditLog} />
+          <Route path="/admin/withdrawals" component={AdminWithdrawals} />
+          <Route path="/admin/analytics" component={AdminAnalytics} />
+          <Route path="/admin/kyc" component={AdminKycPage} />
+          <Route path="/support" component={AdminSupportPage} />
+          <Route>
+            {user?.isAdmin ? <Redirect to="/admin" /> : <Redirect to="/admin/login" />}
+          </Route>
+        </Switch>
+      </AppLayout>
+    </div>
   );
 }
 

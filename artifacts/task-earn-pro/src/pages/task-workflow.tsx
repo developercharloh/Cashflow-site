@@ -239,7 +239,7 @@ export default function TasksPage() {
           <nav aria-label="Filter task category" className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
             {(["All", ...CATEGORIES] as const).map((item) => <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={category === item} className={`min-h-10 shrink-0 rounded-full border px-4 text-xs font-semibold transition-colors ${category === item ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"}`} data-testid={`filter-category-${item.toLowerCase().replaceAll(" ", "-")}`}>{item}</button>)}
           </nav>
-          {category === "Academic Writing" && <p className="mt-3 rounded-xl border border-border bg-accent/35 px-4 py-3 text-xs leading-5 text-muted-foreground">Academic writing tasks support ethical work such as proofreading, citation formatting, and research organization—not completing graded work.</p>}
+          {category === "Academic Writing" && <p className="mt-3 rounded-xl border border-border bg-accent/35 px-4 py-3 text-xs leading-5 text-muted-foreground">Academic writing tasks include technical editing and research organization for engineering and computer science, as well as proofreading and citation work. They do not complete graded coursework.</p>}
           {tasksQuery.isLoading ? (
             <div className="mt-5 space-y-3" aria-label="Loading task listings">{[0, 1, 2].map((item) => <div key={item} className="h-40 animate-pulse rounded-2xl border border-border bg-card/70" />)}</div>
           ) : tasksQuery.isError ? (
@@ -258,7 +258,7 @@ export default function TasksPage() {
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/70 text-primary"><Icon className="h-[18px] w-[18px]" /></div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="font-mono text-[9px] uppercase tracking-[.14em] text-primary">{task.category}</p><span className="text-border">/</span><span className="text-[10px] text-muted-foreground">{task.difficulty} · Level {task.minLevel}+</span></div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="font-mono text-[9px] uppercase tracking-[.14em] text-primary">{task.category}</p><span className="text-border">/</span><span className="text-[10px] text-muted-foreground">Level {task.minLevel}+</span></div>
                         <h3 className="mt-1 font-serif text-xl leading-tight sm:text-[1.4rem]">{task.title}</h3>
                         <p className="mt-1.5 line-clamp-2 max-w-3xl text-[13px] leading-5 text-muted-foreground">{task.description}</p>
                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/80 pt-3 text-[11px] text-muted-foreground sm:gap-x-5">
@@ -286,7 +286,7 @@ export default function TasksPage() {
       <Dialog open={!!selectedTask} onOpenChange={(open) => !open && closeTask()}>
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto rounded-2xl">
           {selectedTask && <>
-            <DialogHeader><p className="font-mono text-[9px] uppercase tracking-[.16em] text-primary">{selectedTask.category} · {selectedTask.difficulty} · Level {selectedTask.minLevel}+</p><DialogTitle className="font-serif text-2xl leading-tight">{selectedTask.title}</DialogTitle><DialogDescription>{selectedTask.description}</DialogDescription></DialogHeader>
+            <DialogHeader><p className="font-mono text-[9px] uppercase tracking-[.16em] text-primary">{selectedTask.category} · Level {selectedTask.minLevel}+</p><DialogTitle className="font-serif text-2xl leading-tight">{selectedTask.title}</DialogTitle><DialogDescription>{selectedTask.description}</DialogDescription></DialogHeader>
             <div className="rounded-xl border border-border bg-muted/40 p-4"><h3 className="text-sm font-semibold">Task instructions</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedTask.instructions || selectedTask.description}</p></div>
             {selectedTask.assetUrl && <div className="rounded-xl border border-border bg-muted/40 p-4"><h3 className="flex items-center gap-2 text-sm font-semibold"><AudioLines className="h-4 w-4 text-primary" />Task audio</h3><p className="mt-1 text-xs text-muted-foreground">Listen to the full clip and follow the task instructions.</p><audio controls preload="none" src={publicAssetUrl(selectedTask.assetUrl)} className="mt-3 w-full" aria-label={`Audio for ${selectedTask.title}`}>Your browser does not support audio playback.</audio></div>}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/5 px-4 py-3 text-sm"><span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" />Reward after work is accepted</span><strong className="text-primary">${selectedTask.reward.toFixed(2)}</strong></div>

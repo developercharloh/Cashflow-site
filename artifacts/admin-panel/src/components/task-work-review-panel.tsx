@@ -3,7 +3,7 @@ import {
   AudioLines, CheckCircle2, Clock3, FileText, LoaderCircle,
   ShieldCheck, Upload, X,
 } from "lucide-react";
-import { get, patch } from "@/api";
+import { get, patch } from "../api";
 
 export interface TaskWorkSubmission {
   id: number;

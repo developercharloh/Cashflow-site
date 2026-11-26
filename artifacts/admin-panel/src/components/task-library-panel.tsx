@@ -4,7 +4,7 @@ import {
   FileSpreadsheet, FileText, LoaderCircle, Search, ShieldCheck,
   Sparkles, X,
 } from "lucide-react";
-import { post } from "@/api";
+import { post } from "../api";
 
 const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -188,7 +188,6 @@ export function TaskLibraryPanel({
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3.5">
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400"><ShieldCheck className="h-3 w-3 text-green-600" /> Hard task</span>
                       <span className="rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400">Level {template.defaultMinLevel}+</span>
                       <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-semibold text-slate-400"><Clock3 className="h-3 w-3" />{template.estimatedMinutes} min</span>
                       {template.assetUrl && <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-[10px] font-semibold text-blue-700"><AudioLines className="h-3 w-3" />Audio source</span>}
@@ -238,7 +237,7 @@ export function TaskLibraryPanel({
               <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-4 sm:p-5">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-md bg-green-900/40 px-2 py-1 text-[10px] font-bold text-green-400">{selected.category}</span>
-                  <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">Hard · Level {selected.defaultMinLevel}+</span>
+                  <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">Level {selected.defaultMinLevel}+</span>
                   <span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">~{selected.estimatedMinutes} min</span>
                 </div>
                 <p className="text-sm leading-6 text-slate-300">{selected.description}</p>
@@ -311,7 +310,7 @@ export function TaskLibraryPanel({
                     <p className="flex items-center gap-2 text-xs font-bold text-slate-300"><BadgeCheck className="h-4 w-4 text-green-400" />Worker listing preview</p>
                     <p className="mt-3 text-sm font-bold text-white">{selected.title}</p>
                     <p className="mt-1 text-xs leading-5 text-slate-400">{selected.description}</p>
-                    <p className="mt-3 text-[11px] text-slate-500">{selected.category} · Hard · Level {minLevelValue}+ · {currency(rewardValue)} after approval · ~{selected.estimatedMinutes} min</p>
+                    <p className="mt-3 text-[11px] text-slate-500">{selected.category} · Level {minLevelValue}+ · {currency(rewardValue)} after approval · ~{selected.estimatedMinutes} min</p>
                   </div>
                   <p className="rounded-lg bg-slate-800/60 px-3 py-2 text-[11px] leading-5 text-slate-400">
                     Posting sets a maximum budget and completion count; it does not move or reserve money. Rewards are credited only after you approve a worker’s submission.
@@ -321,7 +320,7 @@ export function TaskLibraryPanel({
                 <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                   <p className="flex items-center gap-2 text-sm font-bold text-green-800"><ShieldCheck className="h-4 w-4" />Confirm this task listing</p>
                   <p className="mt-2 text-xs leading-5 text-green-800/80">
-                    Eligible workers can see this hard {selected.category} task at Level {minLevelValue}+. The maximum approved payout is <strong>{currency(requiredFunding)}</strong> across <strong>{capValue}</strong> completions.
+                    Eligible workers can see this {selected.category} task at Level {minLevelValue}+. The maximum approved payout is <strong>{currency(requiredFunding)}</strong> across <strong>{capValue}</strong> completions.
                   </p>
                 </div>
               )}

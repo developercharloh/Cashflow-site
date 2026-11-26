@@ -4,12 +4,12 @@ description: Durable product decisions for work categories, task rewards, wallet
 ---
 
 ## Product scope
-- Work listings are limited to Academic Writing, Data Entry, Transcription, and AI Training. Keep first-party tasks challenging and self-contained, but make them open to Level 1 workers by default; do not require an outside provider account. Academic tasks must not be graded assignments. Written/file work is reviewed by an administrator before rewards are credited.
+- Work listings are limited to Academic Writing, Data Entry, Transcription, and AI Training. Keep first-party tasks challenging and self-contained, but make them open to Level 1 workers by default; do not require an outside provider account. Academic tasks must not be graded assignments. Engineering and computer-science technical writing belongs under Academic Writing. Never show a “Hard” or expert-only label to users.
 - Simple Quiz is Coming Soon and must not issue quiz rewards until re-enabled. Soft Loans remain separate; Forex is Coming Soon, not an active trading feature.
 
-**Why:** The user explicitly chose these as the site's content, asked not to retain the old trading product, and requested professional hard work that ordinary new workers can access.
+**Why:** The user explicitly chose these as the site's content, asked not to retain the old trading product, requested challenging work that ordinary new workers can access, and specifically said not to label tasks “Hard.”
 
-**How to apply:** Keep work listings inside those four categories; build original tasks when no licensed source is available; let the admin review, set the reward and completion budget, and post them. Keep quiz disabled and do not restore trading dashboards or unrelated gig categories.
+**How to apply:** Keep work listings inside those four categories; include engineering and computer-science writing tasks under Academic Writing; build original tasks when no licensed source is available; let the admin review, set the reward and completion budget, and post them. Keep quiz disabled and do not restore trading dashboards or unrelated gig categories.
 
 ## Platform-funded task rewards
 - Task rewards are platform-funded; an administrator sets a per-task payout ceiling and completion cap. Approval credits the worker's in-app balance. The ceiling is not an escrow transfer or proof of external funds.

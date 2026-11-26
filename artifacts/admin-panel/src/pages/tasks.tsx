@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { get, post, patch, del } from "@/api";
+import { get, post, patch, del } from "../api";
 import {
   Activity, AudioLines, BadgeCheck, BookOpen, CheckCircle2, ChevronDown,
   ChevronRight, Clock3, Coins, ExternalLink, FileSpreadsheet, FileText, Filter,
   ListFilter, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, Sparkles,
   Wallet2, X,
 } from "lucide-react";
-import { TaskLibraryPanel, type TaskLibraryTemplate } from "@/components/task-library-panel";
-import { TaskWorkReviewPanel, type TaskWorkSubmission } from "@/components/task-work-review-panel";
+import { TaskLibraryPanel, type TaskLibraryTemplate } from "../components/task-library-panel";
+import { TaskWorkReviewPanel, type TaskWorkSubmission } from "../components/task-work-review-panel";
 
 const CATEGORIES = ["Academic Writing", "Data Entry", "Transcription", "AI Training"] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -617,14 +617,14 @@ export default function Tasks() {
               <label className="block"><span className="mb-1.5 block text-[11px] font-semibold text-slate-400">Minimum worker level</span><select value={minLevel} onChange={(event) => setMinLevel(event.target.value)} className="w-full rounded-xl border border-slate-700 bg-white px-3 py-2.5 text-xs font-semibold text-slate-300">{[1, 2, 3, 4, 5, 6, 7].map((level) => <option key={level} value={level}>Level {level}+</option>)}</select></label>
             </div>
             <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${budgetValue >= requiredFunding ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-              <div><p className="text-xs font-bold text-slate-300">Maximum funded commitment</p><p className="mt-1 text-[11px] text-slate-500">{capValue || 0} workers × {money(rewardValue)} each · task difficulty is set to Hard</p></div>
+              <div><p className="text-xs font-bold text-slate-300">Maximum funded commitment</p><p className="mt-1 text-[11px] text-slate-500">{capValue || 0} workers × {money(rewardValue)} each</p></div>
               <div className="text-right"><p className="text-lg font-extrabold text-white">{money(requiredFunding)}</p><p className="text-[10px] text-slate-500">Budget entered: {money(budgetValue)}</p></div>
             </div>
             <div className="rounded-xl border border-slate-800 bg-white p-4">
               <p className="flex items-center gap-2 text-xs font-bold text-slate-300"><BadgeCheck className="h-4 w-4 text-green-400" />Worker listing preview</p>
               <p className="mt-3 text-sm font-bold text-white">{reviewing.title}</p>
               <p className="mt-1 text-xs leading-5 text-slate-400">{reviewing.description}</p>
-              <p className="mt-3 text-[11px] text-slate-500">{reviewing.category} · Hard · Level {minLevelValue}+ · {money(rewardValue)} reward · Admin-reviewed</p>
+              <p className="mt-3 text-[11px] text-slate-500">{reviewing.category} · Level {minLevelValue}+ · {money(rewardValue)} reward · Admin-reviewed</p>
             </div>
           </> : <div className="rounded-xl border border-green-200 bg-green-50 p-4">
             <p className="flex items-center gap-2 text-sm font-bold text-green-800"><ShieldCheck className="h-4 w-4" />Confirm this platform-funded listing</p>
@@ -708,7 +708,7 @@ function TaskCard({ task, acting, onEdit, onToggle, onPause }: {
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-900/40 text-green-400"><Icon className="h-4 w-4" /></span>
         <div className="min-w-0 flex-1">
           <h3 className="text-xs font-bold leading-5 text-white">{task.title}</h3>
-          <div className="mt-1.5 flex flex-wrap gap-1.5"><span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">{task.category}</span><span className="rounded-md bg-green-900/40 px-2 py-1 text-[10px] font-semibold text-green-400">Hard</span><span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${task.isActive ? "bg-green-900/40 text-green-400" : "bg-slate-800 text-slate-500"}`}>{task.isActive ? "Live" : "Paused"}</span></div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5"><span className="rounded-md bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-400">{task.category}</span><span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${task.isActive ? "bg-green-900/40 text-green-400" : "bg-slate-800 text-slate-500"}`}>{task.isActive ? "Live" : "Paused"}</span></div>
         </div>
         <button onClick={onEdit} className="rounded-lg border border-slate-700 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-400 hover:bg-slate-800">Edit budget</button>
       </div>
