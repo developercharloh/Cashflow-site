@@ -30,13 +30,13 @@ description: Durable product decisions for work categories, task rewards, wallet
 - Deposit rate is USD 1 = KES 130; withdrawal quote is USD 1 = KES 125. M-Pesa Express deposits use PayHero; card deposits are Coming Soon.
 - M-Pesa deposits must accept any phone supported by the connected channel, not a creator-specific number; normalize local and +254 formats consistently.
 - Withdrawals are manual requests: users choose a method, and the admin sends the payout externally before marking the request complete. The user-facing status stays simply Pending until completion; do not mention admin approval to the user.
-- KYC requires identity details and private ID images stored in Vercel Blob; administrators review submissions, and withdrawals stay blocked until approval. Users see only “Under review,” not the review method or reviewer role.
+- KYC requires identity details and private ID images stored in Vercel Blob; users must capture selfies with the front camera, and all identity photos are resized/compressed to the 5 MB upload limit. Administrators review submissions, and withdrawals stay blocked until approval. Users see only “Under review,” not the review method or reviewer role.
 
 **Why:** The user supplied the rates and PayHero deposit method, specified that withdrawals remain pending until admin completion, disabled Simple Quiz for now, and chose admin-reviewed KYC while requiring client-facing status to say only “Under review.”
 
 **Why:** The user said deposits and package purchases must work for all users' supported M-Pesa numbers, not only their own.
 
-**How to apply:** Keep displayed rates consistent with backend conversion, verify PayHero transaction status server-to-server before crediting deposits, do not expose the payment provider's brand or KYC review method to users, and do not send withdrawals automatically.
+**How to apply:** Keep displayed rates consistent with backend conversion, verify PayHero transaction status server-to-server before crediting deposits, require a fresh camera-captured selfie, optimize uploaded identity images before private storage, do not expose the payment provider's brand or KYC review method to users, and do not send withdrawals automatically.
 
 **How to apply:** Do not hardcode or whitelist an individual user's number. Normalize accepted local and +254 formats before sending requests to PayHero; reject only numbers the configured M-Pesa channel cannot support.
 
