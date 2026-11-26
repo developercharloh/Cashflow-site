@@ -19,16 +19,16 @@ description: Durable product decisions for work categories, task rewards, wallet
 **How to apply:** Make the cap and manual review visible to workers and admins; never describe the cap as money already escrowed.
 
 ## Task packages, bids, referrals, and deadlines
-- Silver costs $7.69 and Diamond costs $19.23. Both provide one-time permanent access to unlimited task bids; no extra Diamond benefit is defined. Upgrading Silver to Diamond costs only the price difference. Existing paid members retain access as legacy members. Package purchases can be paid directly with M-Pesa Express without a wallet top-up.
+- Silver costs $7.69 and Diamond costs $19.23. Both provide one-time permanent access to unlimited task bids; no extra Diamond benefit is defined. Upgrading Silver to Diamond costs only the price difference. Existing paid members retain access as legacy members. Package purchases debit the wallet; if funds are short, prompt for the exact wallet deposit shortfall, then let the user retry.
 - A valid signup through a referral link earns the referrer $1 immediately, once. Bids may be submitted by multiple workers, but each funded place is assigned to one worker; work starts only after assignment. The configurable submission deadline begins on assignment and defaults to 72 hours. Late work must be blocked.
 
-**Why:** The user set package prices, direct M-Pesa Express payment, one-dollar referrals, multi-worker bidding, admin assignment, and submission deadlines. Package duration/tier differences and referral timing were unspecified, so permanent access and immediate signup reward are the chosen assumptions.
+**Why:** The user set package prices, wallet-funded package purchases, one-dollar referrals, multi-worker bidding, admin assignment, and submission deadlines. Package duration/tier differences and referral timing were unspecified, so permanent access and immediate signup reward are the chosen assumptions.
 
-**How to apply:** Let users buy packages through a verified direct M-Pesa Express payment without requiring wallet funds; preserve existing paid access and do not invent tier benefits. Tell workers their bid was submitted and to check whether it was assigned; do not describe the bid as awaiting admin approval.
+**How to apply:** Debit only the package charge (or Silver-to-Diamond price difference) from the wallet. If the wallet is short, show the exact shortfall and offer a deposit flow that returns the user to packages; the package payment itself must not launch a direct M-Pesa prompt. Preserve existing paid access and do not invent tier benefits. Tell workers their bid was submitted and to check whether it was assigned; do not describe the bid as awaiting admin approval.
 
 ## Wallet methods and rates
 - Deposit rate is USD 1 = KES 130; withdrawal quote is USD 1 = KES 125. M-Pesa Express deposits use PayHero; card deposits are Coming Soon.
-- Deposits and package purchases must accept any phone supported by the connected M-Pesa channel, not a creator-specific number; normalize local and +254 formats consistently.
+- M-Pesa deposits must accept any phone supported by the connected channel, not a creator-specific number; normalize local and +254 formats consistently.
 - Withdrawals are manual requests: users choose a method, and the admin sends the payout externally before marking the request complete. The user-facing status stays simply Pending until completion; do not mention admin approval to the user.
 - KYC requires identity details and private ID images stored in Vercel Blob; administrators review submissions, and withdrawals stay blocked until approval. Users see only “Under review,” not the review method or reviewer role.
 

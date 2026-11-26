@@ -4,6 +4,7 @@ import { db, notificationsTable, transactionsTable, usersTable } from "@workspac
 import {
   GetTaskPackageInfoResponse,
   PurchaseTaskPackageBody,
+  type TaskPackagePurchaseError,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 
@@ -81,7 +82,14 @@ router.post("/task-packages/purchase", requireAuth, async (req: AuthRequest, res
       const chargeCents = targetPriceCents - ownedValue;
       const balanceCents = Math.floor((user.balance + 0.000001) * 100);
       if (balanceCents < chargeCents) {
-        return { error: "Your wallet balance is not enough for this package.", status: 409 as const };
+        return {
+          error: "Your wallet balance is not enough for this package.",
+          status: 409 as const,
+          code: "insufficient_balance" as const,
+          walletBalance: balanceCents / 100,
+          requiredAmount: chargeCents / 100,
+          shortfall: (chargeCents - balanceCents) / 100,
+        };
       }
 
       const now = new Date();
@@ -112,7 +120,17 @@ router.post("/task-packages/purchase", requireAuth, async (req: AuthRequest, res
     });
 
     if ("error" in result) {
-      res.status(result.status ?? 409).json({ error: result.error });
+      const errorResponse: TaskPackagePurchaseError =
+        "code" in result && result.code === "insufficient_balance"
+          ? {
+              error: result.error ?? "Package purchase could not be completed.",
+              code: result.code,
+              walletBalance: result.walletBalance,
+              requiredAmount: result.requiredAmount,
+              shortfall: result.shortfall,
+            }
+          : { error: result.error ?? "Package purchase could not be completed." };
+      res.status(result.status ?? 409).json(errorResponse);
       return;
     }
     res.json(packageInfo(result.user));

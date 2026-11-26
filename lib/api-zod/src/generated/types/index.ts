@@ -136,6 +136,8 @@ export * from './taskPackageMpesaPurchaseResponseStatus';
 export * from './taskPackageMpesaPurchaseStatusResponse';
 export * from './taskPackageMpesaPurchaseStatusResponsePackage';
 export * from './taskPackageMpesaPurchaseStatusResponseStatus';
+export * from './taskPackagePurchaseError';
+export * from './taskPackagePurchaseErrorCode';
 export * from './taskPackagePurchaseInput';
 export * from './taskPackagePurchaseInputPackage';
 export * from './taskQuestion';

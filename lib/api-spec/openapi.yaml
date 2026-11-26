@@ -469,6 +469,10 @@ paths:
           description: Invalid package choice
         "409":
           description: Package already owned or wallet balance is insufficient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPackagePurchaseError"
 
   /task-packages/purchase/mpesa:
     post:
@@ -3160,6 +3164,22 @@ components:
         package:
           type: string
           enum: [silver, diamond]
+
+    TaskPackagePurchaseError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [insufficient_balance]
+        walletBalance:
+          type: number
+        requiredAmount:
+          type: number
+        shortfall:
+          type: number
 
     TaskPackageMpesaPurchaseInput:
       type: object

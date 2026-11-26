@@ -854,6 +854,21 @@ export interface TaskPackagePurchaseInput {
   package: TaskPackagePurchaseInputPackage;
 }
 
+export type TaskPackagePurchaseErrorCode = typeof TaskPackagePurchaseErrorCode[keyof typeof TaskPackagePurchaseErrorCode];
+
+
+export const TaskPackagePurchaseErrorCode = {
+  insufficient_balance: 'insufficient_balance',
+} as const;
+
+export interface TaskPackagePurchaseError {
+  error: string;
+  code?: TaskPackagePurchaseErrorCode;
+  walletBalance?: number;
+  requiredAmount?: number;
+  shortfall?: number;
+}
+
 export type TaskPackageMpesaPurchaseInputPackage = typeof TaskPackageMpesaPurchaseInputPackage[keyof typeof TaskPackageMpesaPurchaseInputPackage];
 
 

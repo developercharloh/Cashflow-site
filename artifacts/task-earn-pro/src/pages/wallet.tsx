@@ -153,6 +153,24 @@ export default function WalletPage() {
     setStkState({ status: "idle", countdown: 120 });
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedAmount = Number(params.get("depositAmount"));
+    if (!Number.isFinite(requestedAmount) || requestedAmount < 0.1) return;
+
+    setDepositAmount(requestedAmount.toFixed(2));
+    setStage({ view: "deposit_form", method: DEPOSIT_METHODS[0] });
+  }, []);
+
+  const returnToPackagesAfterDeposit = () => {
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    const target = returnTo === "/packages" ? returnTo : null;
+    window.setTimeout(() => {
+      close();
+      if (target) setLocation(target);
+    }, 3000);
+  };
+
   // ── STK push polling ────────────────────────────────────────────────────────
   useEffect(() => {
     if (stkState.status !== "sent" || !stkState.reference) return;
@@ -181,7 +199,7 @@ export default function WalletPage() {
           setStkState(prev => ({ ...prev, status: "confirmed", amount: d.amount }));
           invalidate();
           toast({ title: "Deposit Confirmed! 🎉", description: `$${d.amount?.toFixed(2)} has been credited to your wallet.` });
-          setTimeout(() => close(), 3000);
+          returnToPackagesAfterDeposit();
           return;
         }
         if (d.status === "rejected") {
@@ -508,6 +526,11 @@ export default function WalletPage() {
               </div>
             </DialogHeader>
             <div className="space-y-4 pt-1">
+              {new URLSearchParams(window.location.search).get("returnTo") === "/packages" && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+                  Deposit the requested amount here. After the deposit is confirmed, you’ll return to Packages to retry your purchase.
+                </div>
+              )}
 
               {/* USD amount */}
               <div>

@@ -107,6 +107,7 @@ import type {
   TaskPackageMpesaPurchaseInput,
   TaskPackageMpesaPurchaseResponse,
   TaskPackageMpesaPurchaseStatusResponse,
+  TaskPackagePurchaseError,
   TaskPackagePurchaseInput,
   TaskReviewInput,
   TaskSubmitInput,
@@ -1943,7 +1944,7 @@ export const purchaseTaskPackage = async (taskPackagePurchaseInput: TaskPackageP
 
 
 
-export const getPurchaseTaskPackageMutationOptions = <TError = ErrorType<void>,
+export const getPurchaseTaskPackageMutationOptions = <TError = ErrorType<void | TaskPackagePurchaseError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext> => {
 
@@ -1972,12 +1973,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PurchaseTaskPackageMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseTaskPackage>>>
     export type PurchaseTaskPackageMutationBody = BodyType<TaskPackagePurchaseInput>
-    export type PurchaseTaskPackageMutationError = ErrorType<void>
+    export type PurchaseTaskPackageMutationError = ErrorType<void | TaskPackagePurchaseError>
 
     /**
  * @summary Purchase or upgrade a task package using wallet funds
  */
-export const usePurchaseTaskPackage = <TError = ErrorType<void>,
+export const usePurchaseTaskPackage = <TError = ErrorType<void | TaskPackagePurchaseError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof purchaseTaskPackage>>,

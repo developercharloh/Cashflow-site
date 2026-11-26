@@ -1,60 +1,57 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   getGetTaskPackageInfoQueryKey,
   getGetTransactionsQueryKey,
-  getTaskPackageMpesaPurchaseStatus,
+  getGetWalletQueryKey,
   useGetTaskPackageInfo,
-  useStartTaskPackageMpesaPurchase,
+  usePurchaseTaskPackage,
 } from "@workspace/api-client-react";
-import { ArrowRight, BadgeCheck, CheckCircle, Diamond, Loader2, ShieldCheck, Smartphone, Sparkles, XCircle } from "lucide-react";
+import { ArrowRight, BadgeCheck, Diamond, Loader2, ShieldCheck, Sparkles, Wallet2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const PACKAGE_PRICE: Record<string, number> = { silver: 7.69, diamond: 19.23 };
 const PACKAGE_LABEL: Record<string, string> = { free: "Free", silver: "Silver", diamond: "Diamond", legacy: "Legacy" };
-const DEPOSIT_RATE_KES = 130;
-
 function money(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
-function priceInKes(value: number) {
-  return Math.round(value * DEPOSIT_RATE_KES);
-}
+type PurchaseError = {
+  data?: {
+    error?: string;
+    code?: string;
+    walletBalance?: number;
+    shortfall?: number;
+  };
+  message?: string;
+};
 
 function errorText(error: unknown) {
-  const apiError = error as { data?: { error?: string }; message?: string };
+  const apiError = error as PurchaseError;
   return apiError.data?.error ?? apiError.message ?? "Please try again.";
 }
 
 type PackageCode = "silver" | "diamond";
-type PackagePaymentState =
-  | { status: "idle" }
-  | { status: "pending"; reference: string; package: PackageCode; chargeUsd: number; amountKes: number; message: string; timedOut?: boolean }
-  | { status: "completed"; package: PackageCode; message: string }
-  | { status: "rejected"; package: PackageCode; message: string };
 
 export default function PackagesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const { data: info, isLoading, isError, refetch } = useGetTaskPackageInfo();
-  const purchase = useStartTaskPackageMpesaPurchase();
+  const purchase = usePurchaseTaskPackage();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PackageCode>("silver");
-  const [phone, setPhone] = useState("");
-  const [paymentError, setPaymentError] = useState("");
-  const [payment, setPayment] = useState<PackagePaymentState>({ status: "idle" });
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [purchaseError, setPurchaseError] = useState("");
+  const [serverShortfall, setServerShortfall] = useState<number | null>(null);
 
   const buy = (code: "silver" | "diamond") => {
     if (!info) return;
     setSelectedPackage(code);
-    setPayment({ status: "idle" });
-    setPaymentError("");
+    setPurchaseError("");
+    setServerShortfall(null);
     setDialogOpen(true);
   };
 
@@ -63,9 +60,20 @@ export default function PackagesPage() {
       ? 11.54
       : PACKAGE_PRICE[code];
 
+  const shortfallFor = (code: PackageCode) => {
+    if (!info) return 0;
+    if (code === selectedPackage && serverShortfall !== null) return serverShortfall;
+    const chargeCents = Math.round(chargeFor(code) * 100);
+    const balanceCents = Math.floor((info.walletBalance + 0.000001) * 100);
+    return Math.max(0, chargeCents - balanceCents) / 100;
+  };
+
+  const depositAmountFor = (shortfall: number) => Math.max(0.1, Math.round(shortfall * 100) / 100);
+
   const refreshPackageViews = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: getGetTaskPackageInfoQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetWalletQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetTransactionsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
@@ -73,83 +81,43 @@ export default function PackagesPage() {
   };
 
   const submitPurchase = async () => {
-    if (!phone.trim()) {
-      setPaymentError("Enter the phone number that should receive the M-Pesa prompt.");
-      return;
-    }
-    setPaymentError("");
+    setPurchaseError("");
     try {
-      const result = await purchase.mutateAsync({ data: { package: selectedPackage, phone: phone.trim() } });
-      setSelectedPackage(result.package);
-      setPayment({
-        status: "pending",
-        reference: result.reference,
-        package: result.package,
-        chargeUsd: result.chargeUsd,
-        amountKes: result.amountKes,
-        message: result.message,
+      const result = await purchase.mutateAsync({ data: { package: selectedPackage } });
+      queryClient.setQueryData(getGetTaskPackageInfoQueryKey(), result);
+      setDialogOpen(false);
+      await refreshPackageViews();
+      toast({
+        title: `${PACKAGE_LABEL[selectedPackage]} package active`,
+        description: `${money(chargeFor(selectedPackage))} was deducted from your wallet.`,
       });
     } catch (error) {
-      setPaymentError(errorText(error));
-    }
-  };
-
-  useEffect(() => {
-    if (payment.status !== "pending" || payment.timedOut) return;
-    let attempts = 0;
-    let active = true;
-    const poll = async () => {
-      try {
-        const result = await getTaskPackageMpesaPurchaseStatus(payment.reference);
-        if (!active) return;
-        if (result.status === "completed") {
-          setPayment({ status: "completed", package: result.package, message: result.message });
-          await refreshPackageViews();
-          toast({ title: "Package active", description: `${PACKAGE_LABEL[result.package]} access is ready for task bids.` });
-          return;
+      const apiError = error as PurchaseError;
+      const response = apiError.data;
+      if (response?.code === "insufficient_balance" && typeof response.shortfall === "number") {
+        setServerShortfall(response.shortfall);
+        if (typeof response.walletBalance === "number") {
+          queryClient.setQueryData(
+            getGetTaskPackageInfoQueryKey(),
+            (current: typeof info) => current ? { ...current, walletBalance: response.walletBalance! } : current,
+          );
         }
-        if (result.status === "rejected") {
-          setPayment({ status: "rejected", package: result.package, message: result.message });
-          return;
-        }
-        setPayment((current) => current.status === "pending"
-          ? { ...current, message: result.message }
-          : current);
-      } catch {
-        // A temporary status-check error should not stop payment confirmation polling.
-      }
-      attempts += 1;
-      if (attempts >= 24 && active) {
-        setPayment((current) => current.status === "pending" ? { ...current, timedOut: true } : current);
-        return;
-      }
-      if (active) window.setTimeout(() => void poll(), 5000);
-    };
-    void poll();
-    return () => { active = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payment.status === "pending" ? payment.reference : null, payment.status, payment.status === "pending" ? payment.timedOut : false]);
-
-  const checkPaymentStatus = async () => {
-    if (payment.status !== "pending") return;
-    setCheckingStatus(true);
-    try {
-      const result = await getTaskPackageMpesaPurchaseStatus(payment.reference);
-      if (result.status === "completed") {
-        setPayment({ status: "completed", package: result.package, message: result.message });
-        await refreshPackageViews();
-        toast({ title: "Package active", description: `${PACKAGE_LABEL[result.package]} access is ready for task bids.` });
-      } else if (result.status === "rejected") {
-        setPayment({ status: "rejected", package: result.package, message: result.message });
+        setPurchaseError("");
       } else {
-        setPayment((current) => current.status === "pending" ? { ...current, message: result.message } : current);
+        setPurchaseError(errorText(error));
       }
-    } catch (error) {
-      setPaymentError(errorText(error));
-    } finally {
-      setCheckingStatus(false);
     }
   };
+
+  const goToDeposit = (shortfall: number) => {
+    const amount = depositAmountFor(shortfall);
+    setDialogOpen(false);
+    setLocation(`/wallet?depositAmount=${amount.toFixed(2)}&returnTo=/packages`);
+  };
+
+  const selectedCharge = info ? chargeFor(selectedPackage) : 0;
+  const selectedShortfall = info ? shortfallFor(selectedPackage) : 0;
+  const selectedDepositAmount = depositAmountFor(selectedShortfall);
 
   return (
     <div className="px-4 pb-12 pt-6 sm:px-7 sm:pt-9">
@@ -182,6 +150,10 @@ export default function PackagesPage() {
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-primary"><BadgeCheck className="h-5 w-5" /></span>
                 <div><p className="text-[10px] uppercase tracking-[.15em] text-muted-foreground">Current access</p><p className="font-semibold">{PACKAGE_LABEL[info.currentPackage] ?? info.currentPackage}</p></div>
               </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-[.15em] text-muted-foreground">Wallet balance</p>
+                <p className="font-semibold">{money(info.walletBalance)}</p>
+              </div>
             </section>
             <section className="mt-5 grid gap-4 md:grid-cols-2" aria-label="Available task packages">
               {(["silver", "diamond"] as const).map((code, index) => {
@@ -206,7 +178,7 @@ export default function PackagesPage() {
                       {upgrade && <span className="pb-1 text-xs text-muted-foreground">upgrade difference</span>}
                       {!upgrade && <span className="pb-1 text-xs text-muted-foreground">one time</span>}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">KES {priceInKes(price).toLocaleString()} via M-Pesa Express</p>
+                    <p className="mt-1 text-xs text-muted-foreground">One-time charge from your wallet</p>
                     <div className="mt-5 flex items-center gap-2 border-t border-border pt-4 text-sm">
                       <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
                       <span>Unlimited task bids</span>
@@ -217,81 +189,68 @@ export default function PackagesPage() {
                       </div>
                     ) : (
                       <Button className="mt-5 h-11 w-full gap-2" disabled={purchase.isPending} onClick={() => buy(code)} data-testid={`button-buy-${code}`}>
-                        <>Get {item?.name ?? (code === "silver" ? "Silver" : "Diamond")} with M-Pesa Express <ArrowRight className="h-4 w-4" /></>
+                        {shortfallFor(code) > 0
+                          ? <>Deposit {money(depositAmountFor(shortfallFor(code)))} to buy <ArrowRight className="h-4 w-4" /></>
+                          : <>Buy {item?.name ?? PACKAGE_LABEL[code]} with wallet <ArrowRight className="h-4 w-4" /></>}
                       </Button>
                     )}
                   </article>
                 );
               })}
             </section>
-            <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">Pay directly with M-Pesa Express. You don’t need to top up your wallet first.</p>
+            <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">Packages are paid from your wallet. If your balance is short, deposit the amount needed and then retry.</p>
           </>
         )}
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setPurchaseError("");
+            setServerShortfall(null);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Pay for {PACKAGE_LABEL[selectedPackage]}</DialogTitle>
+              <DialogTitle>Buy {PACKAGE_LABEL[selectedPackage]} with wallet</DialogTitle>
               <DialogDescription>
-                A secure M-Pesa prompt for KES {(payment.status === "pending" ? payment.amountKes : priceInKes(chargeFor(selectedPackage))).toLocaleString()} will be sent to your phone. Your package activates after payment is confirmed.
+                Your wallet will be charged {money(selectedCharge)}. Current wallet balance: {money(info?.walletBalance ?? 0)}.
               </DialogDescription>
             </DialogHeader>
 
-            {payment.status === "idle" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="package-mpesa-phone">M-Pesa phone number</Label>
-                  <Input
-                    id="package-mpesa-phone"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="0712345678 or +254712345678"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    disabled={purchase.isPending}
-                  />
-                </div>
-                {paymentError && <p role="alert" className="text-sm text-destructive">{paymentError}</p>}
-                <Button className="w-full gap-2" onClick={() => void submitPurchase()} disabled={purchase.isPending}>
-                  {purchase.isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending prompt…</>
-                    : <><Smartphone className="h-4 w-4" /> Send M-Pesa prompt · KES {priceInKes(chargeFor(selectedPackage)).toLocaleString()}</>}
-                </Button>
-              </div>
-            )}
-
-            {payment.status === "pending" && (
-              <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="font-semibold">Waiting for payment confirmation</p>
-                </div>
-                <p className="text-sm">{payment.message}</p>
-                <p className="text-sm">Confirm KES {payment.amountKes.toLocaleString()} on your phone. Your wallet balance is not used.</p>
-                {paymentError && <p role="alert" className="text-sm text-red-700">{paymentError}</p>}
-                {payment.timedOut && (
-                  <Button variant="outline" className="w-full" onClick={() => void checkPaymentStatus()} disabled={checkingStatus}>
-                    {checkingStatus ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking…</> : "Check payment status"}
+            <div className="space-y-4">
+              {selectedShortfall > 0 ? (
+                <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                  <div className="flex items-center gap-2">
+                    <Wallet2 className="h-5 w-5 shrink-0" />
+                    <p className="font-semibold">Your wallet is short by {money(selectedShortfall)}.</p>
+                  </div>
+                  <p className="text-sm">
+                    Deposit {money(selectedDepositAmount)} to your wallet, then return here and retry this purchase.
+                    {selectedShortfall < 0.1 ? " The minimum M-Pesa deposit is $0.10; any extra will remain in your wallet." : ""}
+                  </p>
+                  <Button className="w-full gap-2" onClick={() => goToDeposit(selectedShortfall)}>
+                    <Wallet2 className="h-4 w-4" />
+                    Deposit {money(selectedDepositAmount)}
                   </Button>
-                )}
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                    <p className="font-semibold">You have enough in your wallet.</p>
+                    <p className="mt-1 text-sm">After purchase, your balance will be {money((info?.walletBalance ?? 0) - selectedCharge)}.</p>
+                  </div>
+                  {purchaseError && <p role="alert" className="text-sm text-destructive">{purchaseError}</p>}
+                  <Button className="w-full gap-2" onClick={() => void submitPurchase()} disabled={purchase.isPending}>
+                    {purchase.isPending
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Buying package…</>
+                      : <><Wallet2 className="h-4 w-4" /> Buy package · {money(selectedCharge)}</>}
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" className="w-full" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
               </div>
-            )}
-
-            {payment.status === "completed" && (
-              <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
-                <div className="flex items-center gap-2"><CheckCircle className="h-5 w-5" /><p className="font-semibold">{PACKAGE_LABEL[payment.package]} package active</p></div>
-                <p className="text-sm">{payment.message}</p>
-                <Button className="w-full" onClick={() => setDialogOpen(false)}>Done</Button>
-              </div>
-            )}
-
-            {payment.status === "rejected" && (
-              <div className="space-y-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
-                <div className="flex items-center gap-2"><XCircle className="h-5 w-5" /><p className="font-semibold">Payment not completed</p></div>
-                <p className="text-sm">{payment.message}</p>
-                <Button className="w-full" onClick={() => { setPayment({ status: "idle" }); setPaymentError(""); }}>Try again</Button>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
       </div>
