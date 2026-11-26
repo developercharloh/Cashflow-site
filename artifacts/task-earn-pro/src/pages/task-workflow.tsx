@@ -245,7 +245,7 @@ export default function TasksPage() {
           ) : tasksQuery.isError ? (
             <section role="alert" className="mt-5 rounded-2xl border border-border bg-card px-5 py-8 text-center"><p className="font-semibold">Work listings could not be loaded.</p><p className="mt-1 text-sm text-muted-foreground">Please try the board again.</p><Button variant="outline" className="mt-4" onClick={() => void tasksQuery.refetch()}>Try again</Button></section>
           ) : visibleTasks.length === 0 ? (
-            <section className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-9 text-center"><div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-accent text-primary"><FileCheck2 className="h-5 w-5" /></div><h3 className="mt-3 font-semibold">No open tasks in this category yet</h3><p className="mx-auto mt-1 max-w-sm text-sm leading-5 text-muted-foreground">Try another category or check back soon. New work appears when it is ready to accept.</p></section>
+            <section className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-9 text-center"><div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-accent text-primary"><FileCheck2 className="h-5 w-5" /></div><h3 className="mt-3 font-semibold">No open tasks in this category yet</h3><p className="mx-auto mt-1 max-w-sm text-sm leading-5 text-muted-foreground">Try another category or check back soon.</p></section>
           ) : (
             <section aria-label="Task listings" className="mt-4 space-y-3">
               {visibleTasks.map((task) => {
