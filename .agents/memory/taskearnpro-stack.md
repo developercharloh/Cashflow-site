@@ -28,12 +28,17 @@ description: Durable product decisions for work categories, task rewards, wallet
 
 ## Wallet methods and rates
 - Deposit rate is USD 1 = KES 130; withdrawal quote is USD 1 = KES 125. M-Pesa Express deposits use PayHero; card deposits are Coming Soon.
+- Deposits and package purchases must accept any phone supported by the connected M-Pesa channel, not a creator-specific number; normalize local and +254 formats consistently.
 - Withdrawals are manual requests: users choose a method, and the admin sends the payout externally before marking the request complete. The user-facing status stays simply Pending until completion; do not mention admin approval to the user.
 - KYC requires identity details and private ID images stored in Vercel Blob; administrators review submissions, and withdrawals stay blocked until approval. Users see only “Under review,” not the review method or reviewer role.
 
 **Why:** The user supplied the rates and PayHero deposit method, specified that withdrawals remain pending until admin completion, disabled Simple Quiz for now, and chose admin-reviewed KYC while requiring client-facing status to say only “Under review.”
 
+**Why:** The user said deposits and package purchases must work for all users' supported M-Pesa numbers, not only their own.
+
 **How to apply:** Keep displayed rates consistent with backend conversion, verify PayHero transaction status server-to-server before crediting deposits, do not expose the payment provider's brand or KYC review method to users, and do not send withdrawals automatically.
+
+**How to apply:** Do not hardcode or whitelist an individual user's number. Normalize accepted local and +254 formats before sending requests to PayHero; reject only numbers the configured M-Pesa channel cannot support.
 
 ## Imported project runtime
 - Imported repositories can contain artifact configuration without a registered artifact preview; confirm the registered workflow and actual frontend endpoint before relying on the artifact file alone.

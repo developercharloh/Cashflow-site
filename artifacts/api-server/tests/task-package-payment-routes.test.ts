@@ -249,6 +249,7 @@ describe("direct M-Pesa package payments", () => {
 
   it("uses the shared phone normalizer for wallet deposits as well", async () => {
     mocks.selectResults.push([worker]);
+    mocks.selectResults.push([worker]);
     mocks.insert.mockImplementation(() => ({
       values: vi.fn((values: Record<string, unknown>) => ({
         returning: vi.fn(async () => [{ id: 45, ...values }]),
