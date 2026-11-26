@@ -14,7 +14,7 @@ import {
 } from "@workspace/api-client-react";
 import type { MyTaskBid, Task } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AudioLines, BookOpenCheck, ChevronRight, Clock3, FileCheck2, FileSpreadsheet, FileText, Loader2, LockKeyhole, ShieldCheck, Upload, UsersRound, Wallet } from "lucide-react";
+import { AudioLines, BookOpenCheck, ChevronRight, Clock3, FileCheck2, FileSpreadsheet, FileText, Loader2, LockKeyhole, ShieldCheck, Upload, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -211,19 +211,19 @@ export default function TasksPage() {
           <div className="relative max-w-2xl">
             <p className="font-mono text-[10px] uppercase tracking-[.19em] text-primary">Lipwa Tasks / Work board</p>
             <h1 className="mt-3 max-w-xl font-serif text-[2.35rem] leading-[.98] tracking-tight sm:text-5xl">Find work worth doing.</h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">Browse clear briefs across writing, data, transcription, and AI training. A bid is a request for a place—not permission to start work. Work begins only after assignment.</p>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-2 text-xs font-medium text-primary"><ShieldCheck className="h-4 w-4" />Reward and funded place limits are shown up front</div>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">Browse clear briefs across writing, data, transcription, and AI training. Start work only after your bid has been assigned to you.</p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary/8 px-3 py-2 text-xs font-medium text-primary"><ShieldCheck className="h-4 w-4" />Rewards and expected completion times are shown up front</div>
           </div>
         </header>
 
         {myOpenWork.length > 0 && (
           <section className="mt-5 rounded-2xl border border-primary/20 bg-primary/[.035] p-4 sm:p-5" aria-label="Your task bids">
-            <div className="flex items-end justify-between gap-2"><div><p className="font-mono text-[10px] uppercase tracking-[.16em] text-primary">Your task places</p><h2 className="mt-1 font-serif text-2xl">Bids and assignments</h2></div><span className="text-xs text-muted-foreground">{myOpenWork.length} active</span></div>
+            <div className="flex items-end justify-between gap-2"><div><p className="font-mono text-[10px] uppercase tracking-[.16em] text-primary">Your task activity</p><h2 className="mt-1 font-serif text-2xl">Bids and assignments</h2></div><span className="text-xs text-muted-foreground">{myOpenWork.length} active</span></div>
             <div className="mt-3 space-y-2">
               {myOpenWork.map((bid) => {
                 const expired = deadlinePassed(bid);
                 return <article key={bid.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-3 sm:px-4" data-testid={`my-task-bid-${bid.id}`}>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{bid.taskTitle}</p><p className="mt-1 text-xs text-muted-foreground">{bid.status === "pending" ? "Waiting for an available place" : expired ? "The submission deadline has passed" : bid.status === "assigned" ? `Deadline: ${bid.deadlineAt ? new Date(bid.deadlineAt).toLocaleString() : `${bid.deadlineHours} hours after assignment`}` : "Your task place"}</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{bid.taskTitle}</p>{bid.status === "assigned" && <p className="mt-1 text-xs text-muted-foreground">{expired ? "The submission deadline has passed" : `Deadline: ${bid.deadlineAt ? new Date(bid.deadlineAt).toLocaleString() : `${bid.deadlineHours} hours after assignment`}`}</p>}</div>
                   <div className="flex items-center gap-2"><Badge variant="outline" className={statusStyle(bid)}>{statusLabel(bid)}</Badge>{bid.status === "assigned" && !expired && <Button size="sm" onClick={() => setSelectedTask(tasks.find((task) => task.id === bid.taskId) ?? null)} disabled={!tasks.some((task) => task.id === bid.taskId)}>Open work</Button>}</div>
                 </article>;
               })}
@@ -262,7 +262,7 @@ export default function TasksPage() {
                         <h3 className="mt-1 font-serif text-xl leading-tight sm:text-[1.4rem]">{task.title}</h3>
                         <p className="mt-1.5 line-clamp-2 max-w-3xl text-[13px] leading-5 text-muted-foreground">{task.description}</p>
                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/80 pt-3 text-[11px] text-muted-foreground sm:gap-x-5">
-                          <span className="inline-flex items-center gap-1.5 font-semibold text-primary"><Wallet className="h-3.5 w-3.5" />${task.reward.toFixed(2)} reward</span><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{task.estimatedMinutes} min</span><span className="inline-flex items-center gap-1.5"><UsersRound className="h-3.5 w-3.5" />Up to {task.maxCompletions} places</span>
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-primary"><Wallet className="h-3.5 w-3.5" />${task.reward.toFixed(2)} reward</span><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{task.estimatedMinutes} min</span>
                           {task.assetUrl && <span className="inline-flex items-center gap-1.5"><AudioLines className="h-3.5 w-3.5" />Audio included</span>}
                         </div>
                       </div>
@@ -299,7 +299,7 @@ export default function TasksPage() {
              ) : !activeBid && !hasTaskAccess ? (
                <div className="space-y-3 rounded-xl border border-accent bg-accent/30 p-4"><p className="text-sm font-semibold">A task package is needed to bid.</p><p className="text-xs leading-5 text-muted-foreground">Choose Silver or Diamond to unlock unlimited task bids. Pay directly with M-Pesa Express; a wallet top-up is not required.</p><Link href="/packages"><Button className="w-full">View task packages</Button></Link></div>
             ) : !activeBid ? (
-               <div className="space-y-3"><div className="rounded-xl border border-border bg-muted/30 p-4 text-sm leading-5 text-muted-foreground"><LockKeyhole className="mb-2 h-4 w-4 text-primary" />A task place must be assigned to you before you can begin or submit work. This task has up to {selectedTask.maxCompletions} funded places.</div><Button className="w-full" onClick={() => requestBid(selectedTask)} disabled={bidMutation.isPending || !selectedTask.isActive}>{bidMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending bid…</> : "Bid for this task"}</Button></div>
+                <div className="space-y-3"><div className="rounded-xl border border-border bg-muted/30 p-4 text-sm leading-5 text-muted-foreground"><LockKeyhole className="mb-2 h-4 w-4 text-primary" />Start only after your bid is assigned to you. Your submission deadline begins at assignment.</div><Button className="w-full" onClick={() => requestBid(selectedTask)} disabled={bidMutation.isPending || !selectedTask.isActive}>{bidMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending bid…</> : "Bid for this task"}</Button></div>
             ) : activeBid.status === "assigned" && !deadlinePassed(activeBid) ? (
               <div className="space-y-4">
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm font-semibold text-primary">Assigned to you</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Submit within {activeBid.deadlineHours} hours. Deadline: {activeBid.deadlineAt ? new Date(activeBid.deadlineAt).toLocaleString() : `${activeBid.deadlineHours} hours after assignment`}.</p></div>
@@ -308,7 +308,7 @@ export default function TasksPage() {
                  <Button className="w-full" onClick={submitWork} disabled={pending || (writtenWork.trim().length < 50 && !selectedFile)}>{pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading and submitting…</> : "Submit completed work"}</Button>
               </div>
             ) : (
-              <div className="rounded-xl border border-border bg-muted/40 p-4"><div className="flex items-center gap-2"><Badge variant="outline" className={statusStyle(activeBid)}>{statusLabel(activeBid)}</Badge></div><p className="mt-2 text-sm leading-5 text-muted-foreground">{activeBid.status === "pending" ? "Your request is in. You can begin only if a task place is assigned to you." : deadlinePassed(activeBid) ? "The task deadline has passed. Work submission is closed." : activeBid.status === "rejected" ? activeBid.reviewNote || "This request was not selected for a task place." : activeBid.status === "submitted" ? "Your completed work has been received." : activeBid.status === "completed" ? "This task is complete." : activeBid.reviewNote || "This task place is no longer available."}</p>{activeBid.status === "assigned" && activeBid.deadlineAt && <p className="mt-2 text-xs text-muted-foreground">Deadline: {new Date(activeBid.deadlineAt).toLocaleString()}</p>}</div>
+               <div className="rounded-xl border border-border bg-muted/40 p-4"><div className="flex items-center gap-2"><Badge variant="outline" className={statusStyle(activeBid)}>{statusLabel(activeBid)}</Badge></div><p className="mt-2 text-sm leading-5 text-muted-foreground">{activeBid.status === "pending" ? "Your bid was submitted. Check back later to see if the task is assigned to you." : deadlinePassed(activeBid) ? "The task deadline has passed. Work submission is closed." : activeBid.status === "rejected" ? activeBid.reviewNote || "This bid was not selected." : activeBid.status === "submitted" ? "Your completed work has been received." : activeBid.status === "completed" ? "This task is complete." : activeBid.reviewNote || "This task is no longer available."}</p>{activeBid.status === "assigned" && activeBid.deadlineAt && <p className="mt-2 text-xs text-muted-foreground">Deadline: {new Date(activeBid.deadlineAt).toLocaleString()}</p>}</div>
             )}
           </>}
         </DialogContent>
