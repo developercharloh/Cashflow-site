@@ -125,6 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               ["/admin", "Overview"],
               ["/admin/users", "Users"],
               ["/admin/tasks", "Tasks"],
+              ["/admin/task-bids", "Task bids"],
               ["/admin/task-submissions", "Work review"],
               ["/admin/audit-log", "Audit log"],
               ["/admin/withdrawals", "Withdrawals"],

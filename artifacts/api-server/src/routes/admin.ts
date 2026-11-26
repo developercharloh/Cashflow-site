@@ -7,6 +7,7 @@ import {
   transactionsTable,
   notificationsTable,
   userTasksTable,
+  taskBidsTable,
   taskSubmissionsTable,
 } from "@workspace/db";
 import { and, eq, desc, ilike, ne, or, sql } from "drizzle-orm";
@@ -239,6 +240,7 @@ router.get("/admin/tasks", requireAdmin, async (req: AuthRequest, res) => {
 router.post("/admin/tasks", requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { title, description, category, reward, estimatedMinutes, difficulty, minLevel, instructions, isActive } = req.body;
+    const deadlineHours = req.body?.deadlineHours === undefined ? 72 : Number(req.body.deadlineHours);
     const fundingBudget = Number(req.body?.fundingBudget);
     const maxCompletions = Number(req.body?.maxCompletions);
     if (typeof title !== "string" || title.trim().length < 5 || title.length > 160 ||
@@ -247,6 +249,7 @@ router.post("/admin/tasks", requireAdmin, async (req: AuthRequest, res) => {
         !Number.isFinite(fundingBudget) || fundingBudget <= 0 || !Number.isInteger(maxCompletions) ||
         maxCompletions < 1 || maxCompletions > 500 || fundingBudget + 0.000001 < reward * maxCompletions ||
         !Number.isInteger(estimatedMinutes) || estimatedMinutes < 1 || estimatedMinutes > 1440 ||
+        !Number.isInteger(deadlineHours) || deadlineHours < 1 || deadlineHours > 720 ||
         difficulty !== "hard" || !Number.isInteger(minLevel) || minLevel < 1 || minLevel > 7 ||
         typeof instructions !== "string" || instructions.trim().length < 50 || instructions.length > 10000) {
       res.status(400).json({ error: "Tasks must be expert-level and include clear instructions, a category, reward, budget, and valid completion cap. Budget must cover every available reward." });
@@ -260,6 +263,7 @@ router.post("/admin/tasks", requireAdmin, async (req: AuthRequest, res) => {
       reward: Math.round(reward * 100) / 100,
       fundingBudget: Math.round(fundingBudget * 100) / 100,
       maxCompletions,
+      deadlineHours,
       estimatedMinutes,
       difficulty: "hard",
       minLevel,
@@ -289,8 +293,10 @@ router.patch("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => 
     const reward = body.reward === undefined ? current.reward : Number(body.reward);
     const fundingBudget = body.fundingBudget === undefined ? current.fundingBudget : Number(body.fundingBudget);
     const maxCompletions = body.maxCompletions === undefined ? current.maxCompletions : Number(body.maxCompletions);
+    const deadlineHours = body.deadlineHours === undefined ? current.deadlineHours : Number(body.deadlineHours);
     if (!Number.isFinite(reward) || reward <= 0 || !Number.isFinite(fundingBudget) || fundingBudget <= 0 ||
         !Number.isInteger(maxCompletions) || maxCompletions < 1 || maxCompletions > 500 ||
+        !Number.isInteger(deadlineHours) || deadlineHours < 1 || deadlineHours > 720 ||
         fundingBudget + 0.000001 < reward * maxCompletions ||
         (body.difficulty !== undefined && body.difficulty !== "hard") ||
         (body.category !== undefined && !ALLOWED_WORK_CATEGORIES.has(body.category))) {
@@ -314,8 +320,11 @@ router.patch("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => 
         eq(taskSubmissionsTable.taskId, id),
         or(eq(taskSubmissionsTable.status, "submitted"), eq(taskSubmissionsTable.status, "approved")),
       ));
-    if (reservedSubmissions.length > maxCompletions ||
-        fundingBudget + 0.000001 < reward * reservedSubmissions.length) {
+    const assignedBids = await db.select({ id: taskBidsTable.id }).from(taskBidsTable)
+      .where(and(eq(taskBidsTable.taskId, id), eq(taskBidsTable.status, "assigned")));
+    const reservedPlaces = reservedSubmissions.length + assignedBids.length;
+    if (reservedPlaces > maxCompletions ||
+        fundingBudget + 0.000001 < reward * reservedPlaces) {
       res.status(400).json({ error: "Updated budget and completion cap must still cover already submitted and approved work." });
       return;
     }
@@ -323,6 +332,7 @@ router.patch("/admin/tasks/:id", requireAdmin, async (req: AuthRequest, res) => 
       reward: Math.round(reward * 100) / 100,
       fundingBudget: Math.round(fundingBudget * 100) / 100,
       maxCompletions,
+      deadlineHours,
       updatedAt: new Date(),
     };
     for (const key of ["title", "description", "category", "instructions", "estimatedMinutes", "minLevel", "isActive"] as const) {

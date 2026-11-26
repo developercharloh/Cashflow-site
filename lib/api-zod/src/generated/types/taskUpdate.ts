@@ -19,4 +19,9 @@ export interface TaskUpdate {
   category?: string;
   instructions?: string;
   taskType?: string;
+  /**
+     * @minimum 1
+     * @maximum 720
+     */
+  deadlineHours?: number;
 }

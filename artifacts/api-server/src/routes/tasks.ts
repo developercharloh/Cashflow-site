@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable, taskAttemptsTable, taskSubmissionsTable } from "@workspace/db";
-import { eq, and, gte, desc, or } from "drizzle-orm";
+import { db, usersTable, tasksTable, userTasksTable, transactionsTable, notificationsTable, taskAttemptsTable, taskSubmissionsTable, taskBidsTable } from "@workspace/db";
+import { eq, and, gte, desc, lte, or } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
 import { getLevelName } from "./auth";
 import { getRandomQuestions, CATEGORY_DESCRIPTIONS, QUESTION_BANK } from "../lib/questionBank";
@@ -417,79 +417,48 @@ router.get("/tasks/categories", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// ─── Daily seeded shuffle ─────────────────────────────────────────────────────
-
-// Deterministic Fisher-Yates shuffle seeded from a string (today's UTC date).
-// Same seed = same order every time, different date = different order.
-function seededShuffle<T>(arr: T[], seed: string): T[] {
-  let s = 0;
-  for (let i = 0; i < seed.length; i++) s += seed.charCodeAt(i) * (i + 1);
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    s = ((s * 1664525 + 1013904223) | 0) >>> 0;
-    const j = s % (i + 1);
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-const DAILY_PER_CATEGORY = 12; // tasks shown per category per day
-
 // ─── GET /tasks ───────────────────────────────────────────────────────────────
 
 router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { category } = req.query as { category?: string };
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(404).json({ error: "Account not found." });
+      return;
+    }
+    const now = new Date();
+    await db.update(taskBidsTable).set({
+      status: "expired",
+      reviewNote: "The deadline passed before work was submitted.",
+      updatedAt: now,
+    }).where(and(
+      eq(taskBidsTable.status, "assigned"),
+      lte(taskBidsTable.deadlineAt, now),
+    ));
     const openSubmissions = await db.select({ taskId: taskSubmissionsTable.taskId }).from(taskSubmissionsTable)
       .where(or(eq(taskSubmissionsTable.status, "submitted"), eq(taskSubmissionsTable.status, "approved")));
     const reservedByTask = new Map<number, number>();
     for (const submission of openSubmissions) reservedByTask.set(submission.taskId, (reservedByTask.get(submission.taskId) ?? 0) + 1);
-    const allTasks = (await db.select().from(tasksTable).where(eq(tasksTable.isActive, true)))
+    const assignedBids = await db.select({ taskId: taskBidsTable.taskId }).from(taskBidsTable)
+      .where(eq(taskBidsTable.status, "assigned"));
+    for (const bid of assignedBids) reservedByTask.set(bid.taskId, (reservedByTask.get(bid.taskId) ?? 0) + 1);
+    const userBids = await db.select().from(taskBidsTable).where(eq(taskBidsTable.userId, req.userId!));
+    const bidByTask = new Map(userBids.map((bid) => [bid.taskId, bid]));
+    const allTasks = (await db.select().from(tasksTable))
       .filter((task) =>
+        (task.isActive || bidByTask.has(task.id)) &&
         task.taskType === "written" &&
         writtenTaskCategories.has(task.category) &&
-        (reservedByTask.get(task.id) ?? 0) < task.maxCompletions &&
-        task.reward * ((reservedByTask.get(task.id) ?? 0) + 1) <= task.fundingBudget + 0.000001
+        ((reservedByTask.get(task.id) ?? 0) < task.maxCompletions &&
+          task.reward * ((reservedByTask.get(task.id) ?? 0) + 1) <= task.fundingBudget + 0.000001 ||
+          bidByTask.has(task.id))
       );
 
-    // Fetch all user attempts: passed = cooldown, failed = task disappears permanently
-    const userAttempts = await db.select().from(taskAttemptsTable)
-      .where(eq(taskAttemptsTable.userId, req.userId!));
-
-    const lastPassedAt: Record<number, Date> = {};
-    const failedTaskIds = new Set<number>();
-
-    for (const a of userAttempts) {
-      if (a.status === "failed") failedTaskIds.add(a.taskId);
-      if (a.status === "passed") {
-        const prev = lastPassedAt[a.taskId];
-        const ts = a.completedAt ? new Date(a.completedAt) : new Date(a.startedAt);
-        if (!prev || ts > prev) lastPassedAt[a.taskId] = ts;
-      }
-    }
-
-    // Filter: correct level + never failed
-    let eligible = allTasks.filter(t => t.minLevel <= user.level && !failedTaskIds.has(t.id));
+    let eligible = allTasks.filter(t => t.minLevel <= user.level || bidByTask.has(t.id));
     if (category) eligible = eligible.filter(t => t.category === category);
-
-    // Daily rotation: deterministic shuffle per category, pick DAILY_PER_CATEGORY per day
-    const todaySeed = new Date().toISOString().slice(0, 10); // "2026-06-04"
-    const byCategory: Record<string, typeof eligible> = {};
-    for (const t of eligible) (byCategory[t.category] ??= []).push(t);
-
-    const dailyPool: typeof eligible = [];
-    for (const catTasks of Object.values(byCategory)) {
-      const shuffled = seededShuffle(catTasks, todaySeed + catTasks[0]?.category);
-      dailyPool.push(...shuffled.slice(0, DAILY_PER_CATEGORY));
-    }
-
-    const now = Date.now();
-    res.json(dailyPool.map(t => {
-      const lastPassed = lastPassedAt[t.id];
-      const cooldownMs = (t.cooldownHours ?? 24) * 3600_000;
-      const onCooldown = lastPassed ? (now - lastPassed.getTime()) < cooldownMs : false;
-      const cooldownEndsAt = lastPassed && onCooldown ? new Date(lastPassed.getTime() + cooldownMs).toISOString() : null;
+    res.json(eligible.map(t => {
+      const bid = bidByTask.get(t.id);
       return {
         id: t.id,
         title: t.title,
@@ -504,12 +473,15 @@ router.get("/tasks", requireAuth, async (req: AuthRequest, res) => {
         timeLimitSeconds: t.timeLimitSeconds,
         difficulty: t.difficulty,
         minLevel: t.minLevel,
+        deadlineHours: t.deadlineHours,
         questionCount: t.questionCount,
         cooldownHours: t.cooldownHours,
         completionCount: t.completionCount,
         isActive: t.isActive,
-        onCooldown,
-        cooldownEndsAt,
+        onCooldown: false,
+        cooldownEndsAt: null,
+        bidStatus: bid?.status ?? null,
+        bidDeadlineAt: bid?.deadlineAt?.toISOString() ?? null,
       };
     }));
   } catch (err) {

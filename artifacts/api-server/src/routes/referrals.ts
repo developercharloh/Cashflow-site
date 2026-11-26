@@ -8,6 +8,10 @@ const router = Router();
 router.get("/referrals", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) {
+      res.status(404).json({ error: "Account not found." });
+      return;
+    }
     const referralLink = `https://lipwatasks.site/auth/register?ref=${user.referralCode}`;
 
     const referred = await db.select().from(usersTable).where(eq(usersTable.referredBy, req.userId!));
@@ -19,7 +23,7 @@ router.get("/referrals", requireAuth, async (req: AuthRequest, res) => {
       totalReferrals: user.referralCount,
       activeReferrals,
       totalEarned: user.totalReferralEarnings,
-      pendingEarnings: user.pendingEarnings,
+      pendingEarnings: 0,
     });
   } catch (err) {
     req.log.error(err);

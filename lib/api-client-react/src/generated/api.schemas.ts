@@ -121,6 +121,21 @@ export interface ChartDataPoint {
   amount: number;
 }
 
+/**
+ * @nullable
+ */
+export type TaskBidStatus = typeof TaskBidStatus[keyof typeof TaskBidStatus] | null;
+
+
+export const TaskBidStatus = {
+  pending: 'pending',
+  assigned: 'assigned',
+  submitted: 'submitted',
+  completed: 'completed',
+  rejected: 'rejected',
+  expired: 'expired',
+} as const;
+
 export interface Task {
   id: number;
   title: string;
@@ -132,6 +147,7 @@ export interface Task {
   reward: number;
   fundingBudget: number;
   maxCompletions: number;
+  completionCount?: number;
   estimatedMinutes: number;
   /** @nullable */
   timeLimitSeconds?: number | null;
@@ -139,6 +155,7 @@ export interface Task {
   minutesCost?: number | null;
   difficulty: string;
   minLevel: number;
+  deadlineHours: number;
   isActive: boolean;
   questionCount?: number;
   /** @nullable */
@@ -149,6 +166,10 @@ export interface Task {
   completedByUser?: boolean;
   /** @nullable */
   instructions?: string | null;
+  /** @nullable */
+  bidStatus?: TaskBidStatus;
+  /** @nullable */
+  bidDeadlineAt?: string | null;
 }
 
 export interface TaskCategory {
@@ -253,6 +274,11 @@ export interface TaskInput {
   estimatedMinutes: number;
   difficulty: string;
   minLevel: number;
+  /**
+     * @minimum 1
+     * @maximum 720
+     */
+  deadlineHours: number;
   instructions: string;
   taskType?: string;
   isActive?: boolean;
@@ -271,6 +297,11 @@ export interface TaskUpdate {
   category?: string;
   instructions?: string;
   taskType?: string;
+  /**
+     * @minimum 1
+     * @maximum 720
+     */
+  deadlineHours?: number;
 }
 
 export type TaskFeedSourceInputAllowedCategoriesItem = typeof TaskFeedSourceInputAllowedCategoriesItem[keyof typeof TaskFeedSourceInputAllowedCategoriesItem];
@@ -476,6 +507,7 @@ export interface TaskLibraryPublishInput {
 }
 
 export interface TaskFileInput {
+  taskId: number;
   name: string;
   size: number;
   contentType: string;
@@ -533,6 +565,75 @@ export type AdminTaskSubmission = TaskWorkSubmission & ({
   /** @nullable */
   reviewGuide: string | null;
 });
+
+export type MyTaskBidStatus = typeof MyTaskBidStatus[keyof typeof MyTaskBidStatus];
+
+
+export const MyTaskBidStatus = {
+  pending: 'pending',
+  assigned: 'assigned',
+  submitted: 'submitted',
+  completed: 'completed',
+  rejected: 'rejected',
+  expired: 'expired',
+} as const;
+
+export interface MyTaskBid {
+  id: number;
+  taskId: number;
+  taskTitle: string;
+  status: MyTaskBidStatus;
+  bidAt: string;
+  /** @nullable */
+  deadlineAt?: string | null;
+  deadlineHours: number;
+  /** @nullable */
+  reviewNote: string | null;
+}
+
+export type AdminTaskBidStatus = typeof AdminTaskBidStatus[keyof typeof AdminTaskBidStatus];
+
+
+export const AdminTaskBidStatus = {
+  pending: 'pending',
+  assigned: 'assigned',
+  submitted: 'submitted',
+  completed: 'completed',
+  rejected: 'rejected',
+  expired: 'expired',
+} as const;
+
+export interface AdminTaskBid {
+  id: number;
+  taskId: number;
+  taskTitle: string;
+  category: string;
+  reward: number;
+  deadlineHours: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  status: AdminTaskBidStatus;
+  bidAt: string;
+  /** @nullable */
+  deadlineAt: string | null;
+  /** @nullable */
+  reviewNote?: string | null;
+}
+
+export type TaskBidReviewInputDecision = typeof TaskBidReviewInputDecision[keyof typeof TaskBidReviewInputDecision];
+
+
+export const TaskBidReviewInputDecision = {
+  assign: 'assign',
+  reject: 'reject',
+} as const;
+
+export interface TaskBidReviewInput {
+  decision: TaskBidReviewInputDecision;
+  /** @maxLength 500 */
+  note?: string;
+}
 
 export type TaskReviewInputDecision = typeof TaskReviewInputDecision[keyof typeof TaskReviewInputDecision];
 
@@ -706,6 +807,51 @@ export interface ReferralInfo {
   activeReferrals: number;
   totalEarned: number;
   pendingEarnings: number;
+}
+
+export type TaskPackageCode = typeof TaskPackageCode[keyof typeof TaskPackageCode];
+
+
+export const TaskPackageCode = {
+  silver: 'silver',
+  diamond: 'diamond',
+} as const;
+
+export interface TaskPackage {
+  code: TaskPackageCode;
+  name: string;
+  price: number;
+  description: string;
+}
+
+export type TaskPackageInfoCurrentPackage = typeof TaskPackageInfoCurrentPackage[keyof typeof TaskPackageInfoCurrentPackage];
+
+
+export const TaskPackageInfoCurrentPackage = {
+  free: 'free',
+  silver: 'silver',
+  diamond: 'diamond',
+  legacy: 'legacy',
+} as const;
+
+export interface TaskPackageInfo {
+  currentPackage: TaskPackageInfoCurrentPackage;
+  /** @nullable */
+  purchasedAt: string | null;
+  walletBalance: number;
+  packages: TaskPackage[];
+}
+
+export type TaskPackagePurchaseInputPackage = typeof TaskPackagePurchaseInputPackage[keyof typeof TaskPackagePurchaseInputPackage];
+
+
+export const TaskPackagePurchaseInputPackage = {
+  silver: 'silver',
+  diamond: 'diamond',
+} as const;
+
+export interface TaskPackagePurchaseInput {
+  package: TaskPackagePurchaseInputPackage;
 }
 
 export interface ReferredUser {
@@ -1108,6 +1254,23 @@ search?: string;
 export type AdminGetTaskSubmissionsParams = {
 status?: string;
 };
+
+export type AdminGetTaskBidsParams = {
+status?: AdminGetTaskBidsStatus;
+};
+
+export type AdminGetTaskBidsStatus = typeof AdminGetTaskBidsStatus[keyof typeof AdminGetTaskBidsStatus];
+
+
+export const AdminGetTaskBidsStatus = {
+  pending: 'pending',
+  assigned: 'assigned',
+  submitted: 'submitted',
+  completed: 'completed',
+  rejected: 'rejected',
+  expired: 'expired',
+  all: 'all',
+} as const;
 
 export type AdminListTaskLibraryParams = {
 category?: AdminListTaskLibraryCategory;

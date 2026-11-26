@@ -216,18 +216,22 @@ export const GetTasksResponseItem = zod.object({
   "reward": zod.number(),
   "fundingBudget": zod.number(),
   "maxCompletions": zod.number(),
+  "completionCount": zod.number().optional(),
   "estimatedMinutes": zod.number(),
   "timeLimitSeconds": zod.number().nullish(),
   "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
+  "deadlineHours": zod.number(),
   "isActive": zod.boolean(),
   "questionCount": zod.number().optional(),
   "cooldownHours": zod.number().nullish(),
   "onCooldown": zod.boolean().optional(),
   "cooldownEndsAt": zod.string().nullish(),
   "completedByUser": zod.boolean().optional(),
-  "instructions": zod.string().nullish()
+  "instructions": zod.string().nullish(),
+  "bidStatus": zod.union([zod.literal('pending'),zod.literal('assigned'),zod.literal('submitted'),zod.literal('completed'),zod.literal('rejected'),zod.literal('expired'),zod.literal(null)]).nullish(),
+  "bidDeadlineAt": zod.coerce.date().nullish()
 })
 export const GetTasksResponse = zod.array(GetTasksResponseItem)
 
@@ -249,18 +253,22 @@ export const GetTaskResponse = zod.object({
   "reward": zod.number(),
   "fundingBudget": zod.number(),
   "maxCompletions": zod.number(),
+  "completionCount": zod.number().optional(),
   "estimatedMinutes": zod.number(),
   "timeLimitSeconds": zod.number().nullish(),
   "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
+  "deadlineHours": zod.number(),
   "isActive": zod.boolean(),
   "questionCount": zod.number().optional(),
   "cooldownHours": zod.number().nullish(),
   "onCooldown": zod.boolean().optional(),
   "cooldownEndsAt": zod.string().nullish(),
   "completedByUser": zod.boolean().optional(),
-  "instructions": zod.string().nullish()
+  "instructions": zod.string().nullish(),
+  "bidStatus": zod.union([zod.literal('pending'),zod.literal('assigned'),zod.literal('submitted'),zod.literal('completed'),zod.literal('rejected'),zod.literal('expired'),zod.literal(null)]).nullish(),
+  "bidDeadlineAt": zod.coerce.date().nullish()
 })
 
 
@@ -295,6 +303,7 @@ export const SubmitTaskBody = zod.object({
  * @summary Request a private upload URL for task work
  */
 export const RequestTaskSubmissionUploadBody = zod.object({
+  "taskId": zod.number(),
   "name": zod.string(),
   "size": zod.number(),
   "contentType": zod.string()
@@ -340,6 +349,66 @@ export const GetMyWorkSubmissionsResponseItem = zod.object({
   "submittedAt": zod.string()
 })
 export const GetMyWorkSubmissionsResponse = zod.array(GetMyWorkSubmissionsResponseItem)
+
+
+/**
+ * @summary Get the current user's task bids and assignments
+ */
+export const GetMyTaskBidsResponseItem = zod.object({
+  "id": zod.number(),
+  "taskId": zod.number(),
+  "taskTitle": zod.string(),
+  "status": zod.enum(['pending', 'assigned', 'submitted', 'completed', 'rejected', 'expired']),
+  "bidAt": zod.coerce.date(),
+  "deadlineAt": zod.coerce.date().nullish(),
+  "deadlineHours": zod.number(),
+  "reviewNote": zod.string().nullable()
+})
+export const GetMyTaskBidsResponse = zod.array(GetMyTaskBidsResponseItem)
+
+
+/**
+ * @summary Bid for a task
+ */
+export const SubmitTaskBidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get task packages and current wallet access
+ */
+export const GetTaskPackageInfoResponse = zod.object({
+  "currentPackage": zod.enum(['free', 'silver', 'diamond', 'legacy']),
+  "purchasedAt": zod.coerce.date().nullable(),
+  "walletBalance": zod.number(),
+  "packages": zod.array(zod.object({
+  "code": zod.enum(['silver', 'diamond']),
+  "name": zod.string(),
+  "price": zod.number(),
+  "description": zod.string()
+}))
+})
+
+
+/**
+ * @summary Purchase or upgrade a task package using wallet funds
+ */
+export const PurchaseTaskPackageBody = zod.object({
+  "package": zod.enum(['silver', 'diamond'])
+})
+
+export const PurchaseTaskPackageResponse = zod.object({
+  "currentPackage": zod.enum(['free', 'silver', 'diamond', 'legacy']),
+  "purchasedAt": zod.coerce.date().nullable(),
+  "walletBalance": zod.number(),
+  "packages": zod.array(zod.object({
+  "code": zod.enum(['silver', 'diamond']),
+  "name": zod.string(),
+  "price": zod.number(),
+  "description": zod.string()
+}))
+})
 
 
 /**
@@ -1198,6 +1267,64 @@ export const AdminReviewTaskSubmissionResponse = zod.object({
 
 
 /**
+ * @summary Admin — list worker bids for tasks
+ */
+export const AdminGetTaskBidsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'assigned', 'submitted', 'completed', 'rejected', 'expired', 'all']).optional()
+})
+
+export const AdminGetTaskBidsResponseItem = zod.object({
+  "id": zod.number(),
+  "taskId": zod.number(),
+  "taskTitle": zod.string(),
+  "category": zod.string(),
+  "reward": zod.number(),
+  "deadlineHours": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "userEmail": zod.string(),
+  "status": zod.enum(['pending', 'assigned', 'submitted', 'completed', 'rejected', 'expired']),
+  "bidAt": zod.coerce.date(),
+  "deadlineAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullish()
+})
+export const AdminGetTaskBidsResponse = zod.array(AdminGetTaskBidsResponseItem)
+
+
+/**
+ * @summary Admin — assign a task to a bidder or decline the bid
+ */
+export const AdminReviewTaskBidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminReviewTaskBidBodyNoteMax = 500;
+
+
+
+export const AdminReviewTaskBidBody = zod.object({
+  "decision": zod.enum(['assign', 'reject']),
+  "note": zod.string().max(adminReviewTaskBidBodyNoteMax).optional()
+})
+
+export const AdminReviewTaskBidResponse = zod.object({
+  "id": zod.number(),
+  "taskId": zod.number(),
+  "taskTitle": zod.string(),
+  "category": zod.string(),
+  "reward": zod.number(),
+  "deadlineHours": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "userEmail": zod.string(),
+  "status": zod.enum(['pending', 'assigned', 'submitted', 'completed', 'rejected', 'expired']),
+  "bidAt": zod.coerce.date(),
+  "deadlineAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullish()
+})
+
+
+/**
  * @summary Admin — list original ready-to-publish task templates
  */
 export const AdminListTaskLibraryQueryParams = zod.object({
@@ -1287,18 +1414,22 @@ export const AdminGetTasksResponseItem = zod.object({
   "reward": zod.number(),
   "fundingBudget": zod.number(),
   "maxCompletions": zod.number(),
+  "completionCount": zod.number().optional(),
   "estimatedMinutes": zod.number(),
   "timeLimitSeconds": zod.number().nullish(),
   "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
+  "deadlineHours": zod.number(),
   "isActive": zod.boolean(),
   "questionCount": zod.number().optional(),
   "cooldownHours": zod.number().nullish(),
   "onCooldown": zod.boolean().optional(),
   "cooldownEndsAt": zod.string().nullish(),
   "completedByUser": zod.boolean().optional(),
-  "instructions": zod.string().nullish()
+  "instructions": zod.string().nullish(),
+  "bidStatus": zod.union([zod.literal('pending'),zod.literal('assigned'),zod.literal('submitted'),zod.literal('completed'),zod.literal('rejected'),zod.literal('expired'),zod.literal(null)]).nullish(),
+  "bidDeadlineAt": zod.coerce.date().nullish()
 })
 export const AdminGetTasksResponse = zod.array(AdminGetTasksResponseItem)
 
@@ -1306,6 +1437,10 @@ export const AdminGetTasksResponse = zod.array(AdminGetTasksResponseItem)
 /**
  * @summary Admin — create a task
  */
+export const adminCreateTaskBodyDeadlineHoursMax = 720;
+
+
+
 export const AdminCreateTaskBody = zod.object({
   "title": zod.string(),
   "description": zod.string(),
@@ -1316,6 +1451,7 @@ export const AdminCreateTaskBody = zod.object({
   "estimatedMinutes": zod.number(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
+  "deadlineHours": zod.number().min(1).max(adminCreateTaskBodyDeadlineHoursMax),
   "instructions": zod.string(),
   "taskType": zod.string().optional(),
   "isActive": zod.boolean().optional()
@@ -1329,6 +1465,10 @@ export const AdminUpdateTaskParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminUpdateTaskBodyDeadlineHoursMax = 720;
+
+
+
 export const AdminUpdateTaskBody = zod.object({
   "title": zod.string().optional(),
   "description": zod.string().optional(),
@@ -1341,7 +1481,8 @@ export const AdminUpdateTaskBody = zod.object({
   "maxCompletions": zod.number().optional(),
   "category": zod.string().optional(),
   "instructions": zod.string().optional(),
-  "taskType": zod.string().optional()
+  "taskType": zod.string().optional(),
+  "deadlineHours": zod.number().min(1).max(adminUpdateTaskBodyDeadlineHoursMax).optional()
 })
 
 export const AdminUpdateTaskResponse = zod.object({
@@ -1354,18 +1495,22 @@ export const AdminUpdateTaskResponse = zod.object({
   "reward": zod.number(),
   "fundingBudget": zod.number(),
   "maxCompletions": zod.number(),
+  "completionCount": zod.number().optional(),
   "estimatedMinutes": zod.number(),
   "timeLimitSeconds": zod.number().nullish(),
   "minutesCost": zod.number().nullish(),
   "difficulty": zod.string(),
   "minLevel": zod.number(),
+  "deadlineHours": zod.number(),
   "isActive": zod.boolean(),
   "questionCount": zod.number().optional(),
   "cooldownHours": zod.number().nullish(),
   "onCooldown": zod.boolean().optional(),
   "cooldownEndsAt": zod.string().nullish(),
   "completedByUser": zod.boolean().optional(),
-  "instructions": zod.string().nullish()
+  "instructions": zod.string().nullish(),
+  "bidStatus": zod.union([zod.literal('pending'),zod.literal('assigned'),zod.literal('submitted'),zod.literal('completed'),zod.literal('rejected'),zod.literal('expired'),zod.literal(null)]).nullish(),
+  "bidDeadlineAt": zod.coerce.date().nullish()
 })
 
 

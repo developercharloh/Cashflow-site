@@ -24,6 +24,7 @@ import type {
   AdminAnalytics,
   AdminAuditEntry,
   AdminGetAuditLogParams,
+  AdminGetTaskBidsParams,
   AdminGetTaskSubmissionsParams,
   AdminGetUsersParams,
   AdminGetWithdrawalsParams,
@@ -32,6 +33,7 @@ import type {
   AdminListTaskLibraryParams,
   AdminSupportThread,
   AdminSupportThreadDetail,
+  AdminTaskBid,
   AdminTaskSubmission,
   AdminUpdateTaskSourceBody,
   AdminUser,
@@ -72,6 +74,7 @@ import type {
   MembershipLevel,
   MessageResponse,
   MobileWithdrawInput,
+  MyTaskBid,
   Notification,
   PaystackTransferResult,
   PaystackWithdrawInput,
@@ -85,6 +88,7 @@ import type {
   SupportThreadResponse,
   Task,
   TaskAttemptSummary,
+  TaskBidReviewInput,
   TaskCategory,
   TaskCompletionInput,
   TaskCompletionResult,
@@ -99,6 +103,8 @@ import type {
   TaskInput,
   TaskLibraryItem,
   TaskLibraryPublishInput,
+  TaskPackageInfo,
+  TaskPackagePurchaseInput,
   TaskReviewInput,
   TaskSubmitInput,
   TaskUpdate,
@@ -1683,6 +1689,301 @@ export function useGetMyWorkSubmissions<TData = Awaited<ReturnType<typeof getMyW
 
 
 
+
+export const getGetMyTaskBidsUrl = () => {
+
+
+
+
+  return `/api/tasks/bids/mine`
+}
+
+/**
+ * @summary Get the current user's task bids and assignments
+ */
+export const getMyTaskBids = async ( options?: RequestInit): Promise<MyTaskBid[]> => {
+
+  return customFetch<MyTaskBid[]>(getGetMyTaskBidsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyTaskBidsQueryKey = () => {
+    return [
+    `/api/tasks/bids/mine`
+    ] as const;
+    }
+
+
+export const getGetMyTaskBidsQueryOptions = <TData = Awaited<ReturnType<typeof getMyTaskBids>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyTaskBids>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyTaskBidsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyTaskBids>>> = ({ signal }) => getMyTaskBids({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyTaskBids>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyTaskBidsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyTaskBids>>>
+export type GetMyTaskBidsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current user's task bids and assignments
+ */
+
+export function useGetMyTaskBids<TData = Awaited<ReturnType<typeof getMyTaskBids>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyTaskBids>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyTaskBidsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSubmitTaskBidUrl = (id: number,) => {
+
+
+
+
+  return `/api/tasks/${id}/bids`
+}
+
+/**
+ * @summary Bid for a task
+ */
+export const submitTaskBid = async (id: number, options?: RequestInit): Promise<MyTaskBid> => {
+
+  return customFetch<MyTaskBid>(getSubmitTaskBidUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSubmitTaskBidMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTaskBid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitTaskBid>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['submitTaskBid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitTaskBid>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  submitTaskBid(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitTaskBidMutationResult = NonNullable<Awaited<ReturnType<typeof submitTaskBid>>>
+
+    export type SubmitTaskBidMutationError = ErrorType<void>
+
+    /**
+ * @summary Bid for a task
+ */
+export const useSubmitTaskBid = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTaskBid>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitTaskBid>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSubmitTaskBidMutationOptions(options));
+    }
+
+export const getGetTaskPackageInfoUrl = () => {
+
+
+
+
+  return `/api/task-packages`
+}
+
+/**
+ * @summary Get task packages and current wallet access
+ */
+export const getTaskPackageInfo = async ( options?: RequestInit): Promise<TaskPackageInfo> => {
+
+  return customFetch<TaskPackageInfo>(getGetTaskPackageInfoUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaskPackageInfoQueryKey = () => {
+    return [
+    `/api/task-packages`
+    ] as const;
+    }
+
+
+export const getGetTaskPackageInfoQueryOptions = <TData = Awaited<ReturnType<typeof getTaskPackageInfo>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageInfo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaskPackageInfoQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskPackageInfo>>> = ({ signal }) => getTaskPackageInfo({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageInfo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaskPackageInfoQueryResult = NonNullable<Awaited<ReturnType<typeof getTaskPackageInfo>>>
+export type GetTaskPackageInfoQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get task packages and current wallet access
+ */
+
+export function useGetTaskPackageInfo<TData = Awaited<ReturnType<typeof getTaskPackageInfo>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageInfo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaskPackageInfoQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPurchaseTaskPackageUrl = () => {
+
+
+
+
+  return `/api/task-packages/purchase`
+}
+
+/**
+ * @summary Purchase or upgrade a task package using wallet funds
+ */
+export const purchaseTaskPackage = async (taskPackagePurchaseInput: TaskPackagePurchaseInput, options?: RequestInit): Promise<TaskPackageInfo> => {
+
+  return customFetch<TaskPackageInfo>(getPurchaseTaskPackageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskPackagePurchaseInput,)
+  }
+);}
+
+
+
+
+export const getPurchaseTaskPackageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext> => {
+
+const mutationKey = ['purchaseTaskPackage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purchaseTaskPackage>>, {data: BodyType<TaskPackagePurchaseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  purchaseTaskPackage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurchaseTaskPackageMutationResult = NonNullable<Awaited<ReturnType<typeof purchaseTaskPackage>>>
+    export type PurchaseTaskPackageMutationBody = BodyType<TaskPackagePurchaseInput>
+    export type PurchaseTaskPackageMutationError = ErrorType<void>
+
+    /**
+ * @summary Purchase or upgrade a task package using wallet funds
+ */
+export const usePurchaseTaskPackage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purchaseTaskPackage>>, TError,{data: BodyType<TaskPackagePurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof purchaseTaskPackage>>,
+        TError,
+        {data: BodyType<TaskPackagePurchaseInput>},
+        TContext
+      > => {
+      return useMutation(getPurchaseTaskPackageMutationOptions(options));
+    }
 
 export const getDownloadTaskSubmissionFileUrl = (id: number,) => {
 
@@ -5339,6 +5640,162 @@ export const useAdminReviewTaskSubmission = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminReviewTaskSubmissionMutationOptions(options));
+    }
+
+export const getAdminGetTaskBidsUrl = (params?: AdminGetTaskBidsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/task-bids?${stringifiedParams}` : `/api/admin/task-bids`
+}
+
+/**
+ * @summary Admin — list worker bids for tasks
+ */
+export const adminGetTaskBids = async (params?: AdminGetTaskBidsParams, options?: RequestInit): Promise<AdminTaskBid[]> => {
+
+  return customFetch<AdminTaskBid[]>(getAdminGetTaskBidsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetTaskBidsQueryKey = (params?: AdminGetTaskBidsParams,) => {
+    return [
+    `/api/admin/task-bids`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminGetTaskBidsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetTaskBids>>, TError = ErrorType<unknown>>(params?: AdminGetTaskBidsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTaskBids>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetTaskBidsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetTaskBids>>> = ({ signal }) => adminGetTaskBids(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetTaskBids>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetTaskBidsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetTaskBids>>>
+export type AdminGetTaskBidsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin — list worker bids for tasks
+ */
+
+export function useAdminGetTaskBids<TData = Awaited<ReturnType<typeof adminGetTaskBids>>, TError = ErrorType<unknown>>(
+ params?: AdminGetTaskBidsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTaskBids>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetTaskBidsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminReviewTaskBidUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/task-bids/${id}/review`
+}
+
+/**
+ * @summary Admin — assign a task to a bidder or decline the bid
+ */
+export const adminReviewTaskBid = async (id: number,
+    taskBidReviewInput: TaskBidReviewInput, options?: RequestInit): Promise<AdminTaskBid> => {
+
+  return customFetch<AdminTaskBid>(getAdminReviewTaskBidUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskBidReviewInput,)
+  }
+);}
+
+
+
+
+export const getAdminReviewTaskBidMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReviewTaskBid>>, TError,{id: number;data: BodyType<TaskBidReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminReviewTaskBid>>, TError,{id: number;data: BodyType<TaskBidReviewInput>}, TContext> => {
+
+const mutationKey = ['adminReviewTaskBid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminReviewTaskBid>>, {id: number;data: BodyType<TaskBidReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminReviewTaskBid(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminReviewTaskBidMutationResult = NonNullable<Awaited<ReturnType<typeof adminReviewTaskBid>>>
+    export type AdminReviewTaskBidMutationBody = BodyType<TaskBidReviewInput>
+    export type AdminReviewTaskBidMutationError = ErrorType<void>
+
+    /**
+ * @summary Admin — assign a task to a bidder or decline the bid
+ */
+export const useAdminReviewTaskBid = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReviewTaskBid>>, TError,{id: number;data: BodyType<TaskBidReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminReviewTaskBid>>,
+        TError,
+        {id: number;data: BodyType<TaskBidReviewInput>},
+        TContext
+      > => {
+      return useMutation(getAdminReviewTaskBidMutationOptions(options));
     }
 
 export const getAdminListTaskLibraryUrl = (params?: AdminListTaskLibraryParams,) => {

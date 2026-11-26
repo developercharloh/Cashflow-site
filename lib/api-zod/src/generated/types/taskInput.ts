@@ -16,6 +16,11 @@ export interface TaskInput {
   estimatedMinutes: number;
   difficulty: string;
   minLevel: number;
+  /**
+     * @minimum 1
+     * @maximum 720
+     */
+  deadlineHours: number;
   instructions: string;
   taskType?: string;
   isActive?: boolean;

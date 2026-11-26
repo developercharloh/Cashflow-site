@@ -7,6 +7,7 @@
  */
 
 export interface TaskFileInput {
+  taskId: number;
   name: string;
   size: number;
   contentType: string;

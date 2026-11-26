@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, integer, real, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, integer, real, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -19,6 +19,7 @@ export const tasksTable = pgTable("tasks", {
   timeLimitSeconds: integer("time_limit_seconds"),
   difficulty: text("difficulty").notNull().default("easy"),
   minLevel: integer("min_level").notNull().default(1),
+  deadlineHours: integer("deadline_hours").notNull().default(72),
   questionCount: integer("question_count").notNull().default(5),
   cooldownHours: integer("cooldown_hours").notNull().default(24),
   isActive: boolean("is_active").notNull().default(true),
@@ -55,10 +56,29 @@ export const taskAttemptsTable = pgTable("task_attempts", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
+export const taskBidsTable = pgTable("task_bids", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").notNull().references(() => tasksTable.id),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  status: text("status").notNull().default("pending"),
+  reviewNote: text("review_note"),
+  reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  bidAt: timestamp("bid_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  deadlineAt: timestamp("deadline_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => [
+  uniqueIndex("task_bids_task_user_unique").on(table.taskId, table.userId),
+  index("task_bids_task_status_idx").on(table.taskId, table.status),
+  index("task_bids_user_status_idx").on(table.userId, table.status),
+]);
+
 export const taskSubmissionsTable = pgTable("task_submissions", {
   id: serial("id").primaryKey(),
   taskId: integer("task_id").notNull().references(() => tasksTable.id),
   userId: integer("user_id").notNull().references(() => usersTable.id),
+  bidId: integer("bid_id").references(() => taskBidsTable.id),
   status: text("status").notNull().default("submitted"),
   textSubmission: text("text_submission"),
   attachmentPath: text("attachment_path"),

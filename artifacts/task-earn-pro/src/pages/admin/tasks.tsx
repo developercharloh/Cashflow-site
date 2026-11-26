@@ -24,6 +24,7 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
     fundingBudget: initial?.fundingBudget ?? "",
     maxCompletions: initial?.maxCompletions ?? 1,
     estimatedMinutes: initial?.estimatedMinutes ?? "",
+    deadlineHours: initial?.deadlineHours ?? 72,
     difficulty: "hard",
     minLevel: initial?.minLevel ?? 1,
     instructions: initial?.instructions ?? "Complete every part of the task. Show your working, follow the supplied format, verify accuracy, and explain any assumptions. Submissions are checked against the requirements before the reward is approved.",
@@ -66,6 +67,11 @@ function TaskForm({ initial, onSave, onClose }: { initial?: any; onSave: (data: 
         <div>
           <Label>Estimated minutes</Label>
           <Input type="number" min="1" max="1440" value={form.estimatedMinutes} onChange={e => set("estimatedMinutes", e.target.value)} />
+        </div>
+        <div>
+          <Label>Submission deadline (hours)</Label>
+          <Input type="number" min="1" max="720" step="1" value={form.deadlineHours} onChange={e => set("deadlineHours", e.target.value)} />
+          <p className="mt-1 text-xs text-muted-foreground">1–720 hours after assignment. New tasks default to 72.</p>
         </div>
         <div>
           <Label>Difficulty</Label>
@@ -177,7 +183,7 @@ export default function AdminTasks() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Title", "Category", "Reward", "Budget / places", "Difficulty", "Level", "Status", "Actions"].map(h => (
+                    {["Title", "Category", "Reward", "Budget / places", "Deadline", "Difficulty", "Level", "Status", "Actions"].map(h => (
                       <th key={h} className="text-left py-3 px-3 text-xs text-muted-foreground font-medium">{h}</th>
                     ))}
                   </tr>
@@ -189,6 +195,7 @@ export default function AdminTasks() {
                       <td className="py-3 px-3 text-xs text-muted-foreground">{task.category}</td>
                       <td className="py-3 px-3 text-green-500 font-medium">${task.reward.toFixed(2)}</td>
                       <td className="py-3 px-3 text-xs text-muted-foreground">${task.fundingBudget.toFixed(2)} · {task.maxCompletions} max</td>
+                      <td className="py-3 px-3 text-xs text-muted-foreground">{task.deadlineHours}h</td>
                       <td className="py-3 px-3"><Badge variant="outline" className={`text-xs ${DIFF_COLOR[task.difficulty] ?? ""}`}>{task.difficulty}</Badge></td>
                       <td className="py-3 px-3 text-muted-foreground">L{task.minLevel}+</td>
                       <td className="py-3 px-3">
@@ -225,6 +232,7 @@ export default function AdminTasks() {
             fundingBudget: Number(data.fundingBudget),
             maxCompletions: Number(data.maxCompletions),
             estimatedMinutes: Number(data.estimatedMinutes),
+            deadlineHours: Number(data.deadlineHours),
             minLevel: Number(data.minLevel),
             difficulty: "hard",
           })} onClose={() => setShowCreate(false)} />
@@ -241,6 +249,7 @@ export default function AdminTasks() {
             fundingBudget: Number(data.fundingBudget),
             maxCompletions: Number(data.maxCompletions),
             estimatedMinutes: Number(data.estimatedMinutes),
+            deadlineHours: Number(data.deadlineHours),
             minLevel: Number(data.minLevel),
             difficulty: "hard",
           })} onClose={() => setEditTask(null)} />}

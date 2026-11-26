@@ -5,6 +5,7 @@
  * TaskEarn Pro API
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskBidStatus } from './taskBidStatus';
 
 export interface Task {
   id: number;
@@ -17,6 +18,7 @@ export interface Task {
   reward: number;
   fundingBudget: number;
   maxCompletions: number;
+  completionCount?: number;
   estimatedMinutes: number;
   /** @nullable */
   timeLimitSeconds?: number | null;
@@ -24,6 +26,7 @@ export interface Task {
   minutesCost?: number | null;
   difficulty: string;
   minLevel: number;
+  deadlineHours: number;
   isActive: boolean;
   questionCount?: number;
   /** @nullable */
@@ -34,4 +37,8 @@ export interface Task {
   completedByUser?: boolean;
   /** @nullable */
   instructions?: string | null;
+  /** @nullable */
+  bidStatus?: TaskBidStatus;
+  /** @nullable */
+  bidDeadlineAt?: Date | null;
 }

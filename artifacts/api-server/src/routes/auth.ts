@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, transactionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, transactionsTable, notificationsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { hashPassword, comparePassword, signToken, generateReferralCode, generateResetToken } from "../lib/auth";
 import { requireAuth, type AuthRequest } from "../middlewares/requireAuth";
@@ -56,27 +56,52 @@ router.post("/auth/register", async (req, res) => {
     }
     const hashed = await hashPassword(password);
     const code = generateReferralCode();
+    const normalizedReferralCode = typeof referralCode === "string" ? referralCode.trim().toUpperCase() : "";
 
-    let referredById: number | undefined;
-    if (referralCode) {
-      const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode.toUpperCase()));
+    const user = await db.transaction(async (tx) => {
+      const [referrer] = normalizedReferralCode
+        ? await tx.select().from(usersTable).where(eq(usersTable.referralCode, normalizedReferralCode)).for("update")
+        : [];
+      const [createdUser] = await tx.insert(usersTable).values({
+        email: email.toLowerCase(),
+        password: hashed,
+        name,
+        phone: phone ?? null,
+        country: country ?? null,
+        referralCode: code,
+        referredBy: referrer?.id ?? null,
+        isEmailVerified: true,
+        quizCompleted: true,
+      }).returning();
+
       if (referrer) {
-        referredById = referrer.id;
-        await db.update(usersTable).set({ referralCount: referrer.referralCount + 1 }).where(eq(usersTable.id, referrer.id));
+        const nextTotalEarned = referrer.totalEarned + 1;
+        const level = nextTotalEarned >= 5000 ? 7 : nextTotalEarned >= 2000 ? 6 : nextTotalEarned >= 1000 ? 5 :
+          nextTotalEarned >= 500 ? 4 : nextTotalEarned >= 200 ? 3 : nextTotalEarned >= 50 ? 2 : referrer.level;
+        await tx.update(usersTable).set({
+          balance: sql`${usersTable.balance} + 1`,
+          totalEarned: sql`${usersTable.totalEarned} + 1`,
+          totalReferralEarnings: sql`${usersTable.totalReferralEarnings} + 1`,
+          referralCount: sql`${usersTable.referralCount} + 1`,
+          level,
+        }).where(eq(usersTable.id, referrer.id));
+        await tx.insert(transactionsTable).values({
+          userId: referrer.id,
+          type: "referral",
+          amount: 1,
+          status: "completed",
+          description: `Referral reward for ${name}'s signup`,
+        });
+        await tx.insert(notificationsTable).values({
+          userId: referrer.id,
+          type: "referral_reward",
+          title: "Referral reward added",
+          message: `$1.00 was added to your wallet for a new signup.`,
+        });
       }
-    }
 
-    const [user] = await db.insert(usersTable).values({
-      email: email.toLowerCase(),
-      password: hashed,
-      name,
-      phone: phone ?? null,
-      country: country ?? null,
-      referralCode: code,
-      referredBy: referredById ?? null,
-      isEmailVerified: true,
-      quizCompleted: true,
-    }).returning();
+      return createdUser;
+    });
 
     const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
     res.status(201).json({

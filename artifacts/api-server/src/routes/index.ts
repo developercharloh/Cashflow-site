@@ -17,6 +17,8 @@ import workSubmissionsRouter from "./work-submissions";
 import taskSourcesRouter from "./task-sources";
 import taskLibraryRouter from "./task-library";
 import supportRouter from "./support";
+import taskPackagesRouter from "./task-packages";
+import taskBidsRouter from "./task-bids";
 
 const router: IRouter = Router();
 
@@ -37,6 +39,8 @@ router.use(kycRouter);
 router.use(workSubmissionsRouter);
 router.use(taskSourcesRouter);
 router.use(taskLibraryRouter);
+router.use(taskPackagesRouter);
+router.use(taskBidsRouter);
 router.use(supportRouter);
 
 export default router;

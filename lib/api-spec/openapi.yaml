@@ -396,6 +396,80 @@ paths:
                 items:
                   $ref: "#/components/schemas/TaskWorkSubmission"
 
+  /tasks/bids/mine:
+    get:
+      operationId: getMyTaskBids
+      tags: [tasks]
+      summary: Get the current user's task bids and assignments
+      responses:
+        "200":
+          description: Task bids and assignment deadlines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyTaskBid"
+
+  /tasks/{id}/bids:
+    post:
+      operationId: submitTaskBid
+      tags: [tasks]
+      summary: Bid for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Task bid submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyTaskBid"
+        "403":
+          description: A paid task package is required
+        "409":
+          description: The user already bid or the task is unavailable
+
+  /task-packages:
+    get:
+      operationId: getTaskPackageInfo
+      tags: [packages]
+      summary: Get task packages and current wallet access
+      responses:
+        "200":
+          description: Current task package and wallet balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPackageInfo"
+
+  /task-packages/purchase:
+    post:
+      operationId: purchaseTaskPackage
+      tags: [packages]
+      summary: Purchase or upgrade a task package using wallet funds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPackagePurchaseInput"
+      responses:
+        "200":
+          description: Package activated and wallet updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPackageInfo"
+        "400":
+          description: Invalid package choice
+        "409":
+          description: Package already owned or wallet balance is insufficient
+
   /storage/task-submissions/{id}/file:
     get:
       operationId: downloadTaskSubmissionFile
@@ -1432,6 +1506,54 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminTaskSubmission"
 
+  /admin/task-bids:
+    get:
+      operationId: adminGetTaskBids
+      tags: [admin]
+      summary: Admin — list worker bids for tasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, assigned, submitted, completed, rejected, expired, all]
+      responses:
+        "200":
+          description: Task bid review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTaskBid"
+
+  /admin/task-bids/{id}/review:
+    patch:
+      operationId: adminReviewTaskBid
+      tags: [admin]
+      summary: Admin — assign a task to a bidder or decline the bid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskBidReviewInput"
+      responses:
+        "200":
+          description: Bid decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTaskBid"
+        "409":
+          description: Bid or funded task slot is no longer available
+
   /admin/task-library:
     get:
       operationId: adminListTaskLibrary
@@ -2039,7 +2161,7 @@ components:
     # ── Tasks ─────────────────────────────────────────────────────────────────
     Task:
       type: object
-      required: [id, title, description, category, taskType, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, isActive]
+      required: [id, title, description, category, taskType, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, deadlineHours, isActive]
       properties:
         id:
           type: integer
@@ -2059,6 +2181,8 @@ components:
           type: number
         maxCompletions:
           type: integer
+        completionCount:
+          type: integer
         estimatedMinutes:
           type: integer
         timeLimitSeconds:
@@ -2068,6 +2192,8 @@ components:
         difficulty:
           type: string
         minLevel:
+          type: integer
+        deadlineHours:
           type: integer
         isActive:
           type: boolean
@@ -2083,6 +2209,12 @@ components:
           type: boolean
         instructions:
           type: ["string", "null"]
+        bidStatus:
+          type: ["string", "null"]
+          enum: [pending, assigned, submitted, completed, rejected, expired, null]
+        bidDeadlineAt:
+          type: ["string", "null"]
+          format: date-time
 
     TaskCategory:
       type: object
@@ -2245,7 +2377,7 @@ components:
 
     TaskInput:
       type: object
-      required: [title, description, category, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, instructions]
+      required: [title, description, category, reward, fundingBudget, maxCompletions, estimatedMinutes, difficulty, minLevel, instructions, deadlineHours]
       properties:
         title:
           type: string
@@ -2265,6 +2397,10 @@ components:
           type: string
         minLevel:
           type: integer
+        deadlineHours:
+          type: integer
+          minimum: 1
+          maximum: 720
         instructions:
           type: string
         taskType:
@@ -2299,6 +2435,10 @@ components:
           type: string
         taskType:
           type: string
+        deadlineHours:
+          type: integer
+          minimum: 1
+          maximum: 720
 
     TaskFeedSourceInput:
       type: object
@@ -2515,8 +2655,10 @@ components:
 
     TaskFileInput:
       type: object
-      required: [name, size, contentType]
+      required: [taskId, name, size, contentType]
       properties:
+        taskId:
+          type: integer
         name:
           type: string
         size:
@@ -2597,6 +2739,75 @@ components:
               type: ["string", "null"]
             reviewGuide:
               type: ["string", "null"]
+
+    MyTaskBid:
+      type: object
+      required: [id, taskId, taskTitle, status, bidAt, deadlineHours, reviewNote]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        taskTitle:
+          type: string
+        status:
+          type: string
+          enum: [pending, assigned, submitted, completed, rejected, expired]
+        bidAt:
+          type: string
+          format: date-time
+        deadlineAt:
+          type: ["string", "null"]
+          format: date-time
+        deadlineHours:
+          type: integer
+        reviewNote:
+          type: ["string", "null"]
+
+    AdminTaskBid:
+      type: object
+      required: [id, taskId, taskTitle, category, reward, deadlineHours, userId, userName, userEmail, status, bidAt, deadlineAt]
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        taskTitle:
+          type: string
+        category:
+          type: string
+        reward:
+          type: number
+        deadlineHours:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        userEmail:
+          type: string
+        status:
+          type: string
+          enum: [pending, assigned, submitted, completed, rejected, expired]
+        bidAt:
+          type: string
+          format: date-time
+        deadlineAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewNote:
+          type: ["string", "null"]
+
+    TaskBidReviewInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [assign, reject]
+        note:
+          type: string
+          maxLength: 500
 
     TaskReviewInput:
       type: object
@@ -2864,6 +3075,45 @@ components:
           type: number
         pendingEarnings:
           type: number
+
+    TaskPackage:
+      type: object
+      required: [code, name, price, description]
+      properties:
+        code:
+          type: string
+          enum: [silver, diamond]
+        name:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+
+    TaskPackageInfo:
+      type: object
+      required: [currentPackage, purchasedAt, walletBalance, packages]
+      properties:
+        currentPackage:
+          type: string
+          enum: [free, silver, diamond, legacy]
+        purchasedAt:
+          type: ["string", "null"]
+          format: date-time
+        walletBalance:
+          type: number
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskPackage"
+
+    TaskPackagePurchaseInput:
+      type: object
+      required: [package]
+      properties:
+        package:
+          type: string
+          enum: [silver, diamond]
 
     ReferredUser:
       type: object

@@ -5,6 +5,7 @@ import {
   adminAuditLogsTable,
   db,
   notificationsTable,
+  taskBidsTable,
   taskSubmissionsTable,
   tasksTable,
   transactionsTable,
@@ -40,6 +41,23 @@ const ALLOWED_FILE_TYPES = new Set([
   "audio/x-wav",
 ]);
 
+async function getAssignmentEligibility(taskId: number, userId: number): Promise<"open" | "expired" | "unassigned"> {
+  const [bid] = await db.select().from(taskBidsTable)
+    .where(and(
+      eq(taskBidsTable.taskId, taskId),
+      eq(taskBidsTable.userId, userId),
+    ));
+  if (bid?.status === "expired") return "expired";
+  if (!bid || bid.status !== "assigned" || !bid.deadlineAt) return "unassigned";
+  if (bid.deadlineAt.getTime() > Date.now()) return "open";
+  await db.update(taskBidsTable).set({
+    status: "expired",
+    reviewNote: "The deadline passed before work was submitted.",
+    updatedAt: new Date(),
+  }).where(and(eq(taskBidsTable.id, bid.id), eq(taskBidsTable.status, "assigned")));
+  return "expired";
+}
+
 router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
   if (req.body?.type === "blob.upload-completed") {
     next();
@@ -63,20 +81,28 @@ router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
             throw new Error("Invalid upload destination.");
           }
           const payload = JSON.parse(clientPayload || "{}") as {
+            taskId?: unknown;
             name?: unknown;
             contentType?: unknown;
             size?: unknown;
           };
-          if (typeof payload.name !== "string" || payload.name.trim().length < 1 ||
+          if (!Number.isSafeInteger(payload.taskId) || Number(payload.taskId) < 1 ||
+              typeof payload.name !== "string" || payload.name.trim().length < 1 ||
               payload.name.length > 180 || typeof payload.contentType !== "string" ||
               !ALLOWED_FILE_TYPES.has(payload.contentType) || !Number.isInteger(payload.size) ||
               Number(payload.size) < 1 || Number(payload.size) > MAX_FILE_SIZE) {
             throw new Error("The file details are invalid.");
           }
+          const eligibility = await getAssignmentEligibility(Number(payload.taskId), req.userId!);
+          if (eligibility !== "open") {
+            throw new Error(eligibility === "expired"
+              ? "The task deadline has passed. Late work cannot be submitted."
+              : "You need an active task assignment before uploading work.");
+          }
           return {
             allowedContentTypes: [payload.contentType],
             maximumSizeInBytes: MAX_FILE_SIZE,
-            tokenPayload: JSON.stringify({ userId: req.userId!, uploadedAt: Date.now() }),
+            tokenPayload: JSON.stringify({ userId: req.userId!, taskId: Number(payload.taskId), uploadedAt: Date.now() }),
           };
         },
       });
@@ -84,11 +110,21 @@ router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
       return;
     }
 
-    const { name, size, contentType } = req.body ?? {};
-    if (typeof name !== "string" || name.trim().length < 1 || name.length > 180 ||
+    const { taskId, name, size, contentType } = req.body ?? {};
+    if (!Number.isSafeInteger(taskId) || taskId < 1 ||
+        typeof name !== "string" || name.trim().length < 1 || name.length > 180 ||
         !Number.isInteger(size) || size < 1 || size > MAX_FILE_SIZE ||
         typeof contentType !== "string" || !ALLOWED_FILE_TYPES.has(contentType)) {
       res.status(400).json({ error: "File must be up to 10 MB and use a supported document, image, CSV, text, or audio format." });
+      return;
+    }
+    const eligibility = await getAssignmentEligibility(taskId, req.userId!);
+    if (eligibility !== "open") {
+      res.status(eligibility === "expired" ? 410 : 403).json({
+        error: eligibility === "expired"
+          ? "The task deadline has passed. Late work cannot be submitted."
+          : "You need an active task assignment before uploading work.",
+      });
       return;
     }
     const upload = await createTaskUploadUrl(req.userId!);
@@ -99,6 +135,15 @@ router.post("/tasks/work-submissions/upload-url", (req, res, next) => {
     res.json({ provider: "replit", uploadURL: upload.uploadURL, objectPath: upload.objectPath });
   } catch (error) {
     req.log.error({ err: error }, "Could not create task work upload");
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("active task assignment")) {
+      res.status(403).json({ error: "You need an active task assignment before uploading work." });
+      return;
+    }
+    if (message.includes("task deadline has passed")) {
+      res.status(410).json({ error: "The task deadline has passed. Late work cannot be submitted." });
+      return;
+    }
     res.status(500).json({ error: "File uploads are unavailable right now." });
   }
 });
@@ -146,30 +191,37 @@ router.post("/tasks/:id/work-submissions", requireAuth, async (req: AuthRequest,
     const result = await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(${taskId})`);
       const [task] = await tx.select().from(tasksTable).where(eq(tasksTable.id, taskId));
-      if (!task || !task.isActive || task.taskType !== "written") return { error: "This work listing is not available.", status: 404 as const };
+      if (!task || task.taskType !== "written") return { error: "This work listing is not available.", status: 404 as const };
       const [user] = await tx.select().from(usersTable).where(eq(usersTable.id, userId));
       if (!user || user.level < task.minLevel) return { error: "Your account does not meet this task's level requirement.", status: 403 as const };
 
-      const existingMine = await tx.select({ id: taskSubmissionsTable.id }).from(taskSubmissionsTable)
+      const [bid] = await tx.select().from(taskBidsTable)
         .where(and(
-          eq(taskSubmissionsTable.taskId, taskId),
-          eq(taskSubmissionsTable.userId, userId),
-          or(eq(taskSubmissionsTable.status, "submitted"), eq(taskSubmissionsTable.status, "approved")),
-        ));
-      if (existingMine.length > 0) return { error: "You already have an active or approved submission for this task.", status: 409 as const };
+          eq(taskBidsTable.taskId, taskId),
+          eq(taskBidsTable.userId, userId),
+        )).for("update");
+      if (!bid || bid.status !== "assigned" || !bid.deadlineAt) {
+        return { error: "This task has not been assigned to you.", status: 403 as const };
+      }
+      if (bid.deadlineAt.getTime() <= Date.now()) {
+        await tx.update(taskBidsTable).set({
+          status: "expired",
+          reviewNote: "The deadline passed before work was submitted.",
+          updatedAt: new Date(),
+        }).where(eq(taskBidsTable.id, bid.id));
+        return { error: "The task deadline has passed. Late work cannot be submitted.", status: 410 as const };
+      }
 
-      const reserved = await tx.select({ id: taskSubmissionsTable.id }).from(taskSubmissionsTable)
-        .where(and(
-          eq(taskSubmissionsTable.taskId, taskId),
-          or(eq(taskSubmissionsTable.status, "submitted"), eq(taskSubmissionsTable.status, "approved")),
-        ));
-      if (reserved.length >= task.maxCompletions || reserved.length * task.reward + task.reward > task.fundingBudget + 0.000001) {
-        return { error: "This funded task has reached its available places.", status: 409 as const };
+      const existingMine = await tx.select({ id: taskSubmissionsTable.id }).from(taskSubmissionsTable)
+        .where(eq(taskSubmissionsTable.bidId, bid.id));
+      if (existingMine.length > 0) {
+        return { error: "Work has already been submitted for this assignment.", status: 409 as const };
       }
 
       const [submission] = await tx.insert(taskSubmissionsTable).values({
         taskId,
         userId,
+        bidId: bid.id,
         status: "submitted",
         textSubmission: text || null,
         attachmentPath: hasAttachment ? attachmentPath : null,
@@ -177,6 +229,10 @@ router.post("/tasks/:id/work-submissions", requireAuth, async (req: AuthRequest,
         attachmentContentType: verifiedFile?.contentType ?? null,
         attachmentSize: verifiedFile?.size ?? null,
       }).returning();
+      await tx.update(taskBidsTable).set({
+        status: "submitted",
+        updatedAt: new Date(),
+      }).where(eq(taskBidsTable.id, bid.id));
       return { submission, task };
     });
 
@@ -367,6 +423,13 @@ router.patch("/admin/task-submissions/:id/review", requireAdmin, async (req: Aut
         reviewedAt: new Date(),
         updatedAt: new Date(),
       }).where(eq(taskSubmissionsTable.id, submission.id)).returning();
+      if (submission.bidId !== null) {
+        await tx.update(taskBidsTable).set({
+          status: decision === "approved" ? "completed" : "rejected",
+          reviewNote: note.trim(),
+          updatedAt: new Date(),
+        }).where(eq(taskBidsTable.id, submission.bidId));
+      }
       await tx.insert(adminAuditLogsTable).values({
         adminUserId: req.userId!,
         action: `task_submission_${decision}`,

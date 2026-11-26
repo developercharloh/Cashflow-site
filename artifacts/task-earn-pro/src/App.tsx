@@ -15,8 +15,14 @@ import CallbackPage from "@/pages/callback";
 import WalletPage from "@/pages/wallet";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
-import TasksPage from "@/pages/tasks";
+import TasksPage from "@/pages/task-workflow";
+import PackagesPage from "@/pages/packages";
+import ReferralsPage from "@/pages/referral-center";
+import AdminTaskBidsPage from "@/pages/admin/task-bids";
+import AdminTasksPage from "@/pages/admin/tasks";
 import AdminSupportPage from "@/pages/admin/support";
+import AdminLogin from "@/pages/admin/login";
+import AdminDashboard from "@/pages/admin";
 import QuizPage from "@/pages/quiz";
 import LoansPage from "@/pages/loans";
 import ForexPage from "@/pages/forex";
@@ -33,7 +39,13 @@ function Router() {
         <Route path="/"                    component={Landing} />
         <Route path="/dashboard"           component={Dashboard} />
         <Route path="/tasks"               component={TasksPage} />
+        <Route path="/packages"            component={PackagesPage} />
+        <Route path="/referrals"           component={ReferralsPage} />
+        <Route path="/admin/task-bids"     component={AdminTaskBidsPage} />
+        <Route path="/admin/tasks"         component={AdminTasksPage} />
         <Route path="/admin/support"       component={AdminSupportPage} />
+        <Route path="/admin/login"         component={AdminLogin} />
+        <Route path="/admin"               component={AdminDashboard} />
         <Route path="/quiz"                component={QuizPage} />
         <Route path="/wallet"              component={WalletPage} />
         <Route path="/loans"               component={LoansPage} />
