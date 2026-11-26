@@ -514,6 +514,46 @@ describe("private KYC routes", () => {
     }
   });
 
+  it("skips uploads with missing or invalid timestamps while deleting valid stale uploads", async () => {
+    const app = createApp();
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [
+        {
+          ...blob("uploads/kyc/7/missing-upload-date.jpg"),
+          uploadedAt: undefined as unknown as Date,
+        },
+        blob("uploads/kyc/7/invalid-upload-date.jpg", new Date("invalid")),
+        blob("uploads/kyc/7/valid-stale-upload.jpg"),
+      ],
+      hasMore: false,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result).toMatchObject({
+      scanned: 3,
+      olderThanCutoff: 1,
+      eligible: 1,
+      deleted: 1,
+    });
+    expect(del).toHaveBeenCalledExactlyOnceWith([
+      "uploads/kyc/7/valid-stale-upload.jpg",
+    ]);
+    expect(vi.mocked(del).mock.calls.flat()).not.toContain(
+      "uploads/kyc/7/missing-upload-date.jpg",
+    );
+    expect(vi.mocked(del).mock.calls.flat()).not.toContain(
+      "uploads/kyc/7/invalid-upload-date.jpg",
+    );
+  });
+
   it("deletes only eligible stale objects when an admin explicitly disables dry-run", async () => {
     const app = createApp();
     queueSelectResults(...authenticatedAdminReads(), [
