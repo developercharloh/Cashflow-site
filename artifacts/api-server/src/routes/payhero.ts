@@ -14,6 +14,7 @@ import {
   calculateTaskPackageCharge,
   type TaskPackageCode,
 } from "../lib/task-package-billing";
+import { normalizeMpesaPhone } from "../lib/mpesa-phone";
 
 const router = Router();
 const DEPOSIT_RATE_KES = 130;
@@ -190,11 +191,9 @@ router.post("/wallet/deposits/mpesa", requireAuth, async (req: AuthRequest, res)
       return;
     }
 
-    let normalizedPhone = phone.replace(/\s+/g, "").replace(/^\+/, "");
-    if (normalizedPhone.startsWith("254")) normalizedPhone = `0${normalizedPhone.slice(3)}`;
-    if (!normalizedPhone.startsWith("0")) normalizedPhone = `0${normalizedPhone}`;
-    if (!/^0[17]\d{8}$/.test(normalizedPhone)) {
-      res.status(400).json({ error: "Enter a valid Kenyan mobile number, such as 0712345678." });
+    const normalizedPhone = normalizeMpesaPhone(phone);
+    if (!normalizedPhone) {
+      res.status(400).json({ error: "Enter a valid mobile number for M-Pesa Express." });
       return;
     }
 
@@ -327,10 +326,8 @@ router.post("/task-packages/purchase/mpesa", requireAuth, async (req: AuthReques
     return;
   }
 
-  let normalizedPhone = input.data.phone.replace(/\s+/g, "").replace(/^\+/, "");
-  if (normalizedPhone.startsWith("254")) normalizedPhone = `0${normalizedPhone.slice(3)}`;
-  if (!normalizedPhone.startsWith("0")) normalizedPhone = `0${normalizedPhone}`;
-  if (!/^0[17]\d{8}$/.test(normalizedPhone)) {
+  const normalizedPhone = normalizeMpesaPhone(input.data.phone);
+  if (!normalizedPhone) {
     res.status(400).json({ error: "Enter a valid mobile number for M-Pesa Express." });
     return;
   }

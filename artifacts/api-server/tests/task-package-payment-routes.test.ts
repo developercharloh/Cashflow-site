@@ -199,7 +199,7 @@ describe("direct M-Pesa package payments", () => {
     const response = await request(createApp(), "/api/task-packages/purchase/mpesa", {
       method: "POST",
       token: "worker",
-      body: { package: "silver", phone: "0712345678" },
+      body: { package: "silver", phone: "+254 712 345 678" },
     });
     const body = await response.json();
     const sentRequest = vi.mocked(fetch).mock.calls.find(([input]) =>
@@ -245,6 +245,30 @@ describe("direct M-Pesa package payments", () => {
       status: 400,
       provider: { code: "INVALID_AMOUNT", message: "Amount rejected for [phone]" },
     }, "M-Pesa package payment request was rejected");
+  });
+
+  it("uses the shared phone normalizer for wallet deposits as well", async () => {
+    mocks.selectResults.push([worker]);
+    mocks.insert.mockImplementation(() => ({
+      values: vi.fn((values: Record<string, unknown>) => ({
+        returning: vi.fn(async () => [{ id: 45, ...values }]),
+      })),
+    }));
+
+    const response = await request(createApp(), "/api/wallet/deposits/mpesa", {
+      method: "POST",
+      token: "worker",
+      body: { amount: 7.69, phone: "+254 11 234 5678", provider: "mpesa" },
+    });
+    const responseBody = await response.json();
+    expect(response.status, JSON.stringify(responseBody)).toBe(200);
+    const sentRequest = vi.mocked(fetch).mock.calls.find(([input]) =>
+      String(input).includes("backend.payhero.co.ke"),
+    );
+    expect(sentRequest).toBeDefined();
+    const paymentRequest = JSON.parse(String(sentRequest?.[1]?.body));
+
+    expect(paymentRequest).toMatchObject({ amount: 1000, phone_number: "0112345678", provider: "m-pesa" });
   });
 
   it("activates the selected package after provider status confirms payment", async () => {
