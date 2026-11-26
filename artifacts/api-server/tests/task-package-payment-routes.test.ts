@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   notificationValues: undefined as Record<string, unknown> | undefined,
   transactionValues: undefined as Record<string, unknown> | undefined,
   claimed: true,
+  warn: vi.fn(),
   usersTable: { id: "users.id" },
   transactionsTable: {
     id: "transactions.id",
@@ -96,7 +97,7 @@ function createApp(): Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    Object.assign(req, { log: { error: vi.fn(), warn: vi.fn() } });
+    Object.assign(req, { log: { error: vi.fn(), warn: mocks.warn } });
     next();
   });
   app.use("/api", payheroRouter);
@@ -143,6 +144,7 @@ beforeEach(() => {
   mocks.notificationValues = undefined;
   mocks.transactionValues = undefined;
   mocks.claimed = true;
+  mocks.warn.mockClear();
   mocks.verifyToken.mockImplementation((token: string) => token === "worker" ? { userId: 7, isAdmin: false } : null);
   mocks.select.mockImplementation(() => queryFor(mocks.selectResults.shift() ?? []));
   mocks.transaction.mockImplementation(async (callback: (tx: unknown) => unknown) => callback({
@@ -208,6 +210,7 @@ describe("direct M-Pesa package payments", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ status: "pending", package: "silver", chargeUsd: 7.69, amountKes: 1000 });
     expect(paymentRequest).toMatchObject({ amount: 1000, phone_number: "0712345678", provider: "m-pesa" });
+    expect(paymentRequest.external_reference).toMatch(/^lp_7_[0-9a-f-]{36}$/i);
     expect(mocks.transactionValues).toMatchObject({
       type: "package_purchase",
       amount: -7.69,
@@ -216,6 +219,32 @@ describe("direct M-Pesa package payments", () => {
     });
     expect(mocks.transactionValues).not.toHaveProperty("balance");
     expect(mocks.userUpdateValues).toBeUndefined();
+  });
+
+  it("logs safe PayHero rejection details without blaming the phone number", async () => {
+    mocks.selectResults.push([worker]);
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (String(input).startsWith("http://127.0.0.1:")) return nativeFetch(input, init);
+      return new Response(JSON.stringify({
+        success: false,
+        error_code: "INVALID_AMOUNT",
+        message: "Amount rejected for 0712345678",
+      }), { status: 400 });
+    });
+
+    const response = await request(createApp(), "/api/task-packages/purchase/mpesa", {
+      method: "POST",
+      token: "worker",
+      body: { package: "silver", phone: "0712345678" },
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("We couldn't start the package payment prompt. Please try again shortly.");
+    expect(mocks.warn).toHaveBeenCalledWith({
+      status: 400,
+      provider: { code: "INVALID_AMOUNT", message: "Amount rejected for [phone]" },
+    }, "M-Pesa package payment request was rejected");
   });
 
   it("activates the selected package after provider status confirms payment", async () => {

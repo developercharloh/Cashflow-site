@@ -46,6 +46,28 @@ function getAuthorizationHeader(): string | null {
   return /^Basic\s/i.test(token) ? token : `Basic ${token}`;
 }
 
+function getSafeProviderFailure(data: any): { code?: string; message?: string } {
+  const rawCode = data?.error_code ?? data?.errorCode ?? data?.code;
+  const code = typeof rawCode === "string" || typeof rawCode === "number"
+    ? String(rawCode).slice(0, 64)
+    : undefined;
+  const rawMessage = [
+    data?.message,
+    data?.error_description,
+    data?.error,
+    data?.detail,
+  ].find((value) => typeof value === "string" && value.trim());
+  const message = typeof rawMessage === "string"
+    ? rawMessage
+      .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+      .replace(/\b(?:\+?254|0)[17]\d{8}\b/g, "[phone]")
+      .replace(/https?:\/\/\S+/gi, "[url]")
+      .slice(0, 240)
+    : undefined;
+  return { ...(code ? { code } : {}), ...(message ? { message } : {}) };
+}
+
 function isSuccessfulStatus(data: any): boolean {
   return data?.success === true && String(data?.status ?? "").toUpperCase() === "SUCCESS";
 }
@@ -314,7 +336,7 @@ router.post("/task-packages/purchase/mpesa", requireAuth, async (req: AuthReques
   }
 
   const targetPackage = input.data.package;
-  const externalReference = `pkg_${req.userId}_${crypto.randomUUID()}`;
+  const externalReference = `lp_${req.userId}_${crypto.randomUUID()}`;
 
   try {
     const preparation = await db.transaction(async (tx) => {
@@ -438,8 +460,11 @@ router.post("/task-packages/purchase/mpesa", requireAuth, async (req: AuthReques
         eq(transactionsTable.id, preparation.transaction.id),
         eq(transactionsTable.status, "pending"),
       ));
-      req.log.warn({ status: response.status }, "M-Pesa package payment request was rejected");
-      res.status(400).json({ error: "Could not start the M-Pesa prompt. Check your number and try again." });
+      req.log.warn({
+        status: response.status,
+        provider: getSafeProviderFailure(providerData),
+      }, "M-Pesa package payment request was rejected");
+      res.status(400).json({ error: "We couldn't start the package payment prompt. Please try again shortly." });
       return;
     }
 
