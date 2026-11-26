@@ -756,6 +756,32 @@ describe("private KYC routes", () => {
     expect(del).not.toHaveBeenCalled();
   });
 
+  it("rejects incomplete listing pages before deletion without exposing private paths", async () => {
+    const app = createApp();
+    const privatePath = "uploads/kyc/7/abandoned.jpg";
+    queueSelectResults(...authenticatedAdminReads(), []);
+    vi.mocked(list).mockResolvedValue({
+      blobs: [blob(privatePath)],
+      hasMore: true,
+    });
+
+    const response = await request(app, "/api/kyc/admin/uploads/cleanup", {
+      method: "POST",
+      token: "admin",
+      body: { dryRun: false },
+    });
+    const responseBody = await response.text();
+    const loggedDetails = JSON.stringify(mocks.logError.mock.calls);
+
+    expect(response.status).toBe(500);
+    expect(responseBody).toContain("Could not clean up abandoned identity uploads.");
+    expect(responseBody).not.toContain(privatePath);
+    expect(loggedDetails).toContain('"stage":"listing"');
+    expect(loggedDetails).not.toContain(privatePath);
+    expect(del).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
   it("returns and logs deletion failures without exposing private object paths", async () => {
     const app = createApp();
     const referencedPath = "uploads/kyc/7/retained.jpg";
