@@ -412,6 +412,42 @@ export const PurchaseTaskPackageResponse = zod.object({
 
 
 /**
+ * @summary Start a direct M-Pesa Express package payment
+ */
+export const startTaskPackageMpesaPurchaseBodyPhoneMin = 8;
+
+
+
+export const StartTaskPackageMpesaPurchaseBody = zod.object({
+  "package": zod.enum(['silver', 'diamond']),
+  "phone": zod.string().min(startTaskPackageMpesaPurchaseBodyPhoneMin)
+})
+
+export const StartTaskPackageMpesaPurchaseResponse = zod.object({
+  "status": zod.enum(['pending']),
+  "reference": zod.string(),
+  "package": zod.enum(['silver', 'diamond']),
+  "chargeUsd": zod.number(),
+  "amountKes": zod.number(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Check a direct M-Pesa Express package payment
+ */
+export const GetTaskPackageMpesaPurchaseStatusParams = zod.object({
+  "reference": zod.coerce.string()
+})
+
+export const GetTaskPackageMpesaPurchaseStatusResponse = zod.object({
+  "status": zod.enum(['pending', 'completed', 'rejected']),
+  "package": zod.enum(['silver', 'diamond']),
+  "message": zod.string()
+})
+
+
+/**
  * @summary Download a private task attachment
  */
 export const DownloadTaskSubmissionFileParams = zod.object({

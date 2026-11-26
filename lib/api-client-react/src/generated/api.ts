@@ -104,6 +104,9 @@ import type {
   TaskLibraryItem,
   TaskLibraryPublishInput,
   TaskPackageInfo,
+  TaskPackageMpesaPurchaseInput,
+  TaskPackageMpesaPurchaseResponse,
+  TaskPackageMpesaPurchaseStatusResponse,
   TaskPackagePurchaseInput,
   TaskReviewInput,
   TaskSubmitInput,
@@ -1984,6 +1987,154 @@ export const usePurchaseTaskPackage = <TError = ErrorType<void>,
       > => {
       return useMutation(getPurchaseTaskPackageMutationOptions(options));
     }
+
+export const getStartTaskPackageMpesaPurchaseUrl = () => {
+
+
+
+
+  return `/api/task-packages/purchase/mpesa`
+}
+
+/**
+ * @summary Start a direct M-Pesa Express package payment
+ */
+export const startTaskPackageMpesaPurchase = async (taskPackageMpesaPurchaseInput: TaskPackageMpesaPurchaseInput, options?: RequestInit): Promise<TaskPackageMpesaPurchaseResponse> => {
+
+  return customFetch<TaskPackageMpesaPurchaseResponse>(getStartTaskPackageMpesaPurchaseUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      taskPackageMpesaPurchaseInput,)
+  }
+);}
+
+
+
+
+export const getStartTaskPackageMpesaPurchaseMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>, TError,{data: BodyType<TaskPackageMpesaPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>, TError,{data: BodyType<TaskPackageMpesaPurchaseInput>}, TContext> => {
+
+const mutationKey = ['startTaskPackageMpesaPurchase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>, {data: BodyType<TaskPackageMpesaPurchaseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startTaskPackageMpesaPurchase(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartTaskPackageMpesaPurchaseMutationResult = NonNullable<Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>>
+    export type StartTaskPackageMpesaPurchaseMutationBody = BodyType<TaskPackageMpesaPurchaseInput>
+    export type StartTaskPackageMpesaPurchaseMutationError = ErrorType<void>
+
+    /**
+ * @summary Start a direct M-Pesa Express package payment
+ */
+export const useStartTaskPackageMpesaPurchase = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>, TError,{data: BodyType<TaskPackageMpesaPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startTaskPackageMpesaPurchase>>,
+        TError,
+        {data: BodyType<TaskPackageMpesaPurchaseInput>},
+        TContext
+      > => {
+      return useMutation(getStartTaskPackageMpesaPurchaseMutationOptions(options));
+    }
+
+export const getGetTaskPackageMpesaPurchaseStatusUrl = (reference: string,) => {
+
+
+
+
+  return `/api/task-packages/purchase/mpesa/${reference}/status`
+}
+
+/**
+ * @summary Check a direct M-Pesa Express package payment
+ */
+export const getTaskPackageMpesaPurchaseStatus = async (reference: string, options?: RequestInit): Promise<TaskPackageMpesaPurchaseStatusResponse> => {
+
+  return customFetch<TaskPackageMpesaPurchaseStatusResponse>(getGetTaskPackageMpesaPurchaseStatusUrl(reference),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaskPackageMpesaPurchaseStatusQueryKey = (reference: string,) => {
+    return [
+    `/api/task-packages/purchase/mpesa/${reference}/status`
+    ] as const;
+    }
+
+
+export const getGetTaskPackageMpesaPurchaseStatusQueryOptions = <TData = Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>, TError = ErrorType<void>>(reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaskPackageMpesaPurchaseStatusQueryKey(reference);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>> = ({ signal }) => getTaskPackageMpesaPurchaseStatus(reference, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(reference), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaskPackageMpesaPurchaseStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>>
+export type GetTaskPackageMpesaPurchaseStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Check a direct M-Pesa Express package payment
+ */
+
+export function useGetTaskPackageMpesaPurchaseStatus<TData = Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>, TError = ErrorType<void>>(
+ reference: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskPackageMpesaPurchaseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaskPackageMpesaPurchaseStatusQueryOptions(reference,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getDownloadTaskSubmissionFileUrl = (id: number,) => {
 

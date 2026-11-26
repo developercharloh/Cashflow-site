@@ -854,6 +854,67 @@ export interface TaskPackagePurchaseInput {
   package: TaskPackagePurchaseInputPackage;
 }
 
+export type TaskPackageMpesaPurchaseInputPackage = typeof TaskPackageMpesaPurchaseInputPackage[keyof typeof TaskPackageMpesaPurchaseInputPackage];
+
+
+export const TaskPackageMpesaPurchaseInputPackage = {
+  silver: 'silver',
+  diamond: 'diamond',
+} as const;
+
+export interface TaskPackageMpesaPurchaseInput {
+  package: TaskPackageMpesaPurchaseInputPackage;
+  /** @minLength 8 */
+  phone: string;
+}
+
+export type TaskPackageMpesaPurchaseResponseStatus = typeof TaskPackageMpesaPurchaseResponseStatus[keyof typeof TaskPackageMpesaPurchaseResponseStatus];
+
+
+export const TaskPackageMpesaPurchaseResponseStatus = {
+  pending: 'pending',
+} as const;
+
+export type TaskPackageMpesaPurchaseResponsePackage = typeof TaskPackageMpesaPurchaseResponsePackage[keyof typeof TaskPackageMpesaPurchaseResponsePackage];
+
+
+export const TaskPackageMpesaPurchaseResponsePackage = {
+  silver: 'silver',
+  diamond: 'diamond',
+} as const;
+
+export interface TaskPackageMpesaPurchaseResponse {
+  status: TaskPackageMpesaPurchaseResponseStatus;
+  reference: string;
+  package: TaskPackageMpesaPurchaseResponsePackage;
+  chargeUsd: number;
+  amountKes: number;
+  message: string;
+}
+
+export type TaskPackageMpesaPurchaseStatusResponseStatus = typeof TaskPackageMpesaPurchaseStatusResponseStatus[keyof typeof TaskPackageMpesaPurchaseStatusResponseStatus];
+
+
+export const TaskPackageMpesaPurchaseStatusResponseStatus = {
+  pending: 'pending',
+  completed: 'completed',
+  rejected: 'rejected',
+} as const;
+
+export type TaskPackageMpesaPurchaseStatusResponsePackage = typeof TaskPackageMpesaPurchaseStatusResponsePackage[keyof typeof TaskPackageMpesaPurchaseStatusResponsePackage];
+
+
+export const TaskPackageMpesaPurchaseStatusResponsePackage = {
+  silver: 'silver',
+  diamond: 'diamond',
+} as const;
+
+export interface TaskPackageMpesaPurchaseStatusResponse {
+  status: TaskPackageMpesaPurchaseStatusResponseStatus;
+  package: TaskPackageMpesaPurchaseStatusResponsePackage;
+  message: string;
+}
+
 export interface ReferredUser {
   id: number;
   name: string;

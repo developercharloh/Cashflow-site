@@ -470,6 +470,52 @@ paths:
         "409":
           description: Package already owned or wallet balance is insufficient
 
+  /task-packages/purchase/mpesa:
+    post:
+      operationId: startTaskPackageMpesaPurchase
+      tags: [packages]
+      summary: Start a direct M-Pesa Express package payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPackageMpesaPurchaseInput"
+      responses:
+        "200":
+          description: Payment prompt sent or an existing prompt is pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPackageMpesaPurchaseResponse"
+        "400":
+          description: Invalid package or phone number
+        "409":
+          description: Package already active or upgrade is unavailable
+        "503":
+          description: M-Pesa Express is temporarily unavailable
+
+  /task-packages/purchase/mpesa/{reference}/status:
+    get:
+      operationId: getTaskPackageMpesaPurchaseStatus
+      tags: [packages]
+      summary: Check a direct M-Pesa Express package payment
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current package payment status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPackageMpesaPurchaseStatusResponse"
+        "404":
+          description: Package payment not found
+
   /storage/task-submissions/{id}/file:
     get:
       operationId: downloadTaskSubmissionFile
@@ -3114,6 +3160,49 @@ components:
         package:
           type: string
           enum: [silver, diamond]
+
+    TaskPackageMpesaPurchaseInput:
+      type: object
+      required: [package, phone]
+      properties:
+        package:
+          type: string
+          enum: [silver, diamond]
+        phone:
+          type: string
+          minLength: 8
+
+    TaskPackageMpesaPurchaseResponse:
+      type: object
+      required: [status, reference, package, chargeUsd, amountKes, message]
+      properties:
+        status:
+          type: string
+          enum: [pending]
+        reference:
+          type: string
+        package:
+          type: string
+          enum: [silver, diamond]
+        chargeUsd:
+          type: number
+        amountKes:
+          type: integer
+        message:
+          type: string
+
+    TaskPackageMpesaPurchaseStatusResponse:
+      type: object
+      required: [status, package, message]
+      properties:
+        status:
+          type: string
+          enum: [pending, completed, rejected]
+        package:
+          type: string
+          enum: [silver, diamond]
+        message:
+          type: string
 
     ReferredUser:
       type: object
